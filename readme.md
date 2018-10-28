@@ -27,7 +27,7 @@ Other characteristics of my little programming language include:
 - Single 64-bit floating point number type (C double), as in JavaScript
 - Stack-based virtual machine
 - Compact primary value representation thank to NaN tagging
-- Mark&Sweep garbage collector, running on demand only
+- Mark and sweep garbage collector, running on demand only
 
 # Safe embedding
 

@@ -53,7 +53,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * Map: `{one: 1, two: 2, three: 3 }`, `{}`
 * Tuple: `(1, 2, 3, 4, 5)`, `()`, `(single,)`
 * Range: `0..10` (end exclusive), `1...10` (end inclusive)
-* Set: <1, 2, 3, 4, 5>, <1>, <>
+* Set: `<1, 2, 3, 4, 5>, <1>, <>`
 - Regular expression: /pattern/options
 
 Numbers are all 64-bit floating point values (C double). Valid number forms include:
@@ -130,14 +130,19 @@ statements...
 ```
 
 ## Lists, tuples and maps
-List items are enclosed in brackets `[...]`. Items can be of etherogenous types (including list temselves).
+List items are enclosed in brackets `[...]`. Items can be of etherogenous types (including list temselves).  
 Example: `[1, 2, 3.14, true, false, null, "String"]`.
 
-Tuple items are enclosed in parentesis `(...)`. Items can be of etherogenous types (including tuples temselves).
+Tuple items are enclosed in parentesis `(...)`. Items can be of etherogenous types (including tuples temselves).   
 Example: `(1, 2, 3.14, true, false, null, "String")`.
-The difference between lists and tuples is that tuples are immutable.
 
-Maps key/value pairs are enclosed in braces `{...}`. Key and values can be of any type, but you are strongly advised to use immutable keys, i.e. String or Number.
+The difference between lists and tuples is that tuples are immutable. 
+Tuples are normally used to hold etherogenous elements and where the position is usually significant.
+Lists are better used when all elements are of the same type and where actual position in the list has no real significance.
+As in python, due to syntax ambiguities, an additional comma must be present at the end of a single-item tuple, i.e. `(1,)`.
+
+Maps key/value pairs are enclosed in braces `{...}`. Keys must be hashable, i.e. implement the method hashCode. This is the case for Num, String and Tuples.   
+Example: `{"one": "un", "two": "deux", "three": "trois", "four": "quatre"}`
 
 As in JavaScript, `{one: 1}` is the same as `{"one": 1}`. In other words, quotes around the key are optional as long as it is a valid name.
 
@@ -146,9 +151,15 @@ IF you don't specify the value explicitely, the key is also used as the value. T
 Use `{[one]: 1}` if you want the key to be the value of variable `one` (computed key). You may also write `{[1+1]: 2}` for {2: 2}`.
 
 Maps are more or less compatible with JSON.
+However, in contrary to JavaScript, map entries cannot be accessed using dot notation `map.key`. Use `map["key"]` instead. Dot notation is exclusively used to call methods on objects.
 
-However, in contrary to JavaScript, map entries cannot be accessed using dot notation `map.key`. Use `map["key"]` instead.
-Dot notation is exclusively used to call methods on objects.
+Sets are enclosed in angle brackets `<...>`. As with maps, items of a set must be hashable types such as Num, String or Tuple.
+Example: `<1, 2, 3, 4, 5>`
+
+Elements in a set are guaranteed to be unique. Sets support operators fors `&, |, -, ^`  for resp. intersection, union, difference and symetric difference.
+
+You can create your own hashable types by implementing the *hashCode* method, which must return a number.
+Similarly to Java, when you implement *hashCode*, you should also implement the `==` operator, as well as make sure that the hashCode remains immutable after the object has been created, otherwise you may not find back your item in a map or set.
 
 ## Functions and closures
 Functions are always declared as lambdas, and they can capture variables to form closures.
@@ -265,7 +276,8 @@ print(v2>v1) # true
 
 ## Method references and bound methos
 
-``````
+
+```
 # We can take a method from a class and use it as a standalone function:
 # Num::+ is a kind of shortcut for $(a,b): a+b
 var plus = Num::+, multiply = Num::*
@@ -283,18 +295,20 @@ Num::* = Num::/
 print(4*5) #0.8 (!)
 ```
 
+
 ## Bonus syntax suggars for object-oriented programming
 There are some additional bonus syntax suggars as shown below:
 
 The constructor of the above class Vector:
 
-`` 
+```
 constructor (x, y, z) {
 _x=x 
 _y = y 
 _z = z
 }
 ```
+
 Can be shortened as:
 
 ```
@@ -390,7 +404,7 @@ print("This is always executed, whether or not something bad effectively happene
 }
 ```
 
-The *with* construct is also available as a shortcut for a common pattern:
+The *with* construct is also available as a shortcut for the common pattern of a resource that nees to be closed whatever happens:
 
 ```
 with expression as variable {
@@ -409,3 +423,5 @@ finally {
 variable.close
 }
 ```
+
+Except that the *variable* is no longer available after the closing brace. An optional catch block is allowed, where the variable is still available.
