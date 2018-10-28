@@ -1,0 +1,10 @@
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+*.txt
+*.tmp
+*.zip
+*.7z
+obj/
