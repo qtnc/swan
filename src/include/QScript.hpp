@@ -76,6 +76,11 @@ if (finish<begin) finish=begin;
 }
 };
 
+struct Buffer {
+const void* data;
+size_t length;
+};
+
 struct Fiber {
 
 Fiber () = default;
@@ -89,6 +94,7 @@ virtual bool isBool (int stackIndex) = 0;
 virtual bool isNum (int stackIndex) = 0;
 virtual bool isString (int stackIndex) = 0;
 virtual bool isRange (int stackIndex) = 0;
+virtual bool isBuffer (int stackIndex) = 0;
 virtual bool isNull (int stackIndex) = 0;
 
 virtual double getNum (int stackIndex) = 0;
@@ -96,12 +102,14 @@ virtual bool getBool (int stackIndex) = 0;
 virtual std::string getString (int stackIndex) = 0;
 virtual const char* getCString (int stackIndex) = 0;
 virtual const Range& getRange (int stackIndex) = 0;
+virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
 virtual void* getUserPointer (int stackIndex) = 0;
 
 virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
 virtual void setString (int stackIndex, const std::string& value) = 0;
 virtual void setCString (int stackIndex, const char* value) = 0;
+virtual void setBuffer (int stackIndex, const Buffer& value) = 0;
 virtual void setRange (int stackIndex, const Range& value) = 0;
 virtual void setNull (int stackIndex) = 0;
 virtual void* setNewUserPointer (int stackIndex, size_t classId) = 0;
@@ -110,6 +118,7 @@ virtual void pushNum (double value) = 0;
 virtual void pushBool (bool value) = 0;
 virtual void pushString (const std::string& value) = 0;
 virtual void pushCString (const char* value) = 0;
+virtual void pushBuffer (const Buffer& value) = 0;
 virtual void pushRange (const Range& value) = 0;
 virtual void pushNull () = 0;
 virtual void pushNativeFunction (NativeFunction f) = 0;
@@ -127,6 +136,12 @@ virtual void loadGlobal (const std::string& name) = 0;
 virtual void storeMethod (const std::string& name) = 0;
 virtual void storeStaticMethod (const std::string& name) = 0;
 virtual void storeDestructor ( void(*)(void*) ) = 0;
+
+template<class T> inline const T* getBuffer (int stackIndex, int* length = nullptr) {
+const T* re = reinterpret_cast<const T*>(getBufferV(stackIndex, length));
+if (length) *length /= sizeof(T);
+return re;
+}
 
 template<class T> inline void pushNewClass (const std::string& name, int nParents=0) { 
 pushNewForeignClass(name, typeid(T).hash_code(), sizeof(T), nParents); 
@@ -181,6 +196,7 @@ struct VM {
 typedef std::function<std::string(const std::string&, const std::string&)> PathResolverFn;
 typedef std::function<std::string(const std::string&)> FileLoaderFn;
 typedef std::function<void(const CompilationMessage&)> CompilationMessageFn;
+typedef std::function<std::string(const char*, const char*)> EncodingConversionFn;
 
 enum Option {
 VAR_DECL_MODE = 0, // Variable declaration mode

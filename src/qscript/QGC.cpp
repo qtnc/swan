@@ -156,7 +156,7 @@ unmark(*it);
 //println("%d allocated objects found", count);
 
 vector<QObject*> roots = { 
-boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, tupleClass,
+boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, tupleClass,
 regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
 QFiber::curFiber
 };

@@ -310,6 +310,7 @@ QVM& vm;
 FiberState state;
 
 inline void returnValue (QV value) { stack.at(callFrames.back().stackBase) = value; }
+inline void returnValue (bool value) { stack.at(callFrames.back().stackBase) = value; }
 inline void returnValue (const std::string& s) { returnValue(QV(vm,s)); }
 inline returnValue (QString* s) { returnValue(QV(s, QV_TAG_STRING)); }
 
@@ -323,6 +324,7 @@ virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
 virtual inline bool isString (int i) final override { return at(i).isString(); }
 virtual inline bool isRange (int i) final override;
+virtual inline bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }
@@ -331,6 +333,7 @@ virtual inline bool getBool (int i) final override { return at(i).asBool(); }
 virtual inline std::string getString (int i) final override { return at(i).asString(); }
 virtual inline const char* getCString (int i) final override { return at(i).asCString(); }
 virtual inline const QS::Range& getRange (int i) final override { return at(i).asRange(); }
+virtual const void* getBufferV (int i, int* length = nullptr) final override;
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
 
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
@@ -341,6 +344,7 @@ virtual inline void setNum (int i, double d) final override { at(i).d = d; }
 virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
 virtual inline void setString  (int i, const std::string& s) final override;
 virtual inline void setCString  (int i, const char* s) final override;
+virtual inline void setBuffer  (int i, const QS::Buffer& b) final override;
 virtual void setRange  (int i, const QS::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV(); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
@@ -351,6 +355,7 @@ virtual inline void pushNum (double d) final override { stack.push_back(d); }
 virtual inline void pushBool  (bool b) final override { stack.push_back(b); }
 virtual inline void pushString (const std::string& s) final override;
 virtual inline void pushCString (const char* s) final override;
+virtual inline void pushBuffer  (const QS::Buffer& b) final override;
 virtual void pushRange (const QS::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV()); }
 virtual inline void pushNativeFunction (QS::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
@@ -422,6 +427,8 @@ virtual ~BoundFunction () = default;
 };
 
 struct QVM: QS::VM  {
+static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters, bufferToStringConverters;
+
 std::vector<std::string> methodSymbols, globalSymbols;
 std::vector<QV> globalVariables;
 std::unordered_map<std::string,QV> imports;
@@ -430,8 +437,8 @@ PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 QObject* firstGCObject;
-QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
-QClass *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
+QClass *boolClass, *bufferClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
+QClass *bufferMetaClass, *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
 QClass *regexClass, *regexMatchResultClass, *regexMetaClass, *regexIteratorClass, *regexTokenIteratorClass;
 uint8_t varDeclMode = Option::VAR_STRICT;
 

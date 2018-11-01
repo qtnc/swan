@@ -11,7 +11,7 @@
 #define FNV_OFFSET 0x811c9dc5
 #define FNV_PRIME 16777619
 
-size_t hashBytes (const char* start, const char* end);
+size_t hashBytes (const uint8_t* start, const uint8_t* end);
 void appendToString (QFiber& f, QV x, std::string& out);
 
 inline bool isDigit (uint32_t c) {
@@ -69,6 +69,18 @@ bool operator() (const QV& a) const;
 
 struct QVLess {
 bool operator() (const QV& a, const QV& b) const;
+};
+
+struct QBuffer: QSequence {
+uint32_t length;
+uint8_t data[];
+static QBuffer* create (QVM& vm, const void* buf, int length);
+template <class T> static inline QBuffer* create (QVM& vm, const T* start, const T* end) { return create(vm, start, (end-start)*sizeof(T)); }
+static QBuffer* create (QBuffer*);
+QBuffer (QVM& vm, uint32_t len);
+inline uint8_t* begin () { return data; }
+inline uint8_t* end () { return data+length; }
+virtual ~QBuffer () = default;
 };
 
 struct QSet: QSequence {

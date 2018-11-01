@@ -3,7 +3,7 @@
 #include<vector>
 using namespace std;
 
-size_t hashBytes (const char* c, const char* end) {
+size_t hashBytes (const uint8_t* c, const uint8_t* end) {
 size_t re = FNV_OFFSET;
 for (; c<end; ++c) re = (re^*c) * FNV_PRIME;
 return re;
@@ -31,6 +31,21 @@ std::string QV::asString () const { return asObject<QString>()->asString(); }
 const char* QV::asCString () const { return asObject<QString>()->begin(); }
 const QS::Range& QV::asRange () const { return *asObject<QRange>(); }
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
+bool QFiber::isBuffer (int i) { return at(i).isInstanceOf(vm.bufferClass); }
+
+const void* QFiber::getBufferV (int i, int* length) {
+QBuffer& b = getObject<QBuffer>(i);
+if (length) *length = b.length;
+return b.data;
+}
+
+void QFiber::pushBuffer  (const QS::Buffer& b) {
+push(QBuffer::create(vm, b.data, b.length));
+}
+
+void QFiber::setBuffer  (int i, const QS::Buffer& b) {
+at(i) = QBuffer::create(vm, b.data, b.length);
+}
 
 void QFiber::pushRange (const QS::Range& r) {
 push(new QRange(vm, r));
@@ -131,6 +146,22 @@ return s;
 QString* QString::create (QString* s) { 
 return create(s->type->vm, s->data, s->length); 
 }
+
+QBuffer::QBuffer (QVM& vm, uint32_t len): 
+QSequence(vm.bufferClass), length(len) {}
+
+QBuffer* QBuffer::create (QVM& vm, const void* str, int len) {
+QBuffer* s = newVLS<QBuffer, uint8_t>(len+4, vm, len);
+if (len>0) memcpy(s->data, str, len);
+*reinterpret_cast<uint32_t*>(&s->data[len]) = 0;
+return s;
+}
+
+QBuffer* QBuffer::create (QBuffer* s) { 
+return create(s->type->vm, s->data, s->length); 
+}
+
+
 
 QTuple* QTuple::create (QVM& vm, uint32_t length, const QV* data) {
 QTuple* tuple = newVLS<QTuple, QV>(length, vm, length);

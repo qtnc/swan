@@ -487,7 +487,7 @@ f.returnValue(i>=length? QV() : QV(static_cast<double>(i)));
 
 static void stringHashCode (QFiber& f) {
 QString& s = f.getObject<QString>(0);
-size_t re = hashBytes(s.begin(), s.end());
+size_t re = hashBytes(reinterpret_cast<uint8_t*>(s.begin()), reinterpret_cast<uint8_t*>(s.end()));
 f.returnValue(static_cast<double>(re));
 }
 
@@ -557,6 +557,7 @@ int start=0, end=0, length = utf8::distance(s.data, s.data+s.length);
 if (f.isNum(1)) {
 start = f.getNum(1);
 if (start<0) start+=length;
+if (start>=length) { f.returnValue(QV()); return; }
 end = start +1;
 }
 else if (f.isRange(1)) {
@@ -611,13 +612,13 @@ f.returnValue(it!=s->end());
 
 static void stringStartsWith (QFiber& f) {
 QString *s = f.at(0).asObject<QString>(), *needle = f.ensureString(1);
-if (needle->length>s->length) f.returnValue(false);
+if (needle->length>s->length) { f.returnValue(false); return; }
 else f.returnValue(equal(needle->begin(), needle->end(), s->begin()));
 }
 
 static void stringEndsWith (QFiber& f) {
 QString *s = f.at(0).asObject<QString>(), *needle = f.ensureString(1);
-if (needle->length>s->length) f.returnValue(false);
+if (needle->length>s->length) { f.returnValue(false); return; }
 else f.returnValue(equal(needle->begin(), needle->end(), s->end() - needle->length));
 }
 
@@ -706,6 +707,164 @@ re = (re^h) * FNV_PRIME;
 }
 f.returnValue(static_cast<double>(re));
 }
+
+static void bufferIterate (QFiber& f) {
+QBuffer& b = f.getObject<QBuffer>(0);
+int i = 1 + (f.isNull(1)? -1 : f.getNum(1));
+f.returnValue(i>=b.length? QV() : QV(static_cast<double>(i)));
+}
+
+static void bufferHashCode (QFiber& f) {
+QBuffer& b = f.getObject<QBuffer>(0);
+size_t re = hashBytes(b.begin(), b.end());
+f.returnValue(static_cast<double>(re));
+}
+
+static void bufferPlus (QFiber& f) {
+QBuffer &first = f.getObject<QBuffer>(0), &second = f.getObject<QBuffer>(1);
+uint32_t length = first.length + second.length;
+QBuffer* result = newVLS<QBuffer, uint8_t>(length+1, f.vm, length);
+memcpy(result->data, first.data, first.length);
+memcpy(result->data + first.length, second.data, second.length);
+result->data[length] = 0;
+f.returnValue(result);
+}
+
+static void bufferFromSequence (QFiber& f) {
+vector<QV> values;
+for (int i=1, l=f.getArgCount(); i<l; i++) {
+if (f.isNum(i) || f.isBuffer(i)) values.push_back(f.at(i));
+else f.getObject<QSequence>(i).insertIntoVector(f, values, values.size());
+}
+string re;
+auto out = back_inserter(re);
+for (auto& val: values) {
+if (val.isInstanceOf(f.vm.bufferClass)) {
+QBuffer& b = *val.asObject<QBuffer>();
+re.insert(re.end(), reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end()));
+}
+else if (val.isNum()) *out++ = static_cast<char>(val.asNum());
+}
+QBuffer* b = QBuffer::create(f.vm, reinterpret_cast<const uint8_t*>(re.data()), re.size());
+f.returnValue(b);
+}
+
+static void bufferSubscript (QFiber& f) {
+QBuffer& b = f.getObject<QBuffer>(0);
+if (f.isNum(1)) {
+int pos = f.getNum(1);
+if (pos<0) pos+=b.length;
+f.returnValue(pos<0||pos>=b.length? QV() : QV(static_cast<double>(b.data[pos])));
+}
+else if (f.isRange(1)) {
+int start=0, end=0;
+f.getRange(1).makeBounds(b.length, start, end);
+f.returnValue(QBuffer::create(f.vm, &b.data[start], &b.data[end]));
+}}
+
+static void bufferFind (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+int start = f.getOptionalNum(2, 0);
+if (start<0) start += b.length;
+auto endPos = b.end(), startPos = b.begin()+start;
+auto re = search(startPos, endPos, needle.begin(), needle.end());
+if (re==endPos) f.returnValue(-1);
+else f.returnValue(static_cast<double>(re - b.begin()));
+}
+
+static void bufferRfind (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+int end = f.getOptionalNum(2, b.length);
+if (end<0) end += b.length;
+auto startPos = b.begin(), endPos = b.begin()+end;
+auto re = find_end(startPos, endPos, needle.begin(), needle.end());
+if (re==endPos) f.returnValue(-1);
+else f.returnValue(static_cast<double>(re - b.begin()));
+}
+
+static void bufferFindFirstOf (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+int start = f.getOptionalNum(2, 0);
+if (start<0) start += b.length;
+auto endPos = b.end(), startPos = b.begin()+start;
+auto re = find_first_of(startPos, endPos, needle.begin(), needle.end());
+if (re==endPos) f.returnValue(-1);
+else f.returnValue(static_cast<double>(re - b.begin()));
+}
+
+static void bufferIn (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+auto it = search(b.begin(), b.end(), needle.begin(), needle.end());
+f.returnValue(it!=b.end());
+}
+
+static void bufferStartsWith (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+if (needle.length>b.length) { f.returnValue(false); return; }
+else f.returnValue(equal(needle.begin(), needle.end(), b.begin()));
+}
+
+static void bufferEndsWith (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
+if (needle.length>b.length) { f.returnValue(false); return; }
+else f.returnValue(equal(needle.begin(), needle.end(), b.end() - needle.length));
+}
+
+static string normalizeEncodingName (const string& name) {
+string enc = boost::to_lower_copy(name);
+auto it = remove_if(enc.begin(), enc.end(), boost::is_any_of("-_"));
+enc.erase(it, enc.end());
+return enc;
+}
+
+static QString* convertBufferToString (QBuffer& b, const string& encoding) {
+auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(encoding));
+if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", encoding, "UTF-8"));
+string re = (it->second)( reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end()) );
+return QString::create(b.type->vm, re);
+}
+
+static QBuffer* convertStringToBuffer (QString& s, const string& encoding) {
+auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(encoding));
+if (it==QVM::stringToBufferConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", "UTF-8", encoding));
+string re = (it->second)( s.begin(), s.end() );
+return QBuffer::create(s.type->vm, &re[0], re.size());
+}
+
+static void bufferInstantiate (QFiber& f) {
+QString* s = f.ensureString(1);
+string enc = f.getOptionalString(2, "UTF-8");
+f.returnValue(convertStringToBuffer(*s, enc));
+}
+
+static void stringInstantiate (QFiber& f) {
+if (f.isBuffer(1)) {
+QBuffer& b = f.getObject<QBuffer>(1);
+QString* enc = f.ensureString(2);
+f.returnValue(convertBufferToString(b, enc->asString()));
+}
+//todo
+}
+
+static void stringToBuffer (QFiber& f) {
+QString &s = f.getObject<QString>(0), *enc = f.ensureString(1);
+f.returnValue(convertStringToBuffer(s, enc->asString()));
+}
+
+static void bufferToString (QFiber& f) {
+QBuffer& b = f.getObject<QBuffer>(0);
+if (f.getArgCount()>=2) {
+QString* enc = f.ensureString(1);
+f.returnValue(convertBufferToString(b, enc->asString()));
+} 
+else {
+string out = "Buffer:";
+for (uint8_t x: b) {
+if (x<32 || x>=127) out += format("%%%0$2X", static_cast<int>(x));
+else out += static_cast<char>(x);
+}
+f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
+}}
 
 static void regexInstantiate (QFiber& f) {
 QString &pattern = f.getObject<QString>(1);
@@ -906,6 +1065,7 @@ messageReceiver(defaultMessageReceiver)
 {
 objectClass = QClass::create(*this, nullptr, nullptr, "Object");
 classClass = QClass::create(*this, nullptr, objectClass, "Class");
+bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass");
 fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass");
 functionMetaClass = QClass::create(*this, classClass, classClass, "FunctionMetaClass");
 listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass");
@@ -919,6 +1079,7 @@ tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass")
 boolClass = QClass::create(*this, classClass, objectClass, "Bool");
 functionClass = QClass::create(*this, functionMetaClass, objectClass, "Function");
 sequenceClass = QClass::create(*this, classClass, objectClass, "Sequence");
+bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer");
 fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber");
 listClass = QClass::create(*this, listMetaClass, sequenceClass, "List");
 mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map");
@@ -1083,6 +1244,22 @@ BIND_F(search, stringSearch)
 BIND_F(split, stringSplit)
 BIND_F(replace, stringReplace)
 BIND_F(findAll, stringFindAll)
+BIND_F(toBuffer, stringToBuffer)
+;
+
+bufferClass
+->copyParentMethods()
+BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QBuffer>(0).length)); })
+BIND_F([], bufferSubscript)
+BIND_F(+, bufferPlus)
+BIND_F(in, bufferIn)
+BIND_F(iterate, bufferIterate)
+BIND_F(indexOf, bufferFind)
+BIND_F(lastIndexOf, bufferRfind)
+BIND_F(findFirstOf, bufferFindFirstOf)
+BIND_F(startsWith, bufferStartsWith)
+BIND_F(endsWith, bufferEndsWith)
+BIND_F(toString, bufferToString)
 ;
 
 listClass
@@ -1159,7 +1336,14 @@ BIND_F( (), numInstantiate)
 
 stringMetaClass
 ->copyParentMethods()
+BIND_F( (), stringInstantiate)
 BIND_F( of, stringFromSequence)
+;
+
+bufferMetaClass
+->copyParentMethods()
+BIND_F( (), bufferInstantiate)
+BIND_F(of, bufferFromSequence)
 ;
 
 listMetaClass
@@ -1205,7 +1389,7 @@ functionMetaClass
 ->copyParentMethods()
 ;
 
-QClass* globalClasses[] = { boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, regexClass, sequenceClass, setClass, stringClass, tupleClass };
+QClass* globalClasses[] = { boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, regexClass, sequenceClass, setClass, stringClass, tupleClass };
 for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 
 bindGlobal("import", import_);

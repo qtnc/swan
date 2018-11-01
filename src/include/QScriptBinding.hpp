@@ -52,6 +52,13 @@ static inline const char* get (QS::Fiber& f, int idx) {
 return f.getCString(idx);
 }};
 
+template<> struct QSGetSlot<QS::Buffer> {
+static inline Buffer get (QS::Fiber& f, int idx) { 
+int length = 0;
+const void* ptr = f.getBufferV(idx, &length);
+return { ptr, length };
+}};
+
 template<> struct QSGetSlot<QS::Range> {
 static inline const QS::Range& get (QS::Fiber& f, int idx) { 
 return f.getRange(idx);
@@ -108,6 +115,11 @@ f.setString(idx, value);
 template<> struct QSSetSlot<std::string> {
 static inline void set (QS::Fiber& f, int idx, const std::string& value) { 
 f.setString(idx, value);
+}};
+
+template<> struct QSSetSlot<QS::Buffer> {
+static inline void set (QS::Fiber& f, int idx, const QS::Buffer& value) { 
+f.setBuffer(idx, value);
 }};
 
 template<> struct QSSetSlot<const QS::Range&> {
