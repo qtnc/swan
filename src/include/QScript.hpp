@@ -76,11 +76,6 @@ if (finish<begin) finish=begin;
 }
 };
 
-struct Buffer {
-const void* data;
-size_t length;
-};
-
 struct Fiber {
 
 Fiber () = default;
@@ -109,7 +104,7 @@ virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
 virtual void setString (int stackIndex, const std::string& value) = 0;
 virtual void setCString (int stackIndex, const char* value) = 0;
-virtual void setBuffer (int stackIndex, const Buffer& value) = 0;
+virtual void setBuffer (int stackIndex, const void* data, int length) = 0;
 virtual void setRange (int stackIndex, const Range& value) = 0;
 virtual void setNull (int stackIndex) = 0;
 virtual void* setNewUserPointer (int stackIndex, size_t classId) = 0;
@@ -118,13 +113,15 @@ virtual void pushNum (double value) = 0;
 virtual void pushBool (bool value) = 0;
 virtual void pushString (const std::string& value) = 0;
 virtual void pushCString (const char* value) = 0;
-virtual void pushBuffer (const Buffer& value) = 0;
+virtual void pushBuffer (const void* data, int length) = 0;
 virtual void pushRange (const Range& value) = 0;
 virtual void pushNull () = 0;
 virtual void pushNativeFunction (NativeFunction f) = 0;
 virtual void pushNewForeignClass (const std::string& name, size_t classId, int nUserBytes, int nParents=0) = 0;
 virtual void* pushNewUserPointer (size_t classId) = 0;
+virtual void pushCopy (int stackIndex = -1) = 0;
 virtual void pop () = 0;
+
 
 virtual void loadString (const std::string& source, const std::string& name="") = 0;
 virtual void loadFile (const std::string& filename) = 0;
@@ -141,6 +138,10 @@ template<class T> inline const T* getBuffer (int stackIndex, int* length = nullp
 const T* re = reinterpret_cast<const T*>(getBufferV(stackIndex, length));
 if (length) *length /= sizeof(T);
 return re;
+}
+
+template<class T> T& getUserObject (int stackIndex) {
+return *static_cast<T*>(getUserPointer(stackIndex));
 }
 
 template<class T> inline void pushNewClass (const std::string& name, int nParents=0) { 
@@ -222,6 +223,10 @@ virtual void garbageCollect () = 0;
 
 static VM* export createVM ();
 static Fiber* export getActiveFiber ();
+static EncodingConversionFn export getEncoder (const std::string& name);
+static EncodingConversionFn export getDecoder (const std::string& name);
+static void export registerEncoder (const std::string& name, const EncodingConversionFn& func);
+static void export registerDecoder (const std::string& name, const EncodingConversionFn& func);
 };
 
 } // namespace QS

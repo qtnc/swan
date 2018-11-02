@@ -158,10 +158,12 @@ inline QV(): i(QV_NULL) {}
 inline explicit QV(uint64_t x): i(x) {}
 inline QV(double x): d(x) {}
 inline QV(int x): d(x) {}
+inline QV(uint32_t  x): d(x) {}
 inline QV(bool b): i(b? QV_TRUE : QV_FALSE) {}
 inline QV (void* x, uint64_t tag = QV_TAG_DATA): i( reinterpret_cast<uintptr_t>(x) | tag) {}
 inline QV (QObject* x, uint64_t tag = QV_TAG_DATA): i( reinterpret_cast<uintptr_t>(x) | tag) {}
 inline QV (QNativeFunction f): i(reinterpret_cast<uintptr_t>(f) | QV_TAG_NATIVE_FUNCTION) {}
+inline QV (struct QString* s): QV(s, QV_TAG_STRING) {}
 QV (QVM& vm, const std::string& s);
 QV (QVM& vm, const char* s, int length=-1);
 
@@ -310,9 +312,7 @@ QVM& vm;
 FiberState state;
 
 inline void returnValue (QV value) { stack.at(callFrames.back().stackBase) = value; }
-inline void returnValue (bool value) { stack.at(callFrames.back().stackBase) = value; }
 inline void returnValue (const std::string& s) { returnValue(QV(vm,s)); }
-inline returnValue (QString* s) { returnValue(QV(s, QV_TAG_STRING)); }
 
 inline QV& at (int i) {
 return i>=0? stack.at(callFrames.back().stackBase+i) : *(stack.end() +i);
@@ -344,7 +344,7 @@ virtual inline void setNum (int i, double d) final override { at(i).d = d; }
 virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
 virtual inline void setString  (int i, const std::string& s) final override;
 virtual inline void setCString  (int i, const char* s) final override;
-virtual inline void setBuffer  (int i, const QS::Buffer& b) final override;
+virtual inline void setBuffer  (int i, const void* data, int length) final override;
 virtual void setRange  (int i, const QS::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV(); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
@@ -355,12 +355,13 @@ virtual inline void pushNum (double d) final override { stack.push_back(d); }
 virtual inline void pushBool  (bool b) final override { stack.push_back(b); }
 virtual inline void pushString (const std::string& s) final override;
 virtual inline void pushCString (const char* s) final override;
-virtual inline void pushBuffer  (const QS::Buffer& b) final override;
+virtual inline void pushBuffer  (const void* data, int length) final override;
 virtual void pushRange (const QS::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV()); }
 virtual inline void pushNativeFunction (QS::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;
+virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return at(-1); }
 inline void push (const QV& x) { stack.push_back(x); }
@@ -505,8 +506,6 @@ value = f.at(-1);
 f.pop();
 func(value);
 }}
-
-std::string nativeToUTF8 (const std::string& s);
 
 struct OpCodeInfo {
 int stackEffect, nArgs, argFormat;

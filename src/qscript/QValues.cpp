@@ -39,12 +39,12 @@ if (length) *length = b.length;
 return b.data;
 }
 
-void QFiber::pushBuffer  (const QS::Buffer& b) {
-push(QBuffer::create(vm, b.data, b.length));
+void QFiber::pushBuffer  (const void* data, int length) {
+push(QBuffer::create(vm, data, length));
 }
 
-void QFiber::setBuffer  (int i, const QS::Buffer& b) {
-at(i) = QBuffer::create(vm, b.data, b.length);
+void QFiber::setBuffer  (int i, const void* data, int length) {
+at(i) = QBuffer::create(vm, data, length);
 }
 
 void QFiber::pushRange (const QS::Range& r) {

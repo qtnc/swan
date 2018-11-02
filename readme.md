@@ -35,7 +35,7 @@ The default standard library of the language don't provide any access to screen,
 The host C++ application is responsible for giving its own controlled API to the outside world if it wants to.
 This makes QScript ideal for embedding into games or other applications wanting to provide user scripting capabilities.
 
-*TODO* [>> More  details about embedding API](docs/embedding.md)
+[>> More  details about embedding API](docs/embedding.md)
 
 # Running QScript standalone
 You can also write standalone programs in QScript and run them with the CLI.

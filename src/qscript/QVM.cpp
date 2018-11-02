@@ -368,14 +368,14 @@ void* QFiber::pushNewUserPointer (size_t id) {
 QForeignClass& cls = *vm.foreignClassIds[id];
 QForeignInstance* instance = static_cast<QForeignInstance*>(cls.instantiate());
 push(instance);
-return instance->userData;
+return &instance->userData[0];
 }
 
 void* QFiber::setNewUserPointer (int idx, size_t id) {
 QForeignClass& cls = *vm.foreignClassIds[id];
 QForeignInstance* instance = static_cast<QForeignInstance*>(cls.instantiate());
 at(idx) = instance;
-return instance->userData;
+return &instance->userData[0];
 }
 
 int QVM::getOption (QVM::Option opt) {

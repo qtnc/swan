@@ -38,6 +38,7 @@ f.returnValue(F(f.getNum(0)));
 }
 
 double nativeClock ();
+void initPlatformEncodings ();
 
 static void doNothing (QFiber& f) { }
 
@@ -612,13 +613,13 @@ f.returnValue(it!=s->end());
 
 static void stringStartsWith (QFiber& f) {
 QString *s = f.at(0).asObject<QString>(), *needle = f.ensureString(1);
-if (needle->length>s->length) { f.returnValue(false); return; }
+if (needle->length>s->length) { f.returnValue(QV(false)); return; }
 else f.returnValue(equal(needle->begin(), needle->end(), s->begin()));
 }
 
 static void stringEndsWith (QFiber& f) {
 QString *s = f.at(0).asObject<QString>(), *needle = f.ensureString(1);
-if (needle->length>s->length) { f.returnValue(false); return; }
+if (needle->length>s->length) { f.returnValue(QV(false)); return; }
 else f.returnValue(equal(needle->begin(), needle->end(), s->end() - needle->length));
 }
 
@@ -800,13 +801,13 @@ f.returnValue(it!=b.end());
 
 static void bufferStartsWith (QFiber& f) {
 QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
-if (needle.length>b.length) { f.returnValue(false); return; }
+if (needle.length>b.length) { f.returnValue(QV(false)); return; }
 else f.returnValue(equal(needle.begin(), needle.end(), b.begin()));
 }
 
 static void bufferEndsWith (QFiber& f) {
 QBuffer &b = f.getObject<QBuffer>(0), &needle = f.getObject<QBuffer>(1);
-if (needle.length>b.length) { f.returnValue(false); return; }
+if (needle.length>b.length) { f.returnValue(QV(false)); return; }
 else f.returnValue(equal(needle.begin(), needle.end(), b.end() - needle.length));
 }
 
@@ -815,6 +816,22 @@ string enc = boost::to_lower_copy(name);
 auto it = remove_if(enc.begin(), enc.end(), boost::is_any_of("-_"));
 enc.erase(it, enc.end());
 return enc;
+}
+
+QS::VM::EncodingConversionFn export QS::VM::getEncoder (const std::string& name) {
+return QVM::stringToBufferConverters[name];
+}
+
+QS::VM::EncodingConversionFn export QS::VM::getDecoder (const std::string& name) {
+return QVM::bufferToStringConverters[name];
+}
+
+void export QS::VM::registerEncoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
+QVM::stringToBufferConverters[name] = func;
+}
+
+void export QS::VM::registerDecoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
+QVM::bufferToStringConverters[name] = func;
 }
 
 static QString* convertBufferToString (QBuffer& b, const string& encoding) {
@@ -1107,7 +1124,7 @@ BIND_F(toString, objectToString)
 BIND_L(is, { f.returnValue(f.at(0).i == f.at(1).i); })
 BIND_L(==, { f.returnValue(f.at(0).i == f.at(1).i); })
 BIND_L(!=, { f.returnValue(f.at(0).i != f.at(1).i); })
-BIND_L(!, { f.returnValue(false); })
+BIND_L(!, { f.returnValue(QV(false)); })
 ;
 
 classClass
@@ -1134,7 +1151,7 @@ BIND_F(hashCode, objectHashCode)
 
 nullClass
 ->copyParentMethods()
-BIND_L(!, { f.returnValue(true); })
+BIND_L(!, { f.returnValue(QV(true)); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4)); })
 BIND_F(hashCode, objectHashCode)
 ;
@@ -1388,6 +1405,8 @@ BIND_F( (), fiberInstantiate)
 functionMetaClass
 ->copyParentMethods()
 ;
+
+initPlatformEncodings();
 
 QClass* globalClasses[] = { boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, regexClass, sequenceClass, setClass, stringClass, tupleClass };
 for (auto cls: globalClasses) bindGlobal(cls->name, cls);

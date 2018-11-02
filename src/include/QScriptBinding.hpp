@@ -1,78 +1,100 @@
 #ifndef ___QS_BINDING_HPP_1
 #define ___QS_BINDING_HPP_1
 #include "QScript.hpp"
-//#include "cpprintf.hpp"
+#include "cpprintf.hpp"
+#include<boost/optional.hpp> //todo: switch to C++17 and use std::optional
+using boost::optional;
 
 namespace QS {
 namespace Binding {
 
+template<class T> struct is_optional: std::false_type {};
+template<class T> struct is_optional<optional<T>>: std::true_type {};
+
 template<class T, class B = void> struct QSGetSlot: std::false_type {};
 
 template <class T> struct QSGetSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
+typedef T* returnType;
 static inline T* get (QS::Fiber& f, int idx) {
 return static_cast<T*>( f.getUserPointer(idx) );
 }};
 
 template <class T> struct QSGetSlot<T&, typename std::enable_if< std::is_class<T>::value>::type> {
+typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );
 }};
 
 template <class T> struct QSGetSlot<T, typename std::enable_if< std::is_class<T>::value>::type> {
+typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );
 }};
 
 template<> struct QSGetSlot<QS::Fiber&> {
+typedef QS::Fiber& returnType;
 static QS::Fiber& get (QS::Fiber& f, int unused) { return f; }
 };
 
 template<class T> struct QSGetSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
+typedef T returnType;
 static inline T get (QS::Fiber& f, int idx) { 
 return static_cast<T>(f.getNum(idx));
 }};
 
 template<> struct QSGetSlot<bool> {
+typedef bool returnType;
 static inline bool get (QS::Fiber& f, int idx) { 
 return f.getBool(idx);
 }};
 
 template<> struct QSGetSlot<std::nullptr_t> {
+typedef std::nullptr_t returnType;
 static inline std::nullptr_t get (QS::Fiber& f, int idx) { 
 return nullptr;
 }};
 
 template<> struct QSGetSlot<std::string> {
-static inline std::string get (QS::Fiber& f, int idx) { 
+typedef std::string returnType;
+static inline std::string get (QS::Fiber& f, int idx) {
+return f.getString(idx);
+}};
+
+template<> struct QSGetSlot<const std::string&> {
+typedef std::string returnType;
+static inline std::string get (QS::Fiber& f, int idx) {
 return f.getString(idx);
 }};
 
 template<> struct QSGetSlot<const char*> {
+typedef const char* returnType;
 static inline const char* get (QS::Fiber& f, int idx) { 
 return f.getCString(idx);
 }};
 
-template<> struct QSGetSlot<QS::Buffer> {
-static inline Buffer get (QS::Fiber& f, int idx) { 
-int length = 0;
-const void* ptr = f.getBufferV(idx, &length);
-return { ptr, length };
-}};
-
 template<> struct QSGetSlot<QS::Range> {
+typedef QS::Range& returnType;
 static inline const QS::Range& get (QS::Fiber& f, int idx) { 
 return f.getRange(idx);
 }};
 
+template<class T> struct QSGetSlot<optional<T>> {
+typedef optional<T> returnType;
+static inline optional<T> get (QS::Fiber& f, int idx) { 
+optional<T> re;
+if (f.getArgCount()>idx) re = QSGetSlot<T>::get(f, idx);
+return re;
+}};
+
 template<class T, class B = void> struct QSSetSlot: std::false_type {};
 
-template<class T> struct QSSetSlot<T&, typename std::enable_if< std::is_class<T>::value>::type> {
+template<class T> struct QSSetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
 static inline void set (QS::Fiber& f, int idx, const T& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
 new(ptr) T(value);
 }};
 
-template<class T> struct QSSetSlot<T&&, typename std::enable_if< std::is_class<T>::value>::type> {
+template<class T> struct QSSetSlot<T&&, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value>::type> {
 static inline void set (QS::Fiber& f, int idx, T&& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
 new(ptr) T(value);
@@ -86,7 +108,7 @@ void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
 new(ptr) T(*value);
 }}};
 
-template<class T> struct QSSetSlot<T, typename std::enable_if< std::is_class<T>::value>::type> {
+template<class T> struct QSSetSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value>::type> {
 static inline void set (QS::Fiber& f, int idx, const T& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
 new(ptr) T(value);
@@ -117,11 +139,6 @@ static inline void set (QS::Fiber& f, int idx, const std::string& value) {
 f.setString(idx, value);
 }};
 
-template<> struct QSSetSlot<QS::Buffer> {
-static inline void set (QS::Fiber& f, int idx, const QS::Buffer& value) { 
-f.setBuffer(idx, value);
-}};
-
 template<> struct QSSetSlot<const QS::Range&> {
 static inline void  set (QS::Fiber& f, int idx, const QS::Range& value) { 
 f.setRange(idx, value);
@@ -132,25 +149,31 @@ static inline void set (QS::Fiber& f, int idx, const QS::Range& value) {
 f.setRange(idx, value);
 }};
 
+template<class T> struct QSSetSlot<optional<T>> {
+static inline void set (QS::Fiber& f, int idx, const optional<T>& value) { 
+if (value) QSSetSlot<T>::set(f, idx, *value);
+else f.setNull(idx);
+}};
+
 template<int ...> struct sequence {};
 template<int N, int ...S> struct sequence_generator: sequence_generator<N-1, N-1, S...> {};
 template<int ...S> struct sequence_generator<0, S...>{ typedef sequence<S...> type; };
 
 template<int START, class... A> struct QSParamExtractor {
 template<int N, typename... Ts> using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;
-template<int... S> static inline std::tuple<A...> extract (sequence<S...> unused, QS::Fiber& f) {  return std::forward_as_tuple( extract1<S, NthTypeOf<S,A...>>(f)... );;  }
-template<int S, class E> static E extract1 (QS::Fiber& f) { return QSGetSlot<E>::get(f, S+START); }
+template<int... S> static inline std::tuple<typename QSGetSlot<A>::returnType...> extract (sequence<S...> unused, QS::Fiber& f) {  return std::forward_as_tuple( extract1<S, NthTypeOf<S,A...>>(f)... );  }
+template<int S, class E> static typename QSGetSlot<E>::returnType  extract1 (QS::Fiber& f) { return QSGetSlot<E>::get(f, S+START); }
 };
 
 template <class UNUSED> struct QSWrapper: std::false_type { };
 
 template<class T, class R, class... A> struct QSWrapper< R (T::*)(A...) > {
 typedef R(T::*Func)(A...);
-template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<A...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
+template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 T* obj = QSGetSlot<T*>::get(f, 0);
-std::tuple<A...> params = QSParamExtractor<1, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<1, A...>::extract(seq, f);
 R result = callNative(seq, obj, func, params);
 QSSetSlot<R>::set(f, 0, result);
 }
@@ -158,21 +181,21 @@ QSSetSlot<R>::set(f, 0, result);
 
 template<class T, class... A> struct QSWrapper< void(T::*)(A...) > {
 typedef void(T::*Func)(A...);
-template<int... S> static void callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<A...>& params) {  (obj->*func)( std::get<S>(params)... );  }
+template<int... S> static void callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  (obj->*func)( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 T* obj = QSGetSlot<T*>::get(f, 0);
-std::tuple<A...> params = QSParamExtractor<1, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<1, A...>::extract(seq, f);
 callNative(seq, obj, func, params);
 }
 };
 
 template<class R, class... A> struct QSWrapper< R(A...) > {
 typedef R(*Func)(A...);
-template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<A...>& params) {  return func( std::get<S>(params)... );  }
+template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
-std::tuple<A...> params = QSParamExtractor<0, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<0, A...>::extract(seq, f);
 R result = callNative(seq, func, params);
 QSSetSlot<R>::set(f, 0, result);
 }
@@ -180,10 +203,10 @@ QSSetSlot<R>::set(f, 0, result);
 
 template<class... A> struct QSWrapper< void(A...) > {
 typedef void(*Func)(A...);
-template<int... S> static void callNative (sequence<S...> unused, Func func, const std::tuple<A...>& params) {  func( std::get<S>(params)... );  }
+template<int... S> static void callNative (sequence<S...> unused, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
-std::tuple<A...> params = QSParamExtractor<0, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<0, A...>::extract(seq, f);
 callNative(seq, func, params);
 }
 };
@@ -192,10 +215,10 @@ template <class UNUSED> struct QSStaticWrapper: std::false_type { };
 
 template<class R, class... A> struct QSStaticWrapper< R(A...) > {
 typedef R(*Func)(A...);
-template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<A...>& params) {  return func( std::get<S>(params)... );  }
+template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
-std::tuple<A...> params = QSParamExtractor<1, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<1, A...>::extract(seq, f);
 R result = callNative(seq, func, params);
 QSSetSlot<R>::set(f, 0, result);
 }
@@ -203,10 +226,10 @@ QSSetSlot<R>::set(f, 0, result);
 
 template<class... A> struct QSStaticWrapper< void(A...) > {
 typedef void(*Func)(A...);
-template<int... S> static void callNative (sequence<S...> unused, Func func, const std::tuple<A...>& params) {  func( std::get<S>(params)... );  }
+template<int... S> static void callNative (sequence<S...> unused, Func func, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
-std::tuple<A...> params = QSParamExtractor<1, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<1, A...>::extract(seq, f);
 callNative(seq, func, params);
 }
 };
@@ -214,10 +237,10 @@ callNative(seq, func, params);
 
 
 template<class T, class... A> struct QSConstructorWrapper {
-template<int... S> static void callConstructor (sequence<S...> unused, void* ptr, const std::tuple<A...>& params) {  new(ptr) T( std::get<S>(params)... );  }
+template<int... S> static void callConstructor (sequence<S...> unused, void* ptr, const std::tuple<typename QSGetSlot<A>::returnType...>& params) {  new(ptr) T( std::get<S>(params)... );  }
 static void constructor (QS::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
-std::tuple<A...> params = QSParamExtractor<1, A...>::extract(seq, f);
+std::tuple<typename QSGetSlot<A>::returnType...> params = QSParamExtractor<1, A...>::extract(seq, f);
 void* ptr = f.getUserPointer(0);
 callConstructor(seq, ptr, params);
 }};
