@@ -7,7 +7,7 @@
 #include<cstring>
 using namespace std;
 
-void registerCLIEnv (QS::Fiber& f);
+void registerIO  (QS::Fiber& f);
 
 void printIntro () {
 println("QScript v0");
@@ -82,7 +82,7 @@ try {
 QS::VM& vm = *QS::VM::createVM();
 QS::Fiber& fiber = *vm.createFiber();
 
-registerCLIEnv(fiber);
+registerIO(fiber);
 
 if (!expression.empty()) {
 fiber.loadString(expression, "<cmdLine>");
