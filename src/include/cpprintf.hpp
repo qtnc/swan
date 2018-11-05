@@ -10,7 +10,7 @@
 #include<sstream>
 using namespace boost::type_erasure;
 
-typedef any<boost::mpl::vector<boost::type_erasure::typeid_<>, ostreamable<>>, const _self&> any_ostreamable;
+typedef any<boost::mpl::vector<boost::type_erasure::typeid_<>, ostreamable<>, copy_constructible<>>, _self> any_ostreamable;
 typedef std::vector<any_ostreamable> any_ostreamable_vector;
 
 void print (std::ostream& out, const char* fmt, const any_ostreamable_vector& args);

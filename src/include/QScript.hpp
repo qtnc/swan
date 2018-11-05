@@ -197,7 +197,7 @@ struct VM {
 typedef std::function<std::string(const std::string&, const std::string&)> PathResolverFn;
 typedef std::function<std::string(const std::string&)> FileLoaderFn;
 typedef std::function<void(const CompilationMessage&)> CompilationMessageFn;
-typedef std::function<std::string(const char*, const char*)> EncodingConversionFn;
+typedef std::function<void(std::istream& in, std::ostream& out)> EncodingConversionFn;
 
 enum Option {
 VAR_DECL_MODE = 0, // Variable declaration mode

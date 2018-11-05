@@ -19,13 +19,13 @@ static inline T* get (QS::Fiber& f, int idx) {
 return static_cast<T*>( f.getUserPointer(idx) );
 }};
 
-template <class T> struct QSGetSlot<T&, typename std::enable_if< std::is_class<T>::value>::type> {
+template <class T> struct QSGetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
 typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );
 }};
 
-template <class T> struct QSGetSlot<T, typename std::enable_if< std::is_class<T>::value>::type> {
+template <class T> struct QSGetSlot<T, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
 typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );

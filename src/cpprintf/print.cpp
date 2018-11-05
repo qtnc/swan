@@ -33,21 +33,21 @@ if (*fmt>='0' && *fmt<='9') out << std::setprecision( strtoul(fmt, const_cast<ch
 else if (*fmt=='*') { fmt++; out << std::setprecision(any_cast<int>(args.at(index++))); }
 else { --fmt; goto end; }
 break;
-case 'd': case 'i': case 'u': out << std::dec; break;
-case 'o': out << std::oct; break;
-case 'p': case 'x': out << std::hex; break;
-case 'P': case 'X': out << std::hex << std::uppercase; break;
-case 'f': out << std::fixed; break;
-case 'e': out << std::scientific; break;
-case 'E': out << std::uppercase << std::scientific; break;
-case 'G': out << std::uppercase; break;
-case 'b': out << std::boolalpha; break;
-case 'c': case 'g': case 'h': case 'j': case 'l': case 'L': case 'q': case 's': case 'z': break;
+case 'd': case 'i': case 'u': out << std::dec; goto end;
+case 'o': out << std::oct; goto end;
+case 'p': case 'x': out << std::hex; goto end;
+case 'P': case 'X': out << std::hex << std::uppercase; goto end;
+case 'f': out << std::fixed; goto end;
+case 'e': out << std::scientific; goto end;
+case 'E': out << std::uppercase << std::scientific; goto end;
+case 'G': out << std::uppercase; goto end;
+case 'h': case 'j': case 'l': case 'L': case 'q': break;
+case 'c': case 'g': case 's': case 'z': goto end;
 default: --fmt; goto end;
 }
 first=false;
 } end: 
-out << args.at(index++);
+out << std::boolalpha << args.at(index++);
 }
 else if (c=='\n') out << std::endl;
 else out << c;

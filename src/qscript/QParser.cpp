@@ -2615,7 +2615,10 @@ if (utf8::is_valid(source.begin(), source.end())) {
 if (utf8::starts_with_bom(source.begin(), source.end())) source = source.substr(3);
 }
 else {
-source = QVM::bufferToStringConverters["native"](source.data(), source.data()+source.size());
+istringstream in(source);
+ostringstream out;
+QVM::bufferToStringConverters["native"](in, out);
+source = out.str();
 }
 QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);

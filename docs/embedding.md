@@ -109,11 +109,11 @@ The destructor will be called upon garbage collection of the object.
 Registration of functions, methods and properties are greatly simplified by the use of macros.
 The following macros convert C++ fonctions into valid QScript functions with the prototype `void (QS::Fiber&)`, i.e. it does the wrapping and unwrapping of arguments and return value automatically.
 
-* *`METHOD(TYPE, NAME)`* takes a method *NAME* of the class *TYPE*. The given method can't have multiple overloads, otherwise the C++ compiler doesn't know which one to take.
+- *`METHOD(TYPE, NAME)`* takes a method *NAME* of the class *TYPE*. The given method can't have multiple overloads, otherwise the C++ compiler doesn't know which one to take.
 - *`FUNCTION(NAME)`* takes a fonction with the name *NAME*. There can't be multipel overloads of the fonction with the same name, otherwise the C++ compiler doesn't know which one to take.
 - *`PROPERTY(TYPE, NAME)`* takes a property *NAME* in the class *TYPE*, i.e. a member field. This generates a getter and a setter. For the setter to work, the given member field must obviously not be const.
 - *`GETTER(TYPE, NAME)`* and *`SETTER(TYPE, NAME)`* generates only a getter or only a setter for the given member field. Useful if you wish to write a read-only or write-only property.
-* *`STATIC_METHOD(NAME)`* is intended to be used when registering static methods with *registerStaticMethod*. In that particular case, stack index 0 contains a reference to the class object, which has to be ignored when retrieving method arguments in C++.
+- *`STATIC_METHOD(NAME)`* is intended to be used when registering static methods with *registerStaticMethod*. In that particular case, stack index 0 contains a reference to the class object, which has to be ignored when retrieving method arguments in C++.
 
 Example with a simple point c++ class:
 

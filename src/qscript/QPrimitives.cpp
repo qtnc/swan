@@ -641,10 +641,34 @@ for (utf8::iterator<char*> it(s.begin(), s.begin(), s.end()), end(s.end(), s.beg
 f.returnValue(re);
 }
 
+static void stringTrim (QFiber& f) {
+QString& s = f.getObject<QString>(0);
+string re(s.begin(), s.end());
+boost::trim(re);
+f.returnValue(QString::create(f.vm, re));
+}
+
 static void stringToNum (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int base = f.getOptionalNum(1, -1);
 f.returnValue(stringToNumImpl(s, base));
+}
+
+static void stringFormat (QFiber& f) {
+QString& fmt = *f.ensureString(0);
+ostringstream out;
+any_ostreamable_vector args;
+for (int i=1, n=f.getArgCount(); i<n; i++) {
+if (f.isNum(i)) {
+double d = f.getNum(i);
+int j = static_cast<int>(d);
+if (j==d) args.emplace_back(j);
+else args.emplace_back(d);
+} 
+else args.emplace_back(f.ensureString(i)->begin());
+}
+print(out, fmt.begin(), args);
+f.returnValue(QString::create(f.vm, out.str()));
 }
 
 static void tupleInstantiate (QFiber& f) {
@@ -819,32 +843,37 @@ return enc;
 }
 
 QS::VM::EncodingConversionFn export QS::VM::getEncoder (const std::string& name) {
-return QVM::stringToBufferConverters[name];
+return QVM::stringToBufferConverters[normalizeEncodingName(name)];
 }
 
 QS::VM::EncodingConversionFn export QS::VM::getDecoder (const std::string& name) {
-return QVM::bufferToStringConverters[name];
+return QVM::bufferToStringConverters[normalizeEncodingName(name)];
 }
 
 void export QS::VM::registerEncoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
-QVM::stringToBufferConverters[name] = func;
+QVM::stringToBufferConverters[normalizeEncodingName(name)] = func;
 }
 
 void export QS::VM::registerDecoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
-QVM::bufferToStringConverters[name] = func;
+QVM::bufferToStringConverters[normalizeEncodingName(name)] = func;
 }
 
 static QString* convertBufferToString (QBuffer& b, const string& encoding) {
 auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(encoding));
 if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", encoding, "UTF-8"));
-string re = (it->second)( reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end()) );
-return QString::create(b.type->vm, re);
+istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+ostringstream out;
+(it->second)(in, out);
+return QString::create(b.type->vm, out.str());
 }
 
 static QBuffer* convertStringToBuffer (QString& s, const string& encoding) {
 auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(encoding));
 if (it==QVM::stringToBufferConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", "UTF-8", encoding));
-string re = (it->second)( s.begin(), s.end() );
+istringstream in(string(s.begin(), s.end()));
+ostringstream out;
+(it->second)(in, out);
+string re = out.str();
 return QBuffer::create(s.type->vm, &re[0], re.size());
 }
 
@@ -877,7 +906,7 @@ f.returnValue(convertBufferToString(b, enc->asString()));
 else {
 string out = "Buffer:";
 for (uint8_t x: b) {
-if (x<32 || x>=127) out += format("%%%0$2X", static_cast<int>(x));
+if (x<32 || x>=127) out += format("\\x%0$2X", static_cast<int>(x));
 else out += static_cast<char>(x);
 }
 f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
@@ -1255,12 +1284,13 @@ BIND_F(upper, stringUpper)
 BIND_F(lower, stringLower)
 BIND_F(toNum, stringToNum)
 BIND_F(codePointAt, stringCodePointAt)
-BIND_L(byteLength, { f.returnValue(static_cast<double>(f.getObject<QString>(0).length)); })
 BIND_F(*, stringTimes)
 BIND_F(search, stringSearch)
 BIND_F(split, stringSplit)
 BIND_F(replace, stringReplace)
+BIND_F(trim, stringTrim)
 BIND_F(findAll, stringFindAll)
+BIND_F(format, stringFormat)
 BIND_F(toBuffer, stringToBuffer)
 ;
 
@@ -1412,6 +1442,7 @@ QClass* globalClasses[] = { boolClass, bufferClass, classClass, fiberClass, func
 for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 
 bindGlobal("import", import_);
+bindGlobal("format", stringFormat);
 bindGlobal("print", qsPrint);
 bindGlobal("NaN", QV(QV_NAN));
 bindGlobal("PlusInf", QV(QV_PLUS_INF));
