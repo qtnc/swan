@@ -94,12 +94,6 @@ void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
 new(ptr) T(value);
 }};
 
-template<class T> struct QSSetSlot<T&&, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value>::type> {
-static inline void set (QS::Fiber& f, int idx, T&& value) { 
-void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
-new(ptr) T(value);
-}};
-
 template<class T> struct QSSetSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
 static inline void set (QS::Fiber& f, int idx, const T*  value) { 
 if (!value) f.setNull(idx);
@@ -109,9 +103,9 @@ new(ptr) T(*value);
 }}};
 
 template<class T> struct QSSetSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value>::type> {
-static inline void set (QS::Fiber& f, int idx, const T& value) { 
+static inline void set (QS::Fiber& f, int idx, T& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
-new(ptr) T(value);
+new(ptr) T(std::move(value));
 }};
 
 template<class T> struct QSSetSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {

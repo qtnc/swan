@@ -8,191 +8,69 @@
 #include<memory>
 using namespace std;
 
-struct TextInput {
-shared_ptr<istream> in;
-TextInput (const shared_ptr<istream>& i): in(i) {}
-string readLine () {
-string line;
-getline(*in, line);
-return line;
+struct IO {
+QS::VM::EncodingConversionFn codec;
+unique_ptr<istream> in;
+unique_ptr<ostream> out;
+IO (unique_ptr<istream> i, const QS::VM::EncodingConversionFn& c = nullptr): in(std::move(i)), out(nullptr), codec(c) {}
+IO (unique_ptr<ostream> o, const QS::VM::EncodingConversionFn& c = nullptr): in(nullptr), out(std::move(o)), codec(c) {}
+};
+
+static void ioWrite (QS::Fiber& f) {
+IO& io = f.getUserObject<IO>(0);
+if (io.codec) {
+istringstream in(f.getString(1));
+io.codec(in, *io.out);
 }
-string readAll () {
+else {
+int length;
+const char* buffer = f.getBuffer<char>(1, &length);
+io.out->write(buffer, length);
+}}
+
+static void ioRead (QS::Fiber& f) {
+IO& io = f.getUserObject<IO>(0);
 ostringstream out;
-out << in->rdbuf();
-return out.str();
+if (io.codec) {
+io.codec(*io.in, out);
+f.setString(0, out.str());
 }
-string iteratorValue (int unused) { return readLine(); }
-optional<int> iterate () { optional<int> o; if (*in) o=1; return o; }
-void close () {}
-};
-
-struct TextOutput {
-shared_ptr<ostream> out;
-TextOutput (const shared_ptr<ostream>& o): out(o) {}
-void close () {}
-void write (const std::string& s) { 
-(*out) << s; 
-}
-};
-
-struct TextFileOutput: TextOutput {
-TextFileOutput (const std::string& filename): TextOutput(make_shared<ofstream>(filename)) {}
-void close () { 
-out->flush(); 
-static_pointer_cast<ofstream>(out)->close(); 
-}
-};
-
-struct TextFileInput: TextInput {
-TextFileInput (const std::string& filename): TextInput(make_shared<ifstream>(filename)) {}
-void close () { 
-static_pointer_cast<ifstream>(in)->close(); 
-}
-};
-
-struct TextMemOutput: TextOutput {
-TextMemOutput (): TextOutput(make_shared<ostringstream>()) {}
-string toString () { return static_pointer_cast<ostringstream>(out)->str(); }
-};
-
-struct TextMemInput: TextInput {
-TextMemInput (const string& content): TextInput(make_shared<istringstream>(content)) {}
-};
-
-struct BinInput: TextInput {
-BinInput (const shared_ptr<istream>& i): TextInput(i) {}
-};
-
-struct BinOutput: TextOutput  {
-BinOutput (const shared_ptr<ostream>& o): TextOutput(o) {}
-};
-
-struct BinFileOutput: BinOutput {
-BinFileOutput (const std::string& filename): BinOutput(make_shared<ofstream>(filename, ios::binary)) {}
-void close () { 
-out->flush(); 
-static_pointer_cast<ofstream>(out)->close(); 
-}
-};
-
-struct BinFileInput: BinInput {
-BinFileInput (const std::string& filename): BinInput(make_shared<ifstream>(filename, ios::binary)) {}
-void close () { 
-static_pointer_cast<ifstream>(in)->close(); 
-}
-};
-
-struct BinMemOutput: BinOutput {
-BinMemOutput (): BinOutput(make_shared<ostringstream>()) {}
-string toString () { return static_pointer_cast<ostringstream>(out)->str(); }
-};
-
-struct BinMemInput: BinInput {
-BinMemInput (const void* data, int length): BinInput(make_shared<istringstream>(string(reinterpret_cast<const char*>(data), length))) {}
-};
-
-static void binReadLine (QS::Fiber& f) {
-string s = f.getUserObject<BinInput>(0) .readLine();
+else {
+out << io.in->rdbuf();
+string s = out.str();
 f.setBuffer(0, s.data(), s.size());
-}
+}}
 
-static void binReadAll (QS::Fiber& f) {
-string s = f.getUserObject<BinInput>(0).readAll();
-f.setBuffer(0, s.data(), s.size());
+static IO ioOpen (const string& target, optional<string> omode, optional<string> encoding) {
+string mode = omode.value_or("r");
+string enc = encoding.value_or("utf8");
+if (mode.size()>3) { enc=mode; mode=""; }
+bool reading = mode.find("r")!=string::npos;
+bool writing = mode.find("w")!=string::npos;
+bool appending = mode.find("a")!=string::npos;
+bool binary = mode.find("b")!=string::npos;
+if (reading) {
+if (binary) IO(std::move(make_unique<ifstream>(target, ios::binary)));
+else return IO(std::move(make_unique<ifstream>(target)), QS::VM::getDecoder(enc));
 }
-
-static void binWrite (QS::Fiber& f) {
-auto& b = f.getUserObject<BinOutput>(0);
-int length;
-const void* buf = f.getBufferV(1, &length);
-b.out->write(reinterpret_cast<const char*>(buf), length);
+else if (writing) {
+if (binary) IO(make_unique<ofstream>(target, ios::binary));
+else return IO(make_unique<ofstream>(target), QS::VM::getEncoder(enc));
 }
-
-static void binMemInputConstructor (QS::Fiber& f) {
-void* ptr = f.getUserPointer(0);
-int length;
-const void* data = f.getBufferV(1, &length);
-new(ptr) BinMemInput(data, length);
+else if (appending) {
+if (binary) IO(make_unique<ofstream>(target, ios::binary | ios::app));
+else return IO(make_unique<ofstream>(target, ios::app), QS::VM::getEncoder(enc));
 }
-
-static void binMemOutputToBuffer (QS::Fiber& f) {
-string s = f.getUserObject<BinMemOutput>(0).toString();
-f.setBuffer(0, s.data(), s.length());
+throw std::logic_error(format("Unknown open mode: %s", mode));
 }
 
 void registerIO (QS::Fiber& f) {
 f.loadGlobal("Sequence");
-f.registerClass<TextInput>("Reader", 1);
-f.registerMethod("readLine", METHOD(TextInput, readLine));
-f.registerMethod("read", METHOD(TextInput, readAll));
-f.registerMethod("iterate", METHOD(TextInput, iterate));
-f.registerMethod("iteratorValue", METHOD(TextInput, iteratorValue));
-f.registerMethod("close", METHOD(TextInput, close));
-f.pushCopy();
-f.registerClass<TextFileInput>("FileReader", 1);
-f.registerConstructor<TextFileInput, const std::string&>();
-f.registerDestructor<TextFileInput>();
-f.registerMethod("close", METHOD(TextFileInput, close));
-f.pop();
-f.pushCopy();
-f.registerClass<TextMemInput>("StringReader", 1);
-f.registerConstructor<TextMemInput, const std::string&>();
-f.registerDestructor<TextMemInput>();
-f.pop();
-f.pop();
-
-f.registerClass<TextOutput>("Writer");
-f.registerMethod("write", METHOD(TextOutput, write));
-f.registerMethod("close", METHOD(TextOutput, close));
-f.pushCopy();
-f.registerClass<TextFileOutput>("FileWriter", 1);
-f.registerConstructor<TextFileOutput, const std::string&>();
-f.registerDestructor<TextFileOutput>();
-f.registerMethod("close", METHOD(TextFileOutput, close));
-f.pop();
-f.pushCopy();
-f.registerClass<TextMemOutput>("StringWriter", 1);
-f.registerConstructor<TextMemOutput>();
-f.registerDestructor<TextMemOutput>();
-f.registerMethod("toString", METHOD(TextMemOutput, toString));
-f.pop();
-f.pop();
-
-f.loadGlobal("Sequence");
-f.registerClass<BinInput>("Input", 1);
-f.registerMethod("readLine", binReadLine);
-f.registerMethod("read", binReadAll);
-f.registerMethod("iterate", METHOD(TextInput, iterate));
-f.registerMethod("iteratorValue", binReadLine);
-f.registerMethod("close", METHOD(TextInput, close));
-f.pushCopy();
-f.registerClass<BinFileInput>("FileInput", 1);
-f.registerConstructor<BinFileInput, const std::string&>();
-f.registerDestructor<BinFileInput>();
-f.registerMethod("close", METHOD(BinFileInput, close));
-f.pop();
-f.pushCopy();
-f.registerClass<BinMemInput>("BufferInput", 1);
-f.registerMethod("constructor", binMemInputConstructor);
-f.registerDestructor<BinMemInput>();
-f.pop();
-f.pop();
-
-f.registerClass<BinOutput>("Output");
-f.registerMethod("write", binWrite);
-f.registerMethod("close", METHOD(TextOutput, close));
-f.pushCopy();
-f.registerClass<BinFileOutput>("FileOutput", 1);
-f.registerConstructor<BinFileOutput, const std::string&>();
-f.registerDestructor<BinFileOutput>();
-f.registerMethod("close", METHOD(BinFileOutput, close));
-f.pop();
-f.pushCopy();
-f.registerClass<BinMemOutput>("BufferOutput", 1);
-f.registerConstructor<BinMemOutput>();
-f.registerDestructor<BinMemOutput>();
-f.registerMethod("toBuffer", binMemOutputToBuffer);
-f.pop();
+f.registerClass<IO>("IO", 1);
+f.registerDestructor<IO>();
+f.registerStaticMethod("open", STATIC_METHOD(ioOpen));
+f.registerMethod("read", ioRead);
+f.registerMethod("write", ioWrite);
 f.pop();
 }
 

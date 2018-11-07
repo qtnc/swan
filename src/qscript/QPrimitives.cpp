@@ -1065,8 +1065,10 @@ boost::split(cur, startingPath, boost::is_any_of("/\\"), boost::token_compress_o
 boost::split(toResolve, pathToResolve, boost::is_any_of("/\\"), boost::token_compress_off);
 if (!cur.empty()) cur.pop_back(); // drop file name
 toResolve.erase(remove_if(toResolve.begin(), toResolve.end(), [](const string& s){ return s=="."; }), toResolve.end());
-{ auto it = toResolve.begin();
-while((it = find(toResolve.begin()+1, toResolve.end(), ".."))!=toResolve.end()) {
+{ 
+auto it = toResolve.begin();
+auto initial = find_if_not(toResolve.begin(), toResolve.end(), [](const string& s){ return s==".."; }) -toResolve.begin();
+while((it = find(toResolve.begin()+initial, toResolve.end(), ".."))!=toResolve.end()) {
 toResolve.erase(--it);
 toResolve.erase(it);
 }}
