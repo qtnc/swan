@@ -1742,12 +1742,30 @@ if (match(T_IF)) compr->filterExpression = parseExpression(P_COMPREHENSION);
 return compr;
 }
 
+static shared_ptr<Expression> nameExprToConstant (QParser& parser, shared_ptr<Expression> key) {
+shared_ptr<NameExpression> name = dynamic_pointer_cast<NameExpression>(key);
+if (name) {
+QToken token = name->token;
+token.type = T_STRING;
+token.value = QV(parser.vm, string(token.start, token.length));
+key = make_shared<ConstantExpression>(token);
+}
+return key;
+}
+
 shared_ptr<Expression> QParser::parseMethodCall (shared_ptr<Expression> receiver) {
 vector<shared_ptr<Expression>> args;
+shared_ptr<LiteralMapExpression> mapArg = nullptr;
 if (!match(T_RIGHT_PAREN)) {
 do {
 shared_ptr<Expression> arg = parseExpression();
-if (arg) args.push_back(arg);
+if (match(T_COLON)) {
+shared_ptr<Expression> val = parseExpression();
+if (!mapArg) { mapArg = make_shared<LiteralMapExpression>(cur); args.push_back(mapArg); }
+arg = nameExprToConstant(*this, arg);
+mapArg->items.push_back(make_pair(arg, val));
+}
+else if (arg) args.push_back(arg);
 } while(match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_PAREN, ("Expected ')' to close method call"));
@@ -1845,14 +1863,7 @@ consume(T_RIGHT_BRACKET, ("Expected ']' to close computed map key"));
 else key = parseExpression();
 if (!match(T_COLON)) value = key;
 else value = parseExpression();
-if (!computed) {
-shared_ptr<NameExpression> name = dynamic_pointer_cast<NameExpression>(key);
-if (name) {
-QToken token = name->token;
-token.type = T_STRING;
-token.value = QV(vm, string(token.start, token.length));
-key = make_shared<ConstantExpression>(token);
-}}
+if (!computed) key = nameExprToConstant(*this, key);
 map->items.push_back(make_pair(key, value));
 } while (match(T_COMMA));
 skipNewlines();

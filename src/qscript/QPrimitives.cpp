@@ -314,12 +314,30 @@ double d = f.getNum(0), base = f.getOptionalNum(1, -1);
 f.returnValue(base>0? log(d)/log(base) : log(d));
 }
 
+static bool numToStringBase (QFiber& f, double val) {
+if (isnan(val)) {
+f.returnValue(QV(f.vm, "NaN", 3));
+return true;
+}
+else if (isinf(val)) {
+if (val<0) f.returnValue(QV(f.vm, "\xE2\x88\x92\xE2\x88\x9E", 6));
+else f.returnValue(QV(f.vm, "+\xE2\x88\x9E", 4));
+return true;
+}
+return false;
+}
+
 static void numToString (QFiber& f) {
 double val = f.getNum(0);
-if (isnan(val)) f.returnValue(QV(f.vm, "NaN", 3));
-else if (isinf(val)) f.returnValue(QV(f.vm, "infinity", 8));
-else f.returnValue(QV(f.vm, format("%.14g", val) ));
+if (!numToStringBase(f, val)) {
+int base = f.getOptionalNum(1, 0);
+if (base>=2 && base<=36) {
+char buf[32] = {0};
+lltoa(static_cast<int64_t>(val), buf, base);
+f.returnValue(QV(f.vm, buf));
 }
+else f.returnValue(QV(f.vm, format("%.14g", val) ));
+}}
 
 static void objectInstantiate (QFiber& f) {
 QClass& cls = f.getObject<QClass>(0);
@@ -889,7 +907,7 @@ QBuffer& b = f.getObject<QBuffer>(1);
 QString* enc = f.ensureString(2);
 f.returnValue(convertBufferToString(b, enc->asString()));
 }
-//todo
+else f.returnValue(QV( f.ensureString(1), QV_TAG_STRING));
 }
 
 static void stringToBuffer (QFiber& f) {
