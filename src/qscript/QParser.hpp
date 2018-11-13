@@ -20,6 +20,7 @@
 #define FP_CONST 2
 #define FP_FIELD_ASSIGN 4
 #define FP_STATIC_FIELD_ASSIGN 8
+#define FP_MAP_DESTRUCTURING 16
 #define FD_VARARG 1
 #define FD_FIBER 2
 #define FD_METHOD 4

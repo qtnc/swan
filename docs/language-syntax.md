@@ -176,10 +176,10 @@ var thirty = triple(10) # thirty is 30
 * Parentesis are optional if the lambda takes no explicit parameter or just a single one.
 * If the last instruction of the function is an expression, it is taken as the return value
 
-IF the last parameter is suffixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
+IF the last parameter is prefixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
 
 ```
-var printItems = $(items...) {
+var printItems = $(...items) {
 for item in items: print(item)
 }
 
@@ -296,8 +296,8 @@ print(4*5) #0.8 (!)
 ```
 
 
-## Bonus syntax suggars for object-oriented programming
-There are some additional bonus syntax suggars as shown below:
+## Syntax suggars for object-oriented programming
+There are some additional syntax suggars as shown below:
 
 The constructor of the above class Vector:
 
@@ -425,3 +425,31 @@ variable.close
 ```
 
 Except that the *variable* is no longer available after the closing brace. An optional catch block is allowed, where the variable is still available.
+
+
+## Miscellaneous syntax suggars
+When the last parameter of a function is a map, you can omit the encosing braces when calling it:
+
+`func(1, 2, 3, x: 4, y: 5, z: 6)`  
+is the same as
+`func(1, 2, 3, {a: 4, b: 5, c: 6})`
+
+You can declare new variables and destructure them from a map or any numerically indexable sequence:
+
+```
+let map = {a: 1, b: 2, c: 3}
+let list = [1, 2, 3, 4, 5]
+
+# Creates a=1, b=2 and c=3
+# Equivalent to: let a=map['a'], b=map['b'], c=map['c']
+let {a, b, c} = map
+
+# You may set default values in case the extracted map has no corresponding value
+# This will create a=1, b=2, c=3 and d=true
+let {a=false, b=true, c=false, d=true} = map
+
+# The same is possible with indexable sequences such as tuples or lists
+# This creates a=1, b=2, c=3, d=4 and e=5
+# Equivalent to: let a=list[0], b=list[1], c=list[2], d=list[3], e=list[4]
+let [a, b, c, d, e] = list
+```

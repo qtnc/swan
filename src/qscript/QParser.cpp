@@ -10,6 +10,11 @@ using namespace std;
 
 extern const char* OPCODE_NAMES[];
 
+static const char 
+*THIS = "this",
+*EXPORTS = "exports",
+*DOLLARMAP = "$map";
+
 OpCodeInfo OPCODE_INFO[] = {
 #define OP(name, stackEffect, nArgs, argFormat) { stackEffect, nArgs, argFormat }
 #include "QOpCodes.hpp"
@@ -88,6 +93,7 @@ shared_ptr<Statement> optimizeStatement () { return optimize(); }
 
 struct Assignable {
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) = 0;
+virtual bool isAssignable () { return true; }
 };
 
 struct ConstantExpression: Expression {
@@ -921,6 +927,7 @@ INFIX_OP(DOTDOT, InfixOp, .., RANGE),
 OPERATOR(DOTDOTDOT, Unpack, InfixOp, ..., ..., RANGE),
 INFIX(AMPAMP, InfixOp, &&, LOGICAL),
 INFIX(BARBAR, InfixOp, ||, LOGICAL),
+INFIX(QUESTQUEST, InfixOp, ??, LOGICAL),
 
 INFIX(EQ, InfixOp, =, ASSIGNMENT),
 INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT),
@@ -936,6 +943,7 @@ INFIX(LTLTEQ, InfixOp, <<=, ASSIGNMENT),
 INFIX(GTGTEQ, InfixOp, >>=, ASSIGNMENT),
 INFIX(AMPAMPEQ, InfixOp, &&=, ASSIGNMENT),
 INFIX(BARBAREQ, InfixOp, ||=, ASSIGNMENT),
+INFIX(QUESTQUESTEQ, InfixOp, ??=, ASSIGNMENT),
 
 INFIX_OP(EQEQ, InfixOp, ==, COMPARISON),
 INFIX_OP(EXCLEQ, InfixOp, !=, COMPARISON),
@@ -1256,12 +1264,12 @@ case '%': RET2('=', T_PERCENTEQ, T_PERCENT)
 case '|': RET22('|', '=', T_BARBAREQ, T_BARBAR, T_BAREQ, T_BAR)
 case '&': RET22('&', '=', T_AMPAMPEQ, T_AMPAMP, T_AMPEQ, T_AMP)
 case '^': RET2('=', T_CIRCEQ, T_CIRC)
-case '~': RET2('=', T_TILDEQ, T_TILDE)
-case '!': RET3('=', T_EXCLEQ, '~', T_EXCLTILDE, T_EXCL)
-case '=': RET4('=', T_EQEQ, '~', T_EQTILDE, '>', T_EQGT, T_EQ) 
+case '~': RET(T_TILDE)
+case '!': RET2('=', T_EXCLEQ, T_EXCL)
+case '=': RET3('=', T_EQEQ, '>', T_EQGT, T_EQ) 
 case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
-case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_END, T_QUEST) 
+case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) 
 case '"': case '\'': case '`': {
 QV str = parseString(vm, in, end, c);
 RETV(T_STRING, str)
@@ -1498,6 +1506,8 @@ return make_shared<BlockStatement>(statements);
 shared_ptr<Statement> QParser::parseVarDecl () {
 vector<pair<QToken,shared_ptr<Expression>>> vars;
 bool isConst = cur.type==T_CONST;
+QTokenType destructuring = T_END;
+if (matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET, T_LT)) destructuring = static_cast<QTokenType>(cur.type +1);
 do {
 skipNewlines();
 consume(T_NAME, ("Expected variable name after 'var'"));
@@ -1507,14 +1517,24 @@ if (match(T_EQ)) value = parseExpression();
 else value = make_shared<ConstantExpression>(name);
 vars.push_back(make_pair(name, value));
 } while(match(T_COMMA));
+if (destructuring!=T_END) {
+consume(destructuring, "Expecting close of destructuring variable declaration");
+consume(T_EQ, "Expecting '=' after destructuring variable declaration");
+shared_ptr<Expression> source = parseExpression();
+for (int i=0, n=vars.size(); i<n; i++) {
+QToken& name =  vars[i].first;
+QToken index = { T_NAME, name.start, name.length, destructuring==T_RIGHT_BRACE? QV(QString::create(vm, name.start, name.length), QV_TAG_STRING) : QV(static_cast<double>(i)) };
+vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
+auto subscript = make_shared<SubscriptExpression>(source, indices);
+vars[i].second = createBinaryOperation(subscript, T_QUESTQUESTEQ, vars[i].second);
+}}
 return make_shared<VariableDeclaration>(vars, isConst? VD_CONST : 0);
 }
 
 vector<shared_ptr<FunctionParameter>> QParser::parseFunctionParameters (bool implicitThis) {
 vector<shared_ptr<FunctionParameter>> params;
 if (implicitThis) {
-QString* thisName = QString::create(vm, ("this"), 4);
-QToken thisToken = { T_NAME, thisName->data, thisName->length, QV(thisName, QV_TAG_STRING) };
+QToken thisToken = { T_NAME, THIS, 4, QV() };
 params.push_back(make_shared<FunctionParameter>(thisToken, nullptr, nullptr, FP_CONST));
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
@@ -1523,22 +1543,21 @@ int flags = 0;
 skipNewlines();
 if (match(T_CONST)) flags |= FP_CONST;
 else if (match(T_VAR)) flags &= ~FP_CONST;
+if (match(T_DOTDOTDOT)) flags |= FP_VARARG;
 if (match(T_UND)) flags |= FP_FIELD_ASSIGN;
 else if (match(T_UNDUND)) flags |= FP_STATIC_FIELD_ASSIGN;
 consume(T_NAME, ("Expected parameter name"));
 QToken arg = cur;
 shared_ptr<Expression> defaultValue = nullptr, typeCheck = nullptr;
-if (match(T_DOTDOTDOT)) flags |= FP_VARARG;
 if (match(T_EQ)) defaultValue = parseExpression();
+if (match(T_AS)) typeCheck = parseExpression();
 params.push_back(make_shared<FunctionParameter>(arg, defaultValue, typeCheck, flags));
 if (flags&FP_VARARG) break;
 } while(match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
-else if (match(T_NAME)) {
-params.push_back(make_shared<FunctionParameter>(cur));
-}
+else if (match(T_NAME)) params.push_back(make_shared<FunctionParameter>(cur));
 return params;
 }
 
@@ -1571,10 +1590,9 @@ cls.methods.push_back(funcdecl);
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, bool isStatic) {
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
-QString* thisName = QString::create(vm, ("this"), 4);
 QString* setterName = QString::create(vm, string(cur.start, cur.length) + ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
-QToken thisToken = { T_NAME, thisName->data, thisName->length, QV(thisName, QV_TAG_STRING)  };
+QToken thisToken = { T_NAME, THIS, 4, QV()};
 shared_ptr<Expression> field;
 int flags = FD_METHOD;
 if (isStatic) flags |= FD_STATIC;
@@ -2258,7 +2276,7 @@ else compiler.writeOp(static_cast<QOpCode>(op+args.size()));
 
 void AssignmentOperation::compile (QCompiler& compiler) {
 shared_ptr<Assignable> target = dynamic_pointer_cast<Assignable>(left);
-if (target) {
+if (target && target->isAssignable()) {
 target->compileAssignment(compiler, right);
 return;
 }
@@ -2347,7 +2365,6 @@ fc.writeOp(OP_POP);
 }
 
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
-static const char* THIS = "this";
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
 compiler.parser.curMethodNameToken = name;
@@ -2459,8 +2476,7 @@ return parser.vm.findGlobalSymbol(string(name.start, name.length), createNew);
 }
 
 int QCompiler::findExportsVariable (bool createIfNotExist) {
-QString* exportsName = QString::create(parser.vm, ("exports"), 7);
-QToken exportsToken = { T_NAME, exportsName->data, exportsName->length, QV(exportsName, QV_TAG_STRING) };
+QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
 int slot = findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
 if (slot<0 && createIfNotExist) {
 int mapSlot = vm.findGlobalSymbol(("Map"), false);
