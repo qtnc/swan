@@ -67,6 +67,10 @@ if (eq(*begin)) last = begin;
 return last;
 }
 
+template<class T, class C> static inline void insert_n (C& container, int n, const T& val) {
+if (n>0) std::fill_n(std::back_inserter(container), n, val);
+}
+
 template<class T, class F = std::function<void(const T*, const T*)>, class Alloc = std::allocator<T>> struct execution_stack {
 T *base, *top, *finish;
 Alloc allocator;
@@ -96,7 +100,6 @@ if (top==finish)  reserve(2 * (finish-base));
 *top++ = x;
 }
 inline T& pop_back () {
-//if (top==base) throw std::out_of_range("pop an empty stack");
 return *top--;
 }
 template<class I> void insert (T* pos, I begin, const I& end) {
@@ -114,16 +117,11 @@ top -= (end-begin);
 inline void insert (T* pos, const T& val) { insert(pos, &val, &val+1); }
 inline void erase (T* pos) { erase(pos, pos+1); }
 inline size_t size () { return top-base; }
-inline T& at (int i) {
-//return base[i];
-T* ptr = base+i;
-//if (ptr<base || ptr>=top) throw std::out_of_range(format("Index out of range: index=%d, size=%d", i, top-base));
-return *ptr;
-}
+inline T& at (int i) { return *(base+i); }
 inline T& operator[] (int i) { return at(i); }
 inline T* begin () { return base; }
 inline T* end () { return top; }
-inline T& back () { return top[-1]; }
+inline T& back () { return *(top -1); }
 };
 
 enum FiberState {
@@ -250,6 +248,11 @@ QClass* mergeMixinMethods (QClass* mixin);
 QClass* bind (const std::string& methodName, QNativeFunction func);
 QClass* bind (int symbol, const QV& value);
 inline bool isSubclassOf (QClass* cls) { return this==cls || (parent && parent->isSubclassOf(cls)); }
+inline QV findMethod (int symbol) {
+QV re = symbol>=methods.size()? QV() : methods[symbol];
+if (re.isNull() && parent) return parent->findMethod(symbol);
+else return re;
+}
 static QClass* create (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nStaticFields=0, int nFields=0) { return newVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields); }
 virtual QObject* instantiate ();
 virtual ~QClass () = default;
@@ -428,7 +431,8 @@ virtual ~BoundFunction () = default;
 };
 
 struct QVM: QS::VM  {
-static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters, bufferToStringConverters;
+static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters;
+static std::unordered_map<std::string, DecodingConversionFn> bufferToStringConverters;
 
 std::vector<std::string> methodSymbols, globalSymbols;
 std::vector<QV> globalVariables;

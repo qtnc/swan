@@ -95,11 +95,11 @@ QClass(vm0, type0, parent0, name0, nf), destructor(destr)
 {}
 
 QClass::QClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, int nf):
-QObject(type0), vm(vm0), parent(parent0), nFields(nf), name(name0), methods(parent0? parent0->methods : vector<QV>())
-{}
+QObject(type0), vm(vm0), parent(parent0), nFields(nf), name(name0)
+{ copyParentMethods(); }
 
 QClass* QClass::copyParentMethods () {
-methods = parent->methods;
+if (parent) methods = parent->methods;
 return this;
 }
 
@@ -115,7 +115,7 @@ return bind(symbol, QV(func));
 }
 
 QClass* QClass::bind (int symbol, const QV& val) {
-while (methods.size()<=symbol) methods.push_back(QV());
+insert_n(methods, 1+symbol-methods.size(), QV());
 methods[symbol] = val;
 return this;
 }

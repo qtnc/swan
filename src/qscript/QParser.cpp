@@ -1531,6 +1531,31 @@ vars[i].second = createBinaryOperation(subscript, T_QUESTQUESTEQ, vars[i].second
 return make_shared<VariableDeclaration>(vars, isConst? VD_CONST : 0);
 }
 
+static shared_ptr<Statement> makeMethodPrebody (vector<shared_ptr<FunctionParameter>>& params) {
+return nullptr;
+}
+
+shared_ptr<Statement> concatStatements (shared_ptr<Statement> s1, shared_ptr<Statement> s2) {
+if (!s1) return s2;
+else if (!s2) return s1;
+auto b1 = dynamic_pointer_cast<BlockStatement>(s1), b2 = dynamic_pointer_cast<BlockStatement>(s2);
+if (b1&&b2) {
+b1->statements.insert(b1->statements.end(), b2->statements.begin(), b2->statements.end());
+return b1;
+}
+else if (b1) {
+b1->statements.push_back(s2);
+return b1;
+}
+else if (b2) {
+b2->statements.insert(b2->statements.begin(), s1);
+return b2;
+}
+else {
+vector<shared_ptr<Statement>> v = { s1, s2 };
+return make_shared<BlockStatement>(v);
+}}
+
 vector<shared_ptr<FunctionParameter>> QParser::parseFunctionParameters (bool implicitThis) {
 vector<shared_ptr<FunctionParameter>> params;
 if (implicitThis) {
@@ -1565,6 +1590,7 @@ void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
 stackedTokens.push_back(cur);
 QToken name = nextNameToken(true);
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(true);
+shared_ptr<Statement> prebody = makeMethodPrebody(params);
 int flags = FD_METHOD;
 if (isStatic) flags |= FD_STATIC;
 if (*name.start=='[' && params.size()<=0) {
@@ -1583,6 +1609,7 @@ shared_ptr<Statement> body;
 match(T_COLON);
 if (match(T_SEMICOLON)) body = make_shared<SimpleStatement>(cur);
 else body = parseStatement();
+body = concatStatements(prebody, body);
 shared_ptr<FunctionDeclaration> funcdecl = make_shared<FunctionDeclaration>(name, params, body, flags);
 cls.methods.push_back(funcdecl);
 }
@@ -1615,8 +1642,10 @@ int flags = 0;
 if (match(T_DOLLAR)) flags |= FD_METHOD;
 if (match(T_STAR)) flags |= FD_FIBER;
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(flags&FD_METHOD);
+shared_ptr<Statement> prebody = makeMethodPrebody(params);
 match(T_COLON);
 shared_ptr<Statement> body = parseStatement();
+body = concatStatements(prebody, body);
 if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
 return make_shared<FunctionDeclaration>(name, params, body, flags);
 }
@@ -2644,7 +2673,7 @@ if (utf8::starts_with_bom(source.begin(), source.end())) source = source.substr(
 else {
 istringstream in(source);
 ostringstream out;
-QVM::bufferToStringConverters["native"](in, out);
+QVM::bufferToStringConverters["native"](in, out, 0);
 source = out.str();
 }
 QParser parser(vm, source, filename, displayName);

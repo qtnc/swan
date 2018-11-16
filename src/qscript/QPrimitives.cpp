@@ -360,6 +360,18 @@ const QClass& cls = f.at(0).getClass(f.vm);
 f.returnValue(format("%s@%#0$16llX", cls.name, f.at(0).i) );
 }
 
+static void objectDir (QFiber& f) {
+QClass& cls = f.at(0).getClass(f.vm);
+QList* list = new QList(f.vm);
+for (int i=0, n=f.vm.methodSymbols.size(); i<n; i++) {
+auto key = i;
+auto& name = f.vm.methodSymbols[i];
+if (key>=cls.methods.size() || cls.methods[key].isNull()) continue;
+list->data.push_back(QV(QString::create(f.vm, name), QV_TAG_STRING));
+}
+f.returnValue(list);
+}
+
 static void rangeInstantiate (QFiber& f) {
 int nArgs = f.getArgCount();
 double start=0, end=f.getNum(1), step=1;
@@ -384,6 +396,13 @@ else re = 0==fmod(x-r.start, r.step);
 f.returnValue(re);
 }
 
+static void rangeSubscript (QFiber& f) {
+QRange& r = f.getObject<QRange>(0);
+double n = f.getNum(1);
+double re = r.start + n * r.step;
+f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV());
+}
+
 static inline QV rangeMake (QVM& vm, double start, double end, bool inclusive) {
 double step = end>=start? 1 : -1;
 return new QRange(vm, start, end, step, inclusive);
@@ -392,7 +411,7 @@ return new QRange(vm, start, end, step, inclusive);
 static void rangeToString (QFiber& f) {
 QRange& r = f.getObject<QRange>(0);
 if (r.step==1 || r.step==-1) f.returnValue(format("%g%s%g", r.start, r.inclusive?"...":"..", r.end));
-else f.returnValue(format("Range(%g, %g, %g, %b)", r.start, r.end, r.step, r.inclusive));
+else f.returnValue(format("Range(%g, %g, %g, %s)", r.start, r.end, r.step, r.inclusive));
 }
 
 static void sequenceJoin (QFiber& f) {
@@ -864,7 +883,7 @@ QS::VM::EncodingConversionFn export QS::VM::getEncoder (const std::string& name)
 return QVM::stringToBufferConverters[normalizeEncodingName(name)];
 }
 
-QS::VM::EncodingConversionFn export QS::VM::getDecoder (const std::string& name) {
+QS::VM::DecodingConversionFn export QS::VM::getDecoder (const std::string& name) {
 return QVM::bufferToStringConverters[normalizeEncodingName(name)];
 }
 
@@ -872,7 +891,7 @@ void export QS::VM::registerEncoder (const std::string& name, const QS::VM::Enco
 QVM::stringToBufferConverters[normalizeEncodingName(name)] = func;
 }
 
-void export QS::VM::registerDecoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
+void export QS::VM::registerDecoder (const std::string& name, const QS::VM::DecodingConversionFn& func) {
 QVM::bufferToStringConverters[normalizeEncodingName(name)] = func;
 }
 
@@ -881,7 +900,7 @@ auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(encoding));
 if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", encoding, "UTF-8"));
 istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
 ostringstream out;
-(it->second)(in, out);
+(it->second)(in, out, 0);
 return QString::create(b.type->vm, out.str());
 }
 
@@ -1282,6 +1301,7 @@ BIND_L(iteratorValue, { f.returnValue(f.at(1)); })
 BIND_L(iterate, { f.returnValue(f.getObject<QRange>(0) .iterate(f.at(1))); })
 BIND_F(toString, rangeToString)
 BIND_F(in, rangeIn)
+BIND_F([], rangeSubscript)
 ;
 
 tupleClass
@@ -1462,6 +1482,7 @@ QClass* globalClasses[] = { boolClass, bufferClass, classClass, fiberClass, func
 for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 
 bindGlobal("import", import_);
+bindGlobal("dir", objectDir);
 bindGlobal("format", stringFormat);
 bindGlobal("print", qsPrint);
 bindGlobal("NaN", QV(QV_NAN));

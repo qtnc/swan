@@ -17,10 +17,19 @@ WideCharToMultiByte(outCP, 0, wide.data(), wide.size(), const_cast<char*>(out.da
 return out;
 }
 
-void winConvertEncoding (istream& in, ostream& out, int inCP, int outCP) {
+void winConvertEncoding (istream& in, ostream& out, int inCP, int outCP, int mode=0) {
+string sIn;
+if (mode==0) {
 ostringstream sOut;
 sOut << in.rdbuf();
-string sIn = sOut.str();
+sIn = sOut.str();
+}
+else if (mode==1) {
+char c[2]={0};
+in >> c[0];
+sIn = c;
+}
+else if (mode==2) getline(in, sIn);
 string sRe = winConvertEncoding(sIn.data(), sIn.data()+sIn.size(), inCP, outCP);
 out << sRe;
 }
@@ -51,7 +60,7 @@ void initPlatformEncodings () {
 
 #ifdef __WIN32
 #define C(N,E) \
-QVM::bufferToStringConverters[#N] = [](istream& in, ostream& out){ winConvertEncoding(in, out, E, CP_UTF8); }; \
+QVM::bufferToStringConverters[#N] = [](istream& in, ostream& out, int mode){ winConvertEncoding(in, out, E, CP_UTF8, mode); }; \
 QVM::stringToBufferConverters[#N] = [](istream& in, ostream& out){ return winConvertEncoding(in, out, CP_UTF8, E); };
 C(native, CP_ACP)
 C(oem, CP_OEMCP)

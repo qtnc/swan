@@ -100,6 +100,10 @@ virtual const Range& getRange (int stackIndex) = 0;
 virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
 virtual void* getUserPointer (int stackIndex) = 0;
 
+double getOptionalNum (int stackIndex, double defaultValue) { return getArgCount()>stackIndex && isNum(stackIndex)? getNum(stackIndex) : defaultValue; }
+bool getOptionalBool (int stackIndex, bool defaultValue) { return getArgCount()>stackIndex && isBool(stackIndex)? getBool(stackIndex) : defaultValue; }
+std::string getOptionalString (int stackIndex, const std::string& defaultValue) { return getArgCount()>stackIndex && isString(stackIndex)? getString(stackIndex) : defaultValue; }
+
 virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
 virtual void setString (int stackIndex, const std::string& value) = 0;
@@ -142,6 +146,16 @@ return re;
 
 template<class T> T& getUserObject (int stackIndex) {
 return *static_cast<T*>(getUserPointer(stackIndex));
+}
+
+template<class T> void setUserObject (int stackIndex, const T& obj) {
+void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
+new(ptr) T(obj);
+}
+
+template<class T, class... A> void emplaceUserObject (int stackIndex, A&&... args) {
+void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
+new(ptr) T(args...);
 }
 
 template<class T> inline void pushNewClass (const std::string& name, int nParents=0) { 
@@ -198,6 +212,7 @@ typedef std::function<std::string(const std::string&, const std::string&)> PathR
 typedef std::function<std::string(const std::string&)> FileLoaderFn;
 typedef std::function<void(const CompilationMessage&)> CompilationMessageFn;
 typedef std::function<void(std::istream& in, std::ostream& out)> EncodingConversionFn;
+typedef std::function<void(std::istream& in, std::ostream& out, int)> DecodingConversionFn;
 
 enum Option {
 VAR_DECL_MODE = 0, // Variable declaration mode
@@ -224,9 +239,9 @@ virtual void garbageCollect () = 0;
 static VM* export createVM ();
 static Fiber* export getActiveFiber ();
 static EncodingConversionFn export getEncoder (const std::string& name);
-static EncodingConversionFn export getDecoder (const std::string& name);
+static DecodingConversionFn export getDecoder (const std::string& name);
 static void export registerEncoder (const std::string& name, const EncodingConversionFn& func);
-static void export registerDecoder (const std::string& name, const EncodingConversionFn& func);
+static void export registerDecoder (const std::string& name, const DecodingConversionFn& func);
 };
 
 } // namespace QS

@@ -54,7 +54,7 @@ callFrames.reserve(4);
 
 void QVM::bindGlobal (const string& name, const QV& value) {
 int symbol = findGlobalSymbol(name, true);
-while (globalVariables.size()<=symbol) globalVariables.push_back(QV());
+insert_n(globalVariables, 1+symbol-globalVariables.size(), QV());
 globalVariables.at(symbol) = value;
 }
 
@@ -92,28 +92,22 @@ callCallable(nArgs);
 popCppCallFrame();
 }
 
-static inline QV findMethod (QClass* cls, int symbol) {
-QV re = symbol>=cls->methods.size()? QV() : cls->methods.at(symbol);
-return re.isNull() && cls->parent ? findMethod(cls->parent, symbol) : re;
-}
-
 void QFiber::callSymbol (int symbol, int nArgs) {
-uint32_t newStackBase = stack.size() -nArgs;
-QV receiver = stack.at(newStackBase);
+QV receiver = *(stack.end() -nArgs);
 QClass& cls = receiver.getClass(vm);
-QV method = findMethod(&cls, symbol);
+QV method = cls.findMethod(symbol);
 bool re = callMethod(method, nArgs);
-if (!re) runtimeError("%s hof type %s has no method %s", receiver.print(), cls.name, vm.methodSymbols[symbol]);
+if (!re) runtimeError("%s has no method %s", cls.name, vm.methodSymbols[symbol]);
 }
 
 void QFiber::callSuperSymbol (int symbol, int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
 QClass* cls = receiver.getClass(vm) .parent;
-QV method = findMethod(cls, symbol);
+QV method = cls->findMethod(symbol);
 bool re = callMethod(method, nArgs);
 if (!re) {
-runtimeError("%s hof type %s has no method %s", receiver.print(), cls->name, vm.methodSymbols[symbol]);
+runtimeError("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
 }}
 
 bool QFiber::callMethod (QV& method, int nArgs) {
@@ -123,7 +117,7 @@ if (method.isNativeFunction()) {
 QNativeFunction func = method.asNativeFunction();
 callFrames.push_back({ nullptr, nullptr, newStackBase });
 func(*this);
-stack.resize(callFrames.back().stackBase+1);
+stack.resize(newStackBase+1);
 callFrames.pop_back();
 return true;
 }
