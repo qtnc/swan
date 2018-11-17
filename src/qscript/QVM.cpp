@@ -115,7 +115,7 @@ uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
 if (method.isNativeFunction()) {
 QNativeFunction func = method.asNativeFunction();
-callFrames.push_back({ nullptr, nullptr, newStackBase });
+callFrames.push_back({nullptr, nullptr, newStackBase});
 func(*this);
 stack.resize(newStackBase+1);
 callFrames.pop_back();
@@ -138,7 +138,7 @@ QV& method = stack.at(newStackBase -1);
 const QClass& cls = method.getClass(vm);
 if (method.isNativeFunction()) {
 QNativeFunction func = method.asNativeFunction();
-callFrames.push_back({ nullptr, nullptr, newStackBase });
+callFrames.push_back({nullptr, nullptr, newStackBase});
 func(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
@@ -201,7 +201,7 @@ void QFiber::callClosure (QClosure& closure, int nArgs) {
 adjustArguments(nArgs, closure.func.nArgs, closure.func.vararg);
 uint32_t newStackBase = stack.size() -nArgs;
 bool doRun = callFrames.back().isCppCallFrame();
-callFrames.push_back({ &closure, closure.func.bytecode.data(), newStackBase });
+callFrames.push_back({&closure, closure.func.bytecode.data(), newStackBase});
 if (doRun) run();
 }
 

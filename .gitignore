@@ -2,6 +2,7 @@
 *.dll
 *.so
 *.a
+*.out
 *.lib
 *.txt
 *.tmp

@@ -434,7 +434,8 @@ When the last parameter of a function is a map, you can omit the encosing braces
 is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
-You can declare new variables and destructure them from a map or any numerically indexable sequence:
+You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
+Note that, unlike JavaScript, *recursive destructuration* is impossible; in QScript it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read.
 
 ```
 let map = {a: 1, b: 2, c: 3}
@@ -452,4 +453,10 @@ let {a=false, b=true, c=false, d=true} = map
 # This creates a=1, b=2, c=3, d=4 and e=5
 # Equivalent to: let a=list[0], b=list[1], c=list[2], d=list[3], e=list[4]
 let [a, b, c, d, e] = list
+
+# You can use destructuration in function parameters
+let f = $({one=1, two=2, three=3}) {
+return one+two+three
+}
+f(three: 333, two: 222, one: 111) # 666
 ```

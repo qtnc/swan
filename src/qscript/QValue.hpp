@@ -67,6 +67,13 @@ if (eq(*begin)) last = begin;
 return last;
 }
 
+template<class I, class F> std::pair<I,I> find_consecutive (const I& begin, const I& end, const F& pred) {
+auto first = std::find_if(begin, end, pred);
+if (first==end) return std::make_pair(end, end);
+auto last = std::find_if_not(first, end, pred);
+return std::make_pair(first, last);
+}
+
 template<class T, class C> static inline void insert_n (C& container, int n, const T& val) {
 if (n>0) std::fill_n(std::back_inserter(container), n, val);
 }
@@ -116,12 +123,18 @@ top -= (end-begin);
 }
 inline void insert (T* pos, const T& val) { insert(pos, &val, &val+1); }
 inline void erase (T* pos) { erase(pos, pos+1); }
-inline size_t size () { return top-base; }
+inline size_t size () const { return top-base; }
+inline bool empty () { return size()==0; }
 inline T& at (int i) { return *(base+i); }
-inline T& operator[] (int i) { return at(i); }
+inline T& operator[] (int i) { return *(base+i); }
+inline const T& at (int i) const { return *(base+i); }
+inline const T& operator[] (int i) const { return *(base+i); }
 inline T* begin () { return base; }
+inline const T* begin () const { return base; }
 inline T* end () { return top; }
+inline const T* end () const { return top; }
 inline T& back () { return *(top -1); }
+inline const T& back () const { return *(top -1); }
 };
 
 enum FiberState {

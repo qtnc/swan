@@ -1531,8 +1531,39 @@ vars[i].second = createBinaryOperation(subscript, T_QUESTQUESTEQ, vars[i].second
 return make_shared<VariableDeclaration>(vars, isConst? VD_CONST : 0);
 }
 
-static shared_ptr<Statement> makeMethodPrebody (vector<shared_ptr<FunctionParameter>>& params) {
-return nullptr;
+static shared_ptr<Statement> makeMethodPrebody (QParser& parser, vector<shared_ptr<FunctionParameter>>& params) {
+vector<shared_ptr<Statement>> stats;
+int count = 0;
+while(true){
+auto mapDestr = find_consecutive(params.begin(), params.end(), [](auto p){ return p->flags&(FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING); });
+if (mapDestr.first==params.end()) break;
+int flags = FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING | FP_CONST;
+vector<pair<QToken,shared_ptr<Expression>>> vars;
+string mapName = format("$destr%d", ++count);
+QString* mapNameStr = QString::create(parser.vm, mapName);
+QToken mapNameToken = { T_NAME, mapNameStr->data, mapNameStr->length, QV(mapNameStr, QV_TAG_STRING) };
+auto mapNameExpr = make_shared<NameExpression>(mapNameToken);
+auto source = mapNameExpr;
+for (auto it=mapDestr.first; it!=mapDestr.second; ++it) {
+auto param = *it;
+QToken& name =  param->arg;
+QToken index = { T_NAME, name.start, name.length, param->flags&FP_MAP_DESTRUCTURING? QV(QString::create(parser.vm, name.start, name.length), QV_TAG_STRING) : QV(static_cast<double>(it-mapDestr.first)) };
+vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
+auto subscript = make_shared<SubscriptExpression>(source, indices);
+if (param->defaultValue) param->defaultValue = createBinaryOperation(subscript, T_QUESTQUESTEQ, param->defaultValue);
+else param->defaultValue =  subscript;
+vars.push_back(make_pair(param->arg, param->defaultValue));
+flags &= param->flags;
+}
+shared_ptr<Expression> paramDefaultValue = nullptr;
+if (flags&FP_MAP_DESTRUCTURING) paramDefaultValue = make_shared<LiteralMapExpression>(mapNameToken);
+else paramDefaultValue = make_shared<LiteralListExpression>(mapNameToken);
+auto it = params.erase(mapDestr.first, mapDestr.second);
+params.insert(it, make_shared<FunctionParameter>(mapNameToken, paramDefaultValue));
+stats.push_back(make_shared<VariableDeclaration>(vars, (flags&FP_CONST? VD_CONST : 0) ));
+}
+if (stats.empty()) return nullptr;
+else return make_shared<BlockStatement>(stats);
 }
 
 shared_ptr<Statement> concatStatements (shared_ptr<Statement> s1, shared_ptr<Statement> s2) {
@@ -1558,6 +1589,7 @@ return make_shared<BlockStatement>(v);
 
 vector<shared_ptr<FunctionParameter>> QParser::parseFunctionParameters (bool implicitThis) {
 vector<shared_ptr<FunctionParameter>> params;
+int  destructuring = 0;
 if (implicitThis) {
 QToken thisToken = { T_NAME, THIS, 4, QV() };
 params.push_back(make_shared<FunctionParameter>(thisToken, nullptr, nullptr, FP_CONST));
@@ -1566,20 +1598,26 @@ if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
 do {
 int flags = 0;
 skipNewlines();
+if (!destructuring && match(T_LEFT_BRACE)) destructuring=FP_MAP_DESTRUCTURING;
+else if (!destructuring && matchOneOf(T_LEFT_PAREN, T_LEFT_BRACKET, T_LT)) destructuring =  FP_ARRAY_DESTRUCTURING; 
 if (match(T_CONST)) flags |= FP_CONST;
 else if (match(T_VAR)) flags &= ~FP_CONST;
+if (!destructuring) {
 if (match(T_DOTDOTDOT)) flags |= FP_VARARG;
 if (match(T_UND)) flags |= FP_FIELD_ASSIGN;
 else if (match(T_UNDUND)) flags |= FP_STATIC_FIELD_ASSIGN;
+}
 consume(T_NAME, ("Expected parameter name"));
 QToken arg = cur;
 shared_ptr<Expression> defaultValue = nullptr, typeCheck = nullptr;
 if (match(T_EQ)) defaultValue = parseExpression();
-if (match(T_AS)) typeCheck = parseExpression();
-params.push_back(make_shared<FunctionParameter>(arg, defaultValue, typeCheck, flags));
+if (!destructuring && match(T_AS)) typeCheck = parseExpression();
+params.push_back(make_shared<FunctionParameter>(arg, defaultValue, typeCheck, flags | destructuring));
 if (flags&FP_VARARG) break;
+if (destructuring && matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN, T_GT)) destructuring=0;
 } while(match(T_COMMA));
 skipNewlines();
+if (destructuring && !matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN, T_GT)) parseError("Expected '}', ']', ')' or '>' to close parameter destructuration");
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
 else if (match(T_NAME)) params.push_back(make_shared<FunctionParameter>(cur));
@@ -1590,7 +1628,7 @@ void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
 stackedTokens.push_back(cur);
 QToken name = nextNameToken(true);
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(true);
-shared_ptr<Statement> prebody = makeMethodPrebody(params);
+shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
 int flags = FD_METHOD;
 if (isStatic) flags |= FD_STATIC;
 if (*name.start=='[' && params.size()<=0) {
@@ -1642,7 +1680,7 @@ int flags = 0;
 if (match(T_DOLLAR)) flags |= FD_METHOD;
 if (match(T_STAR)) flags |= FD_FIBER;
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(flags&FD_METHOD);
-shared_ptr<Statement> prebody = makeMethodPrebody(params);
+shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
 match(T_COLON);
 shared_ptr<Statement> body = parseStatement();
 body = concatStatements(prebody, body);
@@ -2321,6 +2359,7 @@ if (isGlobal) compiler.compileError(nearestToken(), ("Cannot declare global in a
 if (exporting) compiler.compileError(nearestToken(), ("Cannot declare export in a local scope"));
 }
 for (auto& p: vars) {
+int slot = compiler.findLocalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
 compiler.writeDebugLine(p.first);
 auto vd = p.second;
 auto fd = dynamic_pointer_cast<FunctionDeclaration>(vd);
@@ -2329,7 +2368,6 @@ auto func = fd->compileFunction(compiler);
 func->name = string(p.first.start, p.first.length);
 }
 else vd->compile(compiler);
-int slot = compiler.findLocalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
 if (isGlobal) {
 int globalSlot = compiler.findGlobalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
 writeOpLoadLocal(compiler, slot);
