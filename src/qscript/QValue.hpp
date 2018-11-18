@@ -457,7 +457,15 @@ CompilationMessageFn messageReceiver;
 QObject* firstGCObject;
 QClass *boolClass, *bufferClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
 QClass *bufferMetaClass, *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
+#ifndef NO_REGEX
 QClass *regexClass, *regexMatchResultClass, *regexMetaClass, *regexIteratorClass, *regexTokenIteratorClass;
+#endif
+#ifndef NO_OPTIONAL_COLLECTIONS
+QClass *dictionaryClass, *dictionaryMetaClass, *linkedListClass, *linkedListMetaClass;
+#endif
+#ifndef NO_RANDOM
+QClass *randomClass, *randomMetaClass;
+#endif
 uint8_t varDeclMode = Option::VAR_STRICT;
 
 QVM ();

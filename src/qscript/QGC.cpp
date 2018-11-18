@@ -123,6 +123,37 @@ set.gcVisit();
 return false;
 }
 
+#ifndef NO_OPTIONAL_COLLECTIONS
+bool QLinkedList::gcVisit () {
+if (QObject::gcVisit()) return true;
+for (QV& val: data) val.gcVisit();
+return false;
+}
+
+bool QDictionary::gcVisit () {
+if (QObject::gcVisit()) return true;
+for (auto& p: map) {
+const_cast<QV&>(p.first) .gcVisit();
+p.second.gcVisit();
+}
+return false;
+}
+
+bool QDictionaryIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+map.sorter.gcVisit();
+map.gcVisit();
+return false;
+}
+
+bool QLinkedListIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+list.gcVisit();
+return false;
+}
+#endif
+
+#ifndef NO_REGEX
 bool QRegexIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
 str.gcVisit();
@@ -136,6 +167,7 @@ str.gcVisit();
 regex.gcVisit();
 return false;
 }
+#endif
 
 QVM::~QVM () {
 GCOIterator it(firstGCObject);
@@ -157,7 +189,15 @@ unmark(*it);
 
 vector<QObject*> roots = { 
 boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, tupleClass,
+#ifndef NO_REGEX
 regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
+#endif
+#ifndef NO_OPTIONAL_COLLECTIONS
+dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass,
+#endif
+#ifndef NO_RANDOM
+randomClass, randomMetaClass,
+#endif
 QFiber::curFiber
 };
 for (QObject* obj: roots) obj->gcVisit();

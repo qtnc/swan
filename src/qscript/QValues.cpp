@@ -214,6 +214,14 @@ notFirst=true;
 appendToString(f, *x, re);
 }}
 
+void QLinkedList::join (QFiber& f, const string& delim, string& re) {
+bool notFirst=false;
+for (QV& x: data) {
+if (notFirst) re+=delim;
+notFirst=true;
+appendToString(f, x, re);
+}}
+
 size_t QVHasher::operator() (const QV& value) const {
 QFiber& f = *QFiber::curFiber;
 static int hashCodeSymbol = f.vm.findMethodSymbol("hashCode");

@@ -5,7 +5,16 @@
 #include<vector>
 #include<unordered_map>
 #include<unordered_set>
+#ifndef NO_OPTIONAL_COLLECTIONS
+#include<map>
+#include<list>
+#endif
+#ifndef NO_RANDOM
+#include<random>
+#endif
+#ifndef NO_REGEX
 #include<boost/regex.hpp>
+#endif
 
 //https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 #define FNV_OFFSET 0x811c9dc5
@@ -95,6 +104,14 @@ virtual ~QSet () = default;
 virtual bool gcVisit () override;
 };
 
+struct QSetIterator: QObject {
+QSet& set;
+QSet::iterator iterator;
+QSetIterator (QVM& vm, QSet& m): QObject(vm.objectClass), set(m), iterator(m.set.begin()) {}
+virtual bool gcVisit () override;
+virtual ~QSetIterator() = default;
+};
+
 struct QTuple: QSequence {
 uint32_t length;
 QV data[];
@@ -160,14 +177,68 @@ else return (end-start) * (end -val) > 0 ? val : QV();
 virtual ~QRange () = default;
 };
 
-struct QSetIterator: QObject {
-QSet& set;
-QSet::iterator iterator;
-QSetIterator (QVM& vm, QSet& m): QObject(vm.objectClass), set(m), iterator(m.set.begin()) {}
+#ifndef NO_OPTIONAL_COLLECTIONS
+struct QDictionary: QSequence {
+typedef std::map<QV, QV, QVBinaryPredicate> map_type; 
+typedef map_type::iterator iterator;
+map_type map;
+QV sorter;
+QDictionary (QVM& vm, QV& sorter0): QSequence(vm.dictionaryClass), map(sorter0), sorter(sorter0) {}
+inline QV get (const QV& key) {
+auto it = map.find(key);
+if (it==map.end()) return QV();
+else return it->second;
+}
+inline QV& set (const QV& key, const QV& value) { return map[key] = value; }
+virtual ~QDictionary () = default;
 virtual bool gcVisit () override;
-virtual ~QSetIterator() = default;
 };
 
+struct QDictionaryIterator: QObject {
+QDictionary& map;
+QDictionary::iterator iterator;
+QDictionaryIterator (QVM& vm, QDictionary& m): QObject(vm.objectClass), map(m), iterator(m.map.begin()) {}
+virtual bool gcVisit () override;
+virtual ~QDictionaryIterator() = default;
+};
+
+struct QLinkedList: QSequence {
+typedef std::list<QV> list_type;
+typedef list_type::iterator iterator;
+list_type data;
+QLinkedList (QVM& vm): QSequence(vm.linkedListClass) {}
+inline QV& at (int n) {
+int size = data.size();
+iterator origin = data.begin();
+if (n<0) origin = data.end();
+else if (n>=size/2) { origin=data.end(); n-=size; }
+std::advance(origin, n);
+return *origin;
+}
+virtual void insertIntoVector (QFiber& f, std::vector<QV>& list, int start) override { list.insert(list.begin()+start, data.begin(), data.end()); }
+virtual void insertIntoSet (QFiber& f, QSet& s) override { s.set.insert(data.begin(), data.end()); }
+virtual void join (QFiber& f, const std::string& delim, std::string& out) override;
+virtual ~QLinkedList () = default;
+virtual bool gcVisit () override;
+};
+
+struct QLinkedListIterator: QObject {
+QLinkedList& list;
+QLinkedList::iterator iterator;
+QLinkedListIterator (QVM& vm, QLinkedList& m): QObject(vm.objectClass), list(m), iterator(m.data.begin()) {}
+virtual bool gcVisit () override;
+virtual ~QLinkedListIterator() = default;
+};
+#endif
+
+#ifndef NO_RANDOM
+struct QRandom: QObject {
+std::mt19937 rand;
+QRandom (QVM& vm): QObject(vm.objectClass) {}
+};
+#endif
+
+#ifndef NO_REGEX
 struct QRegex: QObject {
 boost::regex regex;
 boost::regex_constants::match_flag_type matchOptions;
@@ -200,5 +271,6 @@ QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, boost::regex_constants::mat
 virtual bool gcVisit () override;
 virtual ~QRegexTokenIterator () = default;
 };
+#endif
 
 #endif
