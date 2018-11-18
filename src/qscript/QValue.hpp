@@ -455,8 +455,11 @@ PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 QObject* firstGCObject;
-QClass *boolClass, *bufferClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
-QClass *bufferMetaClass, *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
+QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
+QClass *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
+#ifndef NO_BUFFER
+QClass *bufferMetaClass, *bufferClass;
+#endif
 #ifndef NO_REGEX
 QClass *regexClass, *regexMatchResultClass, *regexMetaClass, *regexIteratorClass, *regexTokenIteratorClass;
 #endif

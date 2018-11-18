@@ -1,3 +1,4 @@
+﻿#ifndef NO_BUFFER
 /* 
    base64.cpp and base64.h
 
@@ -120,3 +121,4 @@ std::string base64_decode(std::string const& encoded_string) {
 
   return ret;
 }
+#endif

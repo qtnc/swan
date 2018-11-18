@@ -1,7 +1,9 @@
 #include "QValue.hpp"
 #include "../include/cpprintf.hpp"
 #include<utf8.h>
+#ifndef NO_BUFFER
 #include "base64.h"
+#endif
 #include<unordered_map>
 #include<vector>
 #include<sstream>
@@ -116,6 +118,7 @@ static void u8ToBinary (istream& in, ostream& out) {
 auto unused = utf8::utf8to32( istream_iterator_adapter<char>(in), istream_iterator_adapter<char>(), ostream_iterator_adapter<uint8_t>(out));
 }
 
+#ifndef NO_BUFFER
 static void b64enc (istream& in, ostream& out, int mode) {
 ostringstream sOut;
 sOut << in.rdbuf();
@@ -144,6 +147,7 @@ while(in >> b[0] >> b[1]) {
 c = strtol(b, nullptr, 16);
 out << c;
 }}
+#endif
 
 unordered_map<string, QS::VM::EncodingConversionFn> QVM::stringToBufferConverters = {
 { "utf8", identity },
@@ -152,9 +156,11 @@ unordered_map<string, QS::VM::EncodingConversionFn> QVM::stringToBufferConverter
 { "binary", u8ToBinary },
 { "latin1", u8ToBinary },
 { "iso88591", u8ToBinary },
-{ "native", u8ToBinary },
-{ "base64", b64dec },
+{ "native", u8ToBinary }
+#ifndef NO_BUFFER
+, { "base64", b64dec },
 { "hex", hexdec }
+#endif
 };
 
 unordered_map<string, QS::VM::DecodingConversionFn>  QVM::bufferToStringConverters = {
@@ -164,9 +170,11 @@ unordered_map<string, QS::VM::DecodingConversionFn>  QVM::bufferToStringConverte
 { "binary", binaryToU8 },
 { "latin1", binaryToU8 },
 { "iso88591", binaryToU8 },
-{ "native", binaryToU8 },
-{ "base64", b64enc },
+{ "native", binaryToU8 }
+#ifndef NO_BUFFER
+, { "base64", b64enc },
 { "hex", hexenc }
+#endif
 };
 
 

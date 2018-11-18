@@ -80,18 +80,6 @@ struct QVLess {
 bool operator() (const QV& a, const QV& b) const;
 };
 
-struct QBuffer: QSequence {
-uint32_t length;
-uint8_t data[];
-static QBuffer* create (QVM& vm, const void* buf, int length);
-template <class T> static inline QBuffer* create (QVM& vm, const T* start, const T* end) { return create(vm, start, (end-start)*sizeof(T)); }
-static QBuffer* create (QBuffer*);
-QBuffer (QVM& vm, uint32_t len);
-inline uint8_t* begin () { return data; }
-inline uint8_t* end () { return data+length; }
-virtual ~QBuffer () = default;
-};
-
 struct QSet: QSequence {
 typedef std::unordered_set<QV, QVHasher, QVEqualler> set_type;
 typedef set_type::iterator iterator;
@@ -177,6 +165,20 @@ else return (end-start) * (end -val) > 0 ? val : QV();
 virtual ~QRange () = default;
 };
 
+#ifndef NO_BUFFER 
+struct QBuffer: QSequence {
+uint32_t length;
+uint8_t data[];
+static QBuffer* create (QVM& vm, const void* buf, int length);
+template <class T> static inline QBuffer* create (QVM& vm, const T* start, const T* end) { return create(vm, start, (end-start)*sizeof(T)); }
+static QBuffer* create (QBuffer*);
+QBuffer (QVM& vm, uint32_t len);
+inline uint8_t* begin () { return data; }
+inline uint8_t* end () { return data+length; }
+virtual ~QBuffer () = default;
+};
+#endif
+
 #ifndef NO_OPTIONAL_COLLECTIONS
 struct QDictionary: QSequence {
 typedef std::map<QV, QV, QVBinaryPredicate> map_type; 
@@ -234,7 +236,7 @@ virtual ~QLinkedListIterator() = default;
 #ifndef NO_RANDOM
 struct QRandom: QObject {
 std::mt19937 rand;
-QRandom (QVM& vm): QObject(vm.objectClass) {}
+QRandom (QVM& vm): QObject(vm.randomClass) {}
 };
 #endif
 

@@ -260,7 +260,7 @@ static void mapIteratorValue (QFiber& f) {
 QMapIterator& mi = f.getObject<QMapIterator>(1);
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
-mi.iterator++;
+++mi.iterator;
 f.returnValue(tuple);
 }
 
@@ -772,6 +772,7 @@ re = (re^h) * FNV_PRIME;
 f.returnValue(static_cast<double>(re));
 }
 
+#ifndef NO_BUFFER
 static void bufferIterate (QFiber& f) {
 QBuffer& b = f.getObject<QBuffer>(0);
 int i = 1 + (f.isNull(1)? -1 : f.getNum(1));
@@ -950,6 +951,7 @@ else out += static_cast<char>(x);
 }
 f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
 }}
+#endif
 
 #ifndef NO_OPTIONAL_COLLECTIONS
 static void linkedListInstantiate (QFiber& f) {
@@ -1042,6 +1044,175 @@ list.join(f, ", ", re);
 re += "]";
 f.returnValue(re);
 }
+
+static void dictionaryIn (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+auto it = map.map.find(f.at(1));
+f.returnValue(it!=map.map.end());
+}
+
+static void dictionaryInstantiate (QFiber& f) {
+QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+QDictionary* map = new QDictionary(f.vm, sorter);
+vector<QV> tuple;
+for (int i=2, l=f.getArgCount(); i<l; i++) {
+tuple.clear();
+f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
+map->map[tuple[0]] = tuple.back();
+}
+f.returnValue(map);
+}
+
+static void dictionaryFromSequence (QFiber& f) {
+QV sorter = f.getArgCount()>=2? f.at(1) : QV();
+if (sorter.isNull()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+QDictionary* map = new QDictionary(f.vm, sorter);
+vector<QV> pairs, tuple;
+for (int i=2, l=f.getArgCount(); i<l; i++) {
+pairs.clear();
+f.getObject<QSequence>(i).insertIntoVector(f, pairs, 0);
+for (QV& pair: pairs) {
+tuple.clear();
+pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
+map->map[tuple[0]] = tuple.back();
+}}
+f.returnValue(map);
+}
+
+static void dictionaryIterate (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+if (f.isNull(1)) {
+f.returnValue(new QDictionaryIterator(f.vm, map));
+}
+else {
+QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(1);
+bool cont = mi.iterator != map.map.end();
+f.returnValue( cont? f.at(1) : QV());
+}}
+
+static void dictionaryIteratorValue (QFiber& f) {
+QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(1);
+QV data[] = { mi.iterator->first, mi.iterator->second };
+QTuple* tuple = QTuple::create(f.vm, 2, data);
+++mi.iterator;
+f.returnValue(tuple);
+}
+
+static void dictionaryToString (QFiber& f) {
+bool first = true;
+string out;
+out += '{';
+for (auto& p: f.getObject<QDictionary>(0).map) {
+if (!first) out +=  ", ";
+QV key = p.first, value = p.second;
+appendToString(f, key, out);
+out+= ": ";
+appendToString(f, value, out);
+first=false;
+}
+out += '}';
+f.returnValue(out);
+}
+
+static void dictionaryRemove (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+for (int i=1, n=f.getArgCount(); i<n; i++) {
+auto it = map.map.find(f.at(i));
+if (it==map.map.end()) f.returnValue(QV());
+else {
+f.returnValue(it->second);
+map.map.erase(it);
+}}}
+
+static void dictionaryLowerBound (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+auto it = map.map.lower_bound(f.at(1));
+f.returnValue(it==map.map.end()? QV() : it->first);
+}
+
+static void dictionaryUpperBound (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+auto it = map.map.upper_bound(f.at(1));
+f.returnValue(it==map.map.end()? QV() : it->first);
+}
+#endif
+
+#ifndef NO_RANDOM 
+static void randomInstantiate (QFiber& f) {
+QRandom* r = new QRandom(f.vm);
+if (f.getArgCount()>=2 && f.isNum(1)) r->rand.seed(f.getNum(1));
+f.returnValue(r);
+}
+
+static void randomCall (QFiber& f) {
+QRandom& r = f.getObject<QRandom>(0);
+int nargs = f.getArgCount();
+if (nargs==1) {
+uniform_real_distribution<double> dist(0.0, 1.0);
+f.returnValue( dist(r.rand) );
+}
+else if (nargs==2) {
+if (f.isNum(1)) {
+double n = f.getNum(1);
+if (n<1) {
+bernoulli_distribution dist(n);
+f.returnValue( dist(r.rand) );
+} else {
+uniform_int_distribution<int64_t> dist(0, n -1);
+f.returnValue(static_cast<double>( dist(r.rand) ));
+}} else {
+vector<double> weights;
+vector<QV> qw;
+f.getObject<QSequence>(1) .insertIntoVector(f, qw, 0);
+for (QV& x: qw) weights.push_back(x.asNum());
+discrete_distribution<size_t> dist(weights.begin(), weights.end());
+f.returnValue( static_cast<double>( dist(r.rand) ) );
+}}
+else if (nargs==3) {
+uniform_int_distribution<int> dist(f.getNum(1), f.getNum(2));
+f.returnValue(static_cast<double>( dist(r.rand) ));
+}}
+
+static void randomNormal (QFiber& f) {
+QRandom& r = f.getObject<QRandom>(0);
+normal_distribution<double> dist( f.getOptionalNum(1, 0), f.getOptionalNum(2, 1) );
+f.returnValue( dist(r.rand) );
+}
+
+static inline QRandom& getDefaultRandom (QFiber& f) {
+return * f.vm.globalVariables[find(f.vm.globalSymbols.begin(), f.vm.globalSymbols.end(), "rand") -f.vm.globalSymbols.begin()] .asObject<QRandom>();
+}
+
+static void listShuffle (QFiber& f) {
+QList& l = f.getObject<QList>(0);
+QRandom& r = f.getArgCount()>=2? f.getObject<QRandom>(1) : getDefaultRandom(f);
+shuffle(l.data.begin(), l.data.end(), r.rand);
+}
+
+static void listDraw (QFiber& f) {
+QList& l = f.getObject<QList>(0);
+QRandom& r = f.getArgCount()>=2 && f.at(1).isInstanceOf(f.vm.randomClass)? f.getObject<QRandom>(1) : getDefaultRandom(f);
+int count = f.getOptionalNum(-1, 1);
+if (count>1) {
+vector<QV> tmp = l.data;
+shuffle(tmp.begin(), tmp.end(), r.rand);
+QList* re = new QList(f.vm);
+for (int i=0, n=tmp.size(); i<count && i<n; i++) re->data.push_back(tmp[i]);
+f.returnValue(re);
+} 
+else if (f.getArgCount()>=2 && !f.at(-1).isInstanceOf(f.vm.randomClass)) {
+vector<double> weights;
+vector<QV> qw;
+f.getObject<QSequence>(-1) .insertIntoVector(f, qw, 0);
+for (QV& x: qw) weights.push_back(x.asNum());
+weights.resize(l.data.size());
+discrete_distribution<size_t> dist(weights.begin(), weights.end());
+f.returnValue( l.data[ dist(r.rand) ]);
+}
+else {
+uniform_int_distribution<size_t> dist(0, l.data.size() -1);
+f.returnValue( l.data[ dist(r.rand) ]);
+}}
 #endif
 
 #ifndef NO_REGEX
@@ -1247,21 +1418,18 @@ messageReceiver(defaultMessageReceiver)
 {
 objectClass = QClass::create(*this, nullptr, nullptr, "Object");
 classClass = QClass::create(*this, nullptr, objectClass, "Class");
-bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass");
 fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass");
 functionMetaClass = QClass::create(*this, classClass, classClass, "FunctionMetaClass");
 listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass");
 mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass");
 numMetaClass = QClass::create(*this, classClass, classClass, "NumMetaClass");
 rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass");
-regexMetaClass = QClass::create(*this, classClass, classClass, "RegexMetaClass");
 setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass");
 stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass");
 tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass");
 boolClass = QClass::create(*this, classClass, objectClass, "Bool");
 functionClass = QClass::create(*this, functionMetaClass, objectClass, "Function");
 sequenceClass = QClass::create(*this, classClass, objectClass, "Sequence");
-bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer");
 fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber");
 listClass = QClass::create(*this, listMetaClass, sequenceClass, "List");
 mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map");
@@ -1271,7 +1439,12 @@ setClass = QClass::create(*this, setMetaClass, sequenceClass, "Set");
 stringClass = QClass::create(*this, stringMetaClass, sequenceClass, "String");
 tupleClass = QClass::create(*this, tupleMetaClass, sequenceClass, "Tuple");
 rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range");
+#ifndef NO_BUFFER
+bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass");
+bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer");
+#endif
 #ifndef NO_REGEX
+regexMetaClass = QClass::create(*this, classClass, classClass, "RegexMetaClass");
 regexClass = QClass::create(*this, regexMetaClass, objectClass, "Regex");
 regexMatchResultClass = QClass::create(*this, classClass, objectClass, "RegexMatchResult");
 regexIteratorClass = QClass::create(*this, classClass, sequenceClass, "RegexIterator");
@@ -1442,22 +1615,6 @@ BIND_F(findAll, stringFindAll)
 #endif
 BIND_F(trim, stringTrim)
 BIND_F(format, stringFormat)
-BIND_F(toBuffer, stringToBuffer)
-;
-
-bufferClass
-->copyParentMethods()
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QBuffer>(0).length)); })
-BIND_F([], bufferSubscript)
-BIND_F(+, bufferPlus)
-BIND_F(in, bufferIn)
-BIND_F(iterate, bufferIterate)
-BIND_F(indexOf, bufferFind)
-BIND_F(lastIndexOf, bufferRfind)
-BIND_F(findFirstOf, bufferFindFirstOf)
-BIND_F(startsWith, bufferStartsWith)
-BIND_F(endsWith, bufferEndsWith)
-BIND_F(toString, bufferToString)
 ;
 
 listClass
@@ -1501,6 +1658,25 @@ sequenceClass
 BIND_F(join, sequenceJoin)
 ;
 
+#ifndef NO_BUFFER
+stringClass BIND_F(toBuffer, stringToBuffer);
+
+bufferClass
+->copyParentMethods()
+BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QBuffer>(0).length)); })
+BIND_F([], bufferSubscript)
+BIND_F(+, bufferPlus)
+BIND_F(in, bufferIn)
+BIND_F(iterate, bufferIterate)
+BIND_F(indexOf, bufferFind)
+BIND_F(lastIndexOf, bufferRfind)
+BIND_F(findFirstOf, bufferFindFirstOf)
+BIND_F(startsWith, bufferStartsWith)
+BIND_F(endsWith, bufferEndsWith)
+BIND_F(toString, bufferToString)
+;
+#endif
+
 #ifndef NO_OPTIONAL_COLLECTIONS
 linkedListClass
 ->copyParentMethods()
@@ -1517,6 +1693,17 @@ BIND_F(iteratorValue, linkedListIteratorValue)
 
 dictionaryClass
 ->copyParentMethods()
+BIND_L( [], { f.returnValue(f.getObject<QDictionary>(0) .get(f.at(1))); })
+BIND_L( []=, { f.returnValue(f.getObject<QDictionary>(0) .set(f.at(1), f.at(2))); })
+BIND_F(in, dictionaryIn)
+BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDictionary>(0).map.size())); })
+BIND_F(toString, dictionaryToString)
+BIND_F(iterate, dictionaryIterate)
+BIND_F(iteratorValue, dictionaryIteratorValue)
+BIND_L(clear, { f.getObject<QDictionary>(0).map.clear(); })
+BIND_F(remove, dictionaryRemove)
+BIND_F(lower, dictionaryLowerBound)
+BIND_F(upper, dictionaryUpperBound)
 ;
 #endif
 
@@ -1551,24 +1738,24 @@ BIND_F(iteratorValue, regexTokenIteratorValue)
 #ifndef NO_RANDOM
 randomClass
 ->copyParentMethods()
+BIND_F( (), randomCall )
+BIND_F( normal, randomNormal)
+;
+
+randomMetaClass
+->copyParentMethods()
+BIND_F( (), randomInstantiate)
+;
+
+listClass
+BIND_F(shuffle, listShuffle)
+BIND_F(draw, listDraw)
 ;
 #endif
 
 numMetaClass
 ->copyParentMethods()
 BIND_F( (), numInstantiate)
-;
-
-stringMetaClass
-->copyParentMethods()
-BIND_F( (), stringInstantiate)
-BIND_F( of, stringFromSequence)
-;
-
-bufferMetaClass
-->copyParentMethods()
-BIND_F( (), bufferInstantiate)
-BIND_F(of, bufferFromSequence)
 ;
 
 listMetaClass
@@ -1589,6 +1776,20 @@ BIND_F( (), setInstantiate)
 BIND_F(of, setFromSequence)
 ;
 
+#ifndef NO_BUFFER
+stringMetaClass
+->copyParentMethods()
+BIND_F( (), stringInstantiate)
+BIND_F( of, stringFromSequence)
+;
+
+bufferMetaClass
+->copyParentMethods()
+BIND_F( (), bufferInstantiate)
+BIND_F(of, bufferFromSequence)
+;
+#endif
+
 #ifndef NO_OPTIONAL_COLLECTIONS
 linkedListMetaClass
 ->copyParentMethods()
@@ -1598,6 +1799,8 @@ BIND_F(of, linkedListFromSequence)
 
 dictionaryMetaClass
 ->copyParentMethods()
+BIND_F( (), dictionaryInstantiate)
+BIND_F(of, dictionaryFromSequence)
 ;
 #endif
 
@@ -1631,7 +1834,10 @@ functionMetaClass
 initPlatformEncodings();
 
 QClass* globalClasses[] = { 
-boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, sequenceClass, setClass, stringClass, tupleClass 
+boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, sequenceClass, setClass, stringClass, tupleClass
+#ifndef NO_BUFFER
+, bufferClass
+#endif
 #ifndef NO_REGEX
 , regexClass
 #endif
@@ -1653,6 +1859,10 @@ bindGlobal("PlusInf", QV(QV_PLUS_INF));
 bindGlobal("MinusInf", QV(QV_MINUS_INF));
 bindGlobal("Pi", acos(-1));
 BIND_GL(clock, { f.returnValue(nativeClock()); })
+
+#ifndef NO_RANDOM
+bindGlobal("rand", QV(new QRandom(*this)));
+#endif
 
 #define F(X) \
 numClass BIND_F(X, numMathFunc<X>); \

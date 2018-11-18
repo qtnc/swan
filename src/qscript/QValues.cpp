@@ -31,6 +31,8 @@ std::string QV::asString () const { return asObject<QString>()->asString(); }
 const char* QV::asCString () const { return asObject<QString>()->begin(); }
 const QS::Range& QV::asRange () const { return *asObject<QRange>(); }
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
+
+#ifndef NO_BUFFER
 bool QFiber::isBuffer (int i) { return at(i).isInstanceOf(vm.bufferClass); }
 
 const void* QFiber::getBufferV (int i, int* length) {
@@ -46,6 +48,11 @@ push(QBuffer::create(vm, data, length));
 void QFiber::setBuffer  (int i, const void* data, int length) {
 at(i) = QBuffer::create(vm, data, length);
 }
+#else
+bool QFiber::isBuffer (int i) { return false; }
+const void* QFiber::getBufferV (int i, int* length) { return nullptr; }
+void QFiber::setBuffer  (int i, const void* data, int length) { }
+#endif
 
 void QFiber::pushRange (const QS::Range& r) {
 push(new QRange(vm, r));
@@ -147,22 +154,6 @@ QString* QString::create (QString* s) {
 return create(s->type->vm, s->data, s->length); 
 }
 
-QBuffer::QBuffer (QVM& vm, uint32_t len): 
-QSequence(vm.bufferClass), length(len) {}
-
-QBuffer* QBuffer::create (QVM& vm, const void* str, int len) {
-QBuffer* s = newVLS<QBuffer, uint8_t>(len+4, vm, len);
-if (len>0) memcpy(s->data, str, len);
-*reinterpret_cast<uint32_t*>(&s->data[len]) = 0;
-return s;
-}
-
-QBuffer* QBuffer::create (QBuffer* s) { 
-return create(s->type->vm, s->data, s->length); 
-}
-
-
-
 QTuple* QTuple::create (QVM& vm, uint32_t length, const QV* data) {
 QTuple* tuple = newVLS<QTuple, QV>(length, vm, length);
 memcpy(tuple->data, data, length*sizeof(QV));
@@ -212,14 +203,6 @@ for (QV *x = data, *end=data+length; x<end; x++) {
 if (notFirst) re+=delim;
 notFirst=true;
 appendToString(f, *x, re);
-}}
-
-void QLinkedList::join (QFiber& f, const string& delim, string& re) {
-bool notFirst=false;
-for (QV& x: data) {
-if (notFirst) re+=delim;
-notFirst=true;
-appendToString(f, x, re);
 }}
 
 size_t QVHasher::operator() (const QV& value) const {
@@ -317,6 +300,33 @@ case 'z': flags |= boost::regex_constants::format_all; break;
 return std::make_pair(options, flags);
 }
 
+#ifndef NO_OPTIONAL_COLLECTIONS
+void QLinkedList::join (QFiber& f, const string& delim, string& re) {
+bool notFirst=false;
+for (QV& x: data) {
+if (notFirst) re+=delim;
+notFirst=true;
+appendToString(f, x, re);
+}}
+#endif
+
+#ifndef NO_BUFFER
+QBuffer::QBuffer (QVM& vm, uint32_t len): 
+QSequence(vm.bufferClass), length(len) {}
+
+QBuffer* QBuffer::create (QVM& vm, const void* str, int len) {
+QBuffer* s = newVLS<QBuffer, uint8_t>(len+4, vm, len);
+if (len>0) memcpy(s->data, str, len);
+*reinterpret_cast<uint32_t*>(&s->data[len]) = 0;
+return s;
+}
+
+QBuffer* QBuffer::create (QBuffer* s) { 
+return create(s->type->vm, s->data, s->length); 
+}
+#endif
+
+#ifndef NO_REGEX
 QRegex::QRegex (QVM& vm, const char* begin, const char* end, boost::regex_constants::syntax_option_type regexOptions, boost::regex_constants::match_flag_type matchOptions0):
 QObject(vm.regexClass), regex(begin, end, regexOptions), matchOptions(matchOptions0)
 {}
@@ -330,7 +340,7 @@ QRegexTokenIterator::QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, boost:
 QSequence(vm.regexTokenIteratorClass), str(s), regex(r), 
 it(s.begin(), s.end(), r.regex, g, options | r.matchOptions)
 {}
-
+#endif
 
 string QS::RuntimeException::getStackTraceAsString () {
 ostringstream out;
