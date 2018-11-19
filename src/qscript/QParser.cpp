@@ -12,8 +12,7 @@ extern const char* OPCODE_NAMES[];
 
 static const char 
 *THIS = "this",
-*EXPORTS = "exports",
-*DOLLARMAP = "$map";
+*EXPORTS = "exports";
 
 OpCodeInfo OPCODE_INFO[] = {
 #define OP(name, stackEffect, nArgs, argFormat) { stackEffect, nArgs, argFormat }
@@ -26,6 +25,10 @@ static const char* TOKEN_NAMES[] = {
 #include "QTokenTypes.hpp"
 #undef TOKEN
 };
+
+double dlshift (double, double);
+double drshift (double, double);
+double dintdiv (double, double);
 
 template<class T> static inline uint32_t utf8inc (T& it, T end) {
 utf8::next(it, end);
@@ -916,6 +919,7 @@ OPERATOR(PLUS, PrefixOp, InfixOp, unp, +, TERM),
 OPERATOR(MINUS, PrefixOp, InfixOp, unm, -, TERM),
 INFIX_OP(STAR, InfixOp, *, FACTOR),
 OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR),
+INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR),
 INFIX_OP(PERCENT, InfixOp, %, FACTOR),
 INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
 INFIX_OP(BAR, InfixOp, |, BITWISE),
@@ -934,6 +938,7 @@ INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT),
 INFIX(MINUSEQ, InfixOp, -=, ASSIGNMENT),
 INFIX(STAREQ, InfixOp, *=, ASSIGNMENT),
 INFIX(SLASHEQ, InfixOp, /=, ASSIGNMENT),
+INFIX(BACKSLASHEQ, InfixOp, \\=, ASSIGNMENT),
 INFIX(PERCENTEQ, InfixOp, %=, ASSIGNMENT),
 INFIX(STARSTAREQ, InfixOp, **=, ASSIGNMENT),
 INFIX(BAREQ, InfixOp, |=, ASSIGNMENT),
@@ -953,7 +958,8 @@ INFIX_OP(LTE, InfixOp, <=, COMPARISON),
 INFIX_OP(GTE, InfixOp, >=, COMPARISON),
 INFIX_OP(IS, InfixOp, is, COMPARISON),
 INFIX_OP(IN, InfixOp, in, COMPARISON),
-INFIX(QUEST, Conditional, ?, CONDITIONAL),
+
+OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL),
 
 PREFIX_OP(EXCL, PrefixOp, !),
 PREFIX_OP(TILDE, PrefixOp, ~),
@@ -1051,8 +1057,8 @@ OP(LT, <), OP(GT, >),
 OP(LTE, <=), OP(GTE, >=),
 OP(EQEQ, ==), OP(EXCLEQ, !=),
 OPB(BAR, |), OPB(AMP, &), OPB(CIRC, ^),
-OPB(LTLT, <<), OPB(GTGT, >>),
-OPF(PERCENT, fmod), OPF(STARSTAR, pow)
+OPF(LTLT, dlshift), OPF(GTGT, drshift),
+OPF(PERCENT, fmod), OPF(STARSTAR, pow), OPF(BACKSLASH, dintdiv)
 #undef OP
 #undef OPF
 #undef OPB
@@ -1139,7 +1145,7 @@ return QV(vm, re);
 static shared_ptr<BinaryOperation> createBinaryOperation (shared_ptr<Expression> left, QTokenType op, shared_ptr<Expression> right) {
 switch(op){
 case T_EQ:
-case T_PLUSEQ: case T_MINUSEQ: case T_STAREQ: case T_STARSTAREQ: case T_SLASHEQ: case T_PERCENTEQ:
+case T_PLUSEQ: case T_MINUSEQ: case T_STAREQ: case T_STARSTAREQ: case T_SLASHEQ: case T_BACKSLASHEQ: case T_PERCENTEQ:
 case T_BAREQ: case T_AMPEQ: case T_CIRCEQ: case T_AMPAMPEQ: case T_BARBAREQ: case T_LTLTEQ: case T_GTGTEQ: case T_QUESTQUESTEQ:
 return make_shared<AssignmentOperation>(left, op, right);
 case T_DOT: 
@@ -1194,6 +1200,7 @@ case '+': RET2('+')
 case '-': RET3('-', '>')
 case '*': RET2('*')
 case '/': RET
+case '\\': RET
 case '%': RET
 case '|': RET
 case '&': RET
@@ -1253,13 +1260,14 @@ case ',': RET(T_COMMA)
 case ';': RET(T_SEMICOLON)
 case ':': RET2(':', T_COLONCOLON, T_COLON)
 case '_': RET2('_', T_UNDUND, T_UND)
-case '@': RET2('@', T_ATAT, T_AT)
+case '@': RET(T_AT)
 case '$': RET(T_DOLLAR)
 case '.': RET22('.', '.', T_DOTDOTDOT, T_DOTDOT, T_DOTDOT, T_DOT)
 case '+': RET3('+', T_PLUSPLUS, '=', T_PLUSEQ, T_PLUS)
 case '-': RET4('-', T_MINUSMINUS, '=', T_MINUSEQ, '>', T_MINUSGT, T_MINUS)
 case '*': RET22('*', '=', T_STARSTAREQ, T_STARSTAR, T_STAREQ, T_STAR)
 case '/': RET2('=', T_SLASHEQ, T_SLASH)
+case '\\': RET2('=', T_BACKSLASHEQ, T_BACKSLASH)
 case '%': RET2('=', T_PERCENTEQ, T_PERCENT)
 case '|': RET22('|', '=', T_BARBAREQ, T_BARBAR, T_BAREQ, T_BAR)
 case '&': RET22('&', '=', T_AMPAMPEQ, T_AMPAMP, T_AMPEQ, T_AMP)

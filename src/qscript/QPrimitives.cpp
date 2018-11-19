@@ -42,6 +42,20 @@ f.returnValue(F(f.getNum(0)));
 double nativeClock ();
 void initPlatformEncodings ();
 
+double dintdiv (double a, double b) {
+return static_cast<int64_t>(a) / static_cast<int64_t>(b);
+}
+
+double dlshift (double a, double b) {
+int64_t x = a, y = b;
+return y<0? x>>-y : x<<y;
+}
+
+double drshift (double a, double b) {
+int64_t x = a, y = b;
+return y>0? x>>y : x<<-y;
+}
+
 static void doNothing (QFiber& f) { }
 
 static void fiberInstantiate (QFiber& f) {
@@ -1475,6 +1489,7 @@ BIND_L(is, { f.returnValue(f.at(0).i == f.at(1).i); })
 BIND_L(==, { f.returnValue(f.at(0).i == f.at(1).i); })
 BIND_L(!=, { f.returnValue(f.at(0).i != f.at(1).i); })
 BIND_L(!, { f.returnValue(QV(false)); })
+BIND_L(?, { f.returnValue(QV(true)); })
 ;
 
 classClass
@@ -1495,6 +1510,7 @@ BIND_F(hashCode, objectHashCode)
 boolClass
 ->copyParentMethods()
 BIND_L(!, { f.returnValue(!f.getBool(0)); })
+BIND_N(?)
 BIND_L(toString, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
 BIND_F(hashCode, objectHashCode)
 ;
@@ -1502,6 +1518,7 @@ BIND_F(hashCode, objectHashCode)
 nullClass
 ->copyParentMethods()
 BIND_L(!, { f.returnValue(QV(true)); })
+BIND_L(?, { f.returnValue(QV(false)); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4)); })
 BIND_F(hashCode, objectHashCode)
 ;
@@ -1520,7 +1537,9 @@ OP(+) OP(-) OP(*) OP(/)
 OP(<) OP(>) OP(<=) OP(>=) OP(==) OP(!=)
 OPF(%, fmod)
 OPF(**, pow)
-OPB(|) OPB(&) OPB(^) OPB(<<) OPB(>>)
+OPF(\\, dintdiv)
+OPF(<<, dlshift) OPF(>>, drshift)
+OPB(|) OPB(&) OPB(^)
 BIND_L(unm, { f.returnValue(-f.getNum(0)); })
 BIND_L(unp, { f.returnValue(+f.getNum(0)); })
 BIND_L(~, { f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); })
