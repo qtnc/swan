@@ -13,6 +13,7 @@ QS::VM::EncodingConversionFn encoder;
 QS::VM::DecodingConversionFn decoder;
 shared_ptr<istream> in;
 shared_ptr<ostream> out;
+IO (): in(nullptr), out(nullptr), encoder(nullptr), decoder(nullptr) {}
 IO (shared_ptr<istream> i, const QS::VM::DecodingConversionFn& c = nullptr): in(i), out(nullptr), encoder(nullptr), decoder(c) {}
 IO (shared_ptr<ostream> o, const QS::VM::EncodingConversionFn& c = nullptr): in(nullptr), out(o), encoder(c), decoder(nullptr)  {}
 void flush () {
@@ -32,7 +33,58 @@ else in->seekg(pos, ios_base::end);
 return tell();
 }
 bool operator! () { return (in && !*in) || (out && !*out); }
+operator bool () { return (in && *in) || (out && *out); }
 };
+IO cstdin, cstdout, cstderr;
+
+static IO& ioGetStdout () {
+if (!cstdout.out) {
+cstdout.out = make_shared<ostream>(cout.rdbuf());
+cstdout.encoder = QS::VM::getEncoder(("native"));
+}
+return cstdout;
+}
+
+static IO& ioGetStderr () {
+if (!cstderr.out) {
+cstderr.out = make_shared<ostream>(cerr.rdbuf());
+cstderr.encoder = QS::VM::getEncoder(("native"));
+}
+return cstderr;
+}
+
+static IO& ioGetStdin () {
+if (!cstdin.in) {
+cstdin.in = make_shared<istream>(cin.rdbuf());
+cstdin.decoder = QS::VM::getDecoder(("native"));
+}
+return cstdin;
+}
+
+static IO& ioSetStdout (IO& x) { return cstdout = x; }
+static IO& ioSetStderr (IO& x) { return cstderr = x; }
+static IO& ioSetStdin (IO& x) { return cstdin = x; }
+
+static void print (QS::Fiber& f) {
+auto& io = ioGetStdout();
+ostringstream p;
+for (int i=0, n=f.getArgCount(); i<n; i++) {
+if (i>0) p<<' ';
+if (f.isString(i)) p << f.getString(i);
+else {
+f.pushCopy(i);
+f.callMethod("toString", 1);
+p << f.getString(-1);
+f.pop();
+}}
+p << endl;
+if (io.encoder) {
+istringstream in(p.str());
+io.encoder(in, *io.out);
+}
+else *io.out << p.str();
+f.setNull(0);
+}
 
 static void ioWrite (QS::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
@@ -149,9 +201,13 @@ f.registerDestructor<IO>();
 f.registerStaticMethod("open", STATIC_METHOD(ioOpen));
 f.registerStaticMethod("create", STATIC_METHOD(ioCreate));
 f.registerStaticMethod("of", ioOf);
+f.registerStaticProperty("stdout", STATIC_METHOD(ioGetStdout), STATIC_METHOD(ioSetStdout));
+f.registerStaticProperty("stderr", STATIC_METHOD(ioGetStderr), STATIC_METHOD(ioSetStderr));
+f.registerStaticProperty("stdin", STATIC_METHOD(ioGetStdin), STATIC_METHOD(ioSetStdin));
 f.registerMethod("read", ioRead);
 f.registerMethod("readLine", ioReadLine);
 f.registerMethod("!", METHOD(IO, operator!));
+f.registerMethod("?", METHOD(IO, operator bool));
 f.registerMethod("iterate", ioIterate);
 f.registerMethod("iteratorValue", ioReadLine);
 f.registerMethod("write", ioWrite);
@@ -161,5 +217,6 @@ f.registerMethod("tell", METHOD(IO, tell));
 f.registerMethod("close", METHOD(IO, close));
 f.registerMethod("toBuffer", ioToBuffer);
 f.pop();
+f.registerFunction("print", print);
 }
 

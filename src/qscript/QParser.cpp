@@ -1075,7 +1075,7 @@ static inline bool isSpace (uint32_t c) {
 return c==' ' || c=='\t' || c=='\r';
 }
 
-static inline bool isName (uint32_t c) {
+inline bool isName (uint32_t c) {
 return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' || c>=128;
 }
 

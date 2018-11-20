@@ -41,6 +41,8 @@ f.returnValue(F(f.getNum(0)));
 
 double nativeClock ();
 void initPlatformEncodings ();
+bool isName (uint32_t c);
+bool isDigit (uint32_t c);
 
 double dintdiv (double a, double b) {
 return static_cast<int64_t>(a) / static_cast<int64_t>(b);
@@ -710,17 +712,34 @@ f.returnValue(stringToNumImpl(s, base));
 static void stringFormat (QFiber& f) {
 QString& fmt = *f.ensureString(0);
 ostringstream out;
-any_ostreamable_vector args;
-for (int i=1, n=f.getArgCount(); i<n; i++) {
-if (f.isNum(i)) {
-double d = f.getNum(i);
-int j = static_cast<int>(d);
-if (j==d) args.emplace_back(j);
-else args.emplace_back(d);
-} 
-else args.emplace_back(f.ensureString(i)->begin());
+auto cur = fmt.begin(), end = fmt.end(), last = cur;
+while((cur = find_if(last, end, boost::is_any_of("%$"))) < end) {
+if (cur>last) out.write(last, cur-last);
+if (++cur==end) out << cur[-1];
+else if (isDigit(*cur)) {
+int i = strtoul(cur, &cur, 10);
+if (i<f.getArgCount()) {
+QString* s = f.ensureString(i);
+out.write(s->data, s->length);
+}}
+else if (isName(*cur)) {
+auto endName = find_if_not(cur, end, isName);
+f.push(f.at(1));
+f.push(QV(QString::create(f.vm, cur, endName), QV_TAG_STRING));
+f.pushCppCallFrame();
+f.callSymbol(f.vm.findMethodSymbol("[]"), 2);
+f.popCppCallFrame();
+if (!f.isNull(-1)) {
+QString* s = f.ensureString(-1);
+f.pop();
+out.write(s->data, s->length);
 }
-print(out, fmt.begin(), args);
+cur = endName;
+}
+else out << *cur;
+last = cur;
+}
+if (last<end) out.write(last, end-last);
 f.returnValue(QString::create(f.vm, out.str()));
 }
 
@@ -1408,11 +1427,6 @@ out << in.rdbuf();
 return out.str();
 }
 
-static void qsPrint (QFiber& f) {
-println("%s", f.ensureString(0)->data);
-f.returnValue(QV());
-}
-
 static void import_  (QFiber& f) {
 string curFile = f.getString(0), requestedFile = f.getString(1);
 string finalFile = f.vm.pathResolver(curFile, requestedFile);
@@ -1872,7 +1886,6 @@ for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 bindGlobal("import", import_);
 bindGlobal("dir", objectDir);
 bindGlobal("format", stringFormat);
-bindGlobal("print", qsPrint);
 bindGlobal("NaN", QV(QV_NAN));
 bindGlobal("PlusInf", QV(QV_PLUS_INF));
 bindGlobal("MinusInf", QV(QV_MINUS_INF));
