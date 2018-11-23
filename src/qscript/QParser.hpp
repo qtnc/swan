@@ -74,6 +74,7 @@ struct Loop {
 enum { START, CONDITION, END };
 int scope, startPos, condPos, endPos;
 std::vector<std::pair<int,int>> jumpsToPatch;
+Loop (int sc, int st): scope(sc), startPos(st), condPos(-1), endPos(-1) {}
 };
 
 enum CompilationResult {

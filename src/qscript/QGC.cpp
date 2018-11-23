@@ -42,7 +42,7 @@ return false;
 
 bool QInstance::gcVisit () {
 if (QObject::gcVisit()) return true;
-for (QV& value: fields) value.gcVisit();
+for (auto it = &fields[0], end = &fields[type->nFields]; it<end; ++it) it->gcVisit();
 return false;
 }
 

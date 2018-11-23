@@ -14,6 +14,7 @@
 #include<sstream>
 
 //#define _GLIBCXX_DEBUG
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 #define QV_NAN 0x7FF8000000000000ULL
 #define QV_PLUS_INF 0x7FF0000000000000ULL
@@ -220,13 +221,13 @@ virtual void join (struct QFiber& f, const std::string& delim, std::string& out)
 };
 
 struct QString: QSequence {
-uint32_t length;
+size_t length;
 char data[];
 static QString* create (QVM& vm, const std::string& str);
 static QString* create (QVM& vm, const char* str, int length = -1);
 static inline QString* create (QVM& vm, const char* start, const char* end) { return create(vm, start, end-start); }
 static QString* create (QString*);
-QString (QVM& vm, uint32_t len);
+QString (QVM& vm, size_t len);
 inline std::string asString () { return std::string(data, length); }
 inline char* begin () { return data; }
 inline char* end () { return data+length; }
@@ -254,7 +255,7 @@ QClass* parent;
 std::string name;
 std::vector<QV> methods;
 int nFields;
-QV staticFields[];
+QV staticFields[0];
 QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nFields=0);
 QClass* copyParentMethods ();
 QClass* mergeMixinMethods (QClass* mixin);
@@ -308,13 +309,13 @@ virtual bool gcVisit () final override;
 struct QCallFrame {
 QClosure* closure;
 const char* bcp;
-uint32_t stackBase;
+size_t stackBase;
 template<class T> inline T read () { return *reinterpret_cast<const T*&>(bcp)++; }
 inline bool isCppCallFrame () { return !closure || !bcp; }
 };
 
 struct QCatchPoint {
-uint32_t stackSize, callFrame, catchBlock, finallyBlock;
+size_t stackSize, callFrame, catchBlock, finallyBlock;
 };
 
 struct QFiber: QS::Fiber, QSequence  {
@@ -339,8 +340,8 @@ virtual inline int getArgCount () final override { return stack.size() - callFra
 virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
 virtual inline bool isString (int i) final override { return at(i).isString(); }
-virtual inline bool isRange (int i) final override;
-virtual inline bool isBuffer (int i) final override;
+virtual bool isRange (int i) final override;
+virtual bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }

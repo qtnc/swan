@@ -2,8 +2,10 @@
 #define ___QS_BINDING_HPP_1
 #include "QScript.hpp"
 #include "cpprintf.hpp"
-#include<boost/optional.hpp> //todo: switch to C++17 and use std::optional
-using boost::optional;
+//#include<boost/optional.hpp> 
+#include<optional>
+using std::optional;
+//using boost::optional;
 
 namespace QS {
 namespace Binding {

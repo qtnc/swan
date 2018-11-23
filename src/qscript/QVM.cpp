@@ -70,8 +70,8 @@ meta->bind("()", instantiate);
 return cls;
 }
 
-static string buildStackTraceLine (QCallFrame& frame, std::vector<QS::StackTraceElement>& stackTrace) {
-if (!frame.closure) return "";
+static void buildStackTraceLine (QCallFrame& frame, std::vector<QS::StackTraceElement>& stackTrace) {
+if (!frame.closure) return;
 const QFunction& func = frame.closure->func;
 int line = -1;
 for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<frame.bcp && bc<end; ) {
@@ -734,7 +734,7 @@ BREAK
 CASE(OP_TRY)
 arg1 = frame.read<uint32_t>();
 arg2 = frame.read<uint32_t>();
-catchPoints.push_back({ stack.size(), callFrames.size(), arg1, arg2 });
+catchPoints.push_back({ stack.size(), callFrames.size(), static_cast<size_t>(arg1), static_cast<size_t>(arg2) });
 BREAK
 
 CASE(OP_END_FINALLY)

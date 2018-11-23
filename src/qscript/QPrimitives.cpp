@@ -5,9 +5,6 @@
 #include<cmath>
 #include<cstdlib>
 #include<boost/algorithm/string.hpp>
-#ifndef NO_REGEX
-#include<boost/regex.hpp>
-#endif
 #include<utf8.h>
 using namespace std;
 
@@ -16,15 +13,15 @@ for (auto& val: set1) result.insert(val);
 for (auto& val: set2) result.insert(val);
 }
 
-template<class T> unordered_set_intersection (const T& set1, const T& set2, T& result) {
+template<class T> void unordered_set_intersection (const T& set1, const T& set2, T& result) {
 for (auto& val: set1) if (set2.find(val)!=set2.end()) result.insert(val);
 }
 
-template<class T> unordered_set_difference  (const T& set1, const T& set2, T& result) {
+template<class T> void unordered_set_difference  (const T& set1, const T& set2, T& result) {
 for (auto& val: set1) if (set2.find(val)==set2.end()) result.insert(val);
 }
 
-template<class T> unordered_set_symetric_difference  (const T& set1, const T& set2, T& result) {
+template<class T> void unordered_set_symetric_difference  (const T& set1, const T& set2, T& result) {
 T intersection, union_;
 unordered_set_union(set1, set2, union_);
 unordered_set_intersection(set1, set2, intersection);
@@ -184,7 +181,7 @@ int start = f.getOptionalNum(2, 0);
 QVEqualler eq;
 auto end = list.data.end(), begin = start>=0? list.data.begin()+start : list.data.end()+start,
 re = find_if(begin, end, [&](const QV& v){ return eq(v, needle); });
-f.returnValue(re==end? -1 : re-list.data.begin());
+f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
 }
 
 static void listLastIndexOf (QFiber& f) {
@@ -193,7 +190,7 @@ QV& needle = f.at(1);
 int start = f.getOptionalNum(2, list.data.size());
 auto begin = list.data.begin(), end = start>=0? list.data.begin()+start : list.data.end()+start,
 re = find_end(begin, end, &needle, (&needle)+1, QVEqualler());
-f.returnValue(re==end? -1 : re-list.data.begin());
+f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
 }
 
 static void listSort (QFiber& f) {
@@ -573,7 +570,7 @@ f.returnValue(result);
 
 static void stringLength (QFiber& f) {
 QString& s = f.getObject<QString>(0);
-f.returnValue(utf8::distance(s.data, s.data+s.length));
+f.returnValue(static_cast<double>(utf8::distance(s.data, s.data+s.length)));
 }
 
 static void stringFromSequence (QFiber& f) {
@@ -633,8 +630,8 @@ if (start<0) start += length;
 auto endPos = s->end(), startPos = s->begin();
 utf8::advance(startPos, start, endPos);
 auto re = search(startPos, endPos, needle->begin(), needle->end());
-if (re==endPos) f.returnValue(-1);
-else f.returnValue(utf8::distance(s->begin(), re));
+if (re==endPos) f.returnValue(-1.0);
+else f.returnValue(static_cast<double>(utf8::distance(s->begin(), re)));
 }
 
 static void stringRfind (QFiber& f) {
@@ -645,8 +642,8 @@ if (end<0) end += length;
 auto startPos = s->begin(), endPos = startPos;
 utf8::advance(endPos, end, s->end());
 auto re = find_end(startPos, endPos, needle->begin(), needle->end());
-if (re==endPos) f.returnValue(-1);
-else f.returnValue(utf8::distance(s->begin(), re));
+if (re==endPos) f.returnValue(-1.0);
+else f.returnValue(static_cast<double>(utf8::distance(s->begin(), re)));
 }
 
 static void stringFindFirstOf (QFiber& f) {
@@ -656,8 +653,8 @@ if (start<0) start += length;
 auto endPos = s->end(), startPos = s->begin();
 utf8::advance(startPos, start, endPos);
 auto re = find_first_of(startPos, endPos, needle->begin(), needle->end());
-if (re==endPos) f.returnValue(-1);
-else f.returnValue(utf8::distance(s->begin(), re));
+if (re==endPos) f.returnValue(-1.0);
+else f.returnValue(static_cast<double>(utf8::distance(s->begin(), re)));
 }
 
 static void stringIn (QFiber& f) {
@@ -741,6 +738,22 @@ last = cur;
 }
 if (last<end) out.write(last, end-last);
 f.returnValue(QString::create(f.vm, out.str()));
+}
+
+static void stringSplitWithoutRegex (QFiber& f) {
+string subject = f.ensureString(0)->asString(), separator = f.ensureString(1)->asString();
+vector<string> result;
+boost::split(result, subject, boost::is_any_of(separator), boost::token_compress_off);
+QList* list = new QList(f.vm);
+list->data.reserve(result.size());
+for (auto& s: result) list->data.push_back(QV(f.vm, s));
+f.returnValue(list);
+}
+
+static void stringReplaceWithoutRegex (QFiber& f) {
+string subject = f.ensureString(0)->asString(), needle = f.ensureString(1)->asString(), replacement = f.ensureString(2)->asString();
+boost::replace_all(subject, needle, replacement);
+f.returnValue(subject);
 }
 
 static void tupleInstantiate (QFiber& f) {
@@ -1280,31 +1293,43 @@ f.returnValue(*r.it++);
 
 static void regexMatchResultStart (QFiber& f) {
 QRegexMatchResult& m = f.getObject<QRegexMatchResult>(0);
+#ifdef USE_BOOST_REGEX
 if (f.isString(1)) f.returnValue(static_cast<double>(m.match.position(f.getObject<QString>(1).begin())));
-else f.returnValue(static_cast<double>(m.match.position(f.getOptionalNum(1, 0))));
+else 
+#endif
+f.returnValue(static_cast<double>(m.match.position(f.getOptionalNum(1, 0))));
 }
 
 static void regexMatchResultLength (QFiber& f) {
 QRegexMatchResult& m = f.getObject<QRegexMatchResult>(0);
+#ifdef USE_BOOST_REGEX
 if (f.isString(1)) f.returnValue(static_cast<double>(m.match.length(f.getObject<QString>(1).begin())));
-else f.returnValue(static_cast<double>(m.match.length(f.getOptionalNum(1, 0))));
+else 
+#endif
+f.returnValue(static_cast<double>(m.match.length(f.getOptionalNum(1, 0))));
 }
 
 static void regexMatchResultEnd (QFiber& f) {
 QRegexMatchResult& m = f.getObject<QRegexMatchResult>(0);
+#ifdef USE_BOOST_REGEX
 if (f.isString(1)) {
 auto i = f.getObject<QString>(1).begin();
 f.returnValue(static_cast<double>(m.match.position(i) + m.match.length(i)));
 }
-else {
+else 
+#endif
+{
 int i = f.getOptionalNum(1, 0);
 f.returnValue(static_cast<double>(m.match.position(i) + m.match.length(i)));
 }}
 
 static void regexMatchResultSubscript (QFiber& f) {
 QRegexMatchResult& m = f.getObject<QRegexMatchResult>(0);
-auto& sub =  f.isString(1)?
+auto& sub =  
+#ifdef USE_BOOST_REGEX
+f.isString(1)?
 m.match[ f.getObject<QString>(1).begin() ]:
+#endif
 m.match[ f.getOptionalNum(1, 0) ];
 f.returnValue(QV(QString::create(f.vm, sub.first, sub.second), QV_TAG_STRING));
 }
@@ -1312,28 +1337,21 @@ f.returnValue(QV(QString::create(f.vm, sub.first, sub.second), QV_TAG_STRING));
 static void regexTest (QFiber& f) {
 QRegex& r = f.getObject<QRegex>(0);
 QString& s = f.getObject<QString>(1);
-boost::cmatch unused;
-f.returnValue(boost::regex_match(const_cast<const char*>(s.begin()), const_cast<const char*>(s.end()), unused, r.regex, r.matchOptions | boost::regex_constants::match_nosubs | boost::regex_constants::match_any));
-}
-
-static inline QRegex& ensureRegex (QFiber& f, int i) {
-if (f.isString(i)) {
-QString& s = f.getObject<QString>(i);
-return *new QRegex(f.vm, s.begin(), s.end(), boost::regex::literal, boost::regex_constants::format_literal);
-}
-else return f.getObject<QRegex>(i);
+cmatch unused;
+f.returnValue(regex_match(const_cast<const char*>(s.begin()), const_cast<const char*>(s.end()), unused, r.regex, r.matchOptions | REGEX_TEST_MATCH_FLAGS));
 }
 
 static void stringSearch (QFiber& f) {
+if (f.isString(1)) { stringFind(f); return; }
 QString& s = f.getObject<QString>(0);
-QRegex& r = ensureRegex(f,1);
+QRegex& r = f.getObject<QRegex>(1);
 int re=-1, start = f.getOptionalNum(2, 0);
 bool full = f.getOptionalBool(2, false) || f.getOptionalBool(3, false);
-auto options = full? boost::regex_constants::match_default : boost::regex_constants::match_nosubs;
-boost::cmatch match;
+auto options = full? regex_constants::match_default : REGEX_SEARCH_NOT_FULL_DEFAULT_OPTIONS;
+cmatch match;
 if (start<0) start+=s.length;
-if (start>0) options |= boost::regex_constants::match_prev_avail;
-if (boost::regex_search(const_cast<const char*>(s.begin()+start), const_cast<const char*>(s.end()), match, r.regex, r.matchOptions | options)) re = match.position()+start;
+if (start>0) options |= regex_constants::match_prev_avail;
+if (regex_search(const_cast<const char*>(s.begin()+start), const_cast<const char*>(s.end()), match, r.regex, r.matchOptions | options)) re = match.position()+start;
 if (full && re<0) f.returnValue(QV());
 else if (full) f.returnValue(new QRegexMatchResult(f.vm, match));
 else f.returnValue(static_cast<double>(re));
@@ -1341,7 +1359,7 @@ else f.returnValue(static_cast<double>(re));
 
 static void stringFindAll (QFiber& f) {
 QString& s = f.getObject<QString>(0);
-QRegex& r = ensureRegex(f,1);
+QRegex& r = f.getObject<QRegex>(1);
 int group = f.getOptionalNum(2, -2);
 bool full = f.getOptionalBool(2, false);
 if (full) f.returnValue(new QRegexIterator(f.vm, s, r, r.matchOptions));
@@ -1351,32 +1369,47 @@ if (group<-1 || group>groupCount) group = groupCount==0?0:1;
 f.returnValue(new QRegexTokenIterator(f.vm, s, r, r.matchOptions, group));
 }}
 
-static void stringSplit (QFiber& f) {
+static void stringSplitWithRegex (QFiber& f) {
+if (f.isString(1)) { stringSplitWithoutRegex(f); return; }
 QString& s = f.getObject<QString>(0);
-QRegex& r = ensureRegex(f,1);
+QRegex& r = f.getObject<QRegex>(1);
 f.returnValue(new QRegexTokenIterator(f.vm, s, r, r.matchOptions, -1));
 }
 
-static void stringReplace (QFiber& f) {
+static void stringReplaceWithRegex (QFiber& f) {
+if (f.isString(1)) { stringReplaceWithoutRegex(f); return; }
 QString& s = f.getObject<QString>(0);
-QRegex& r = ensureRegex(f,1);
+QRegex& r = f.getObject<QRegex>(1);
 string re;
 auto out = back_inserter(re);
 if (f.isString(2)) {
 QString& fmt = f.getObject<QString>(2);
-boost::regex_replace(out, s.begin(), s.end(), r.regex, fmt.begin(), r.matchOptions);
+regex_replace(out, s.begin(), s.end(), r.regex, fmt.begin(), r.matchOptions);
 }
 else {
 QV& fmt = f.at(2);
-boost::regex_replace(out, const_cast<const char*>(s.begin()), const_cast<const char*>(s.end()), r.regex, [&](auto& m, auto& o){
+#ifdef USE_BOOST_REGEX
+regex_replace(out, const_cast<const char*>(s.begin()), const_cast<const char*>(s.end()), r.regex, [&](auto& m, auto& out){
+#else
+auto last = s.begin();
+for (regex_iterator<const char*> it(s.begin(), s.end(), r.regex, r.matchOptions), end; it!=end; ++it) {
+auto& m = *it;
+std::copy(last, s.begin()+m.position(0), out);
+last = s.begin()+m.position(0)+m.length(0);
+#endif
 f.push(fmt);
 f.push(new QRegexMatchResult(f.vm, m));
 f.call(1);
 QString* repl = f.ensureString(-1);
-std::copy(repl->begin(), repl->end(), o);
+std::copy(repl->begin(), repl->end(), out);
 f.pop();
-return o;
+#ifdef USE_BOOST_REGEX
+return out;
 }, r.matchOptions);
+#else
+}
+std::copy(last, s.end(), out);
+#endif
 }
 f.returnValue(re);
 }
@@ -1642,9 +1675,12 @@ BIND_F(codePointAt, stringCodePointAt)
 BIND_F(*, stringTimes)
 #ifndef NO_REGEX
 BIND_F(search, stringSearch)
-BIND_F(split, stringSplit)
-BIND_F(replace, stringReplace)
+BIND_F(split, stringSplitWithRegex)
+BIND_F(replace, stringReplaceWithRegex)
 BIND_F(findAll, stringFindAll)
+#else
+BIND_F(split, stringSplitWithoutRegex)
+BIND_F(replace, stringReplaceWithoutRegex)
 #endif
 BIND_F(trim, stringTrim)
 BIND_F(format, stringFormat)

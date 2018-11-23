@@ -13,7 +13,31 @@
 #include<random>
 #endif
 #ifndef NO_REGEX
+#ifdef USE_BOOST_REGEX
 #include<boost/regex.hpp>
+using boost::regex;
+namespace regex_constants = boost::regex_constants;
+using boost::cmatch;
+using boost::regex_iterator;
+using boost::regex_token_iterator;
+using boost::regex_match;
+using boost::regex_search;
+using boost::regex_replace;
+#define REGEX_TEST_MATCH_FLAGS regex_constants::match_nosubs  | regex_constants::match_any
+#define REGEX_SEARCH_NOT_FULL_DEFAULT_OPTIONS regex_constants::match_nosubs
+#else
+#include<regex>
+using std::regex;
+namespace regex_constants = std::regex_constants;
+using std::cmatch;
+using std::regex_iterator;
+using std::regex_token_iterator;
+using std::regex_match;
+using std::regex_search;
+using std::regex_replace;
+#define REGEX_TEST_MATCH_FLAGS regex_constants::match_any
+#define REGEX_SEARCH_NOT_FULL_DEFAULT_OPTIONS regex_constants::match_default
+#endif
 #endif
 
 //https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
@@ -101,14 +125,14 @@ virtual ~QSetIterator() = default;
 };
 
 struct QTuple: QSequence {
-uint32_t length;
+size_t length;
 QV data[];
 QTuple (QVM& vm, uint32_t len): QSequence(vm.tupleClass), length(len) {}
 inline QV& at (int n) {
 if (n<0) n+=length;
 return data[n];
 }
-static QTuple* create (QVM& vm, uint32_t length, const QV* data);
+static QTuple* create (QVM& vm, size_t length, const QV* data);
 virtual void insertIntoVector (QFiber& f, std::vector<QV>& list, int start) override { list.insert(list.begin()+start, data, data+length); }
 virtual void insertIntoSet (QFiber& f, QSet& set) override { set.set.insert(data, data+length); }
 virtual void join (QFiber& f, const std::string& delim, std::string& out) override;
@@ -242,34 +266,34 @@ QRandom (QVM& vm): QObject(vm.randomClass) {}
 
 #ifndef NO_REGEX
 struct QRegex: QObject {
-boost::regex regex;
-boost::regex_constants::match_flag_type matchOptions;
-static std::pair<boost::regex_constants::syntax_option_type, boost::regex_constants::match_flag_type>  parseOptions (const char* options);
-QRegex (QVM& vm, const char* begin, const char* end, boost::regex_constants::syntax_option_type regexOptions, boost::regex_constants::match_flag_type matchOptions);
+regex regex;
+regex_constants::match_flag_type matchOptions;
+static std::pair<regex_constants::syntax_option_type, regex_constants::match_flag_type>  parseOptions (const char* options);
+QRegex (QVM& vm, const char* begin, const char* end, regex_constants::syntax_option_type regexOptions, regex_constants::match_flag_type matchOptions);
 virtual ~QRegex () = default;
 };
 
 struct QRegexMatchResult: QObject {
-boost::cmatch match;
+cmatch match;
 QRegexMatchResult (QVM& vm): QObject(vm.regexMatchResultClass) {}
-QRegexMatchResult (QVM& vm, const boost::cmatch& m): QObject(vm.regexMatchResultClass), match(m)  {}
+QRegexMatchResult (QVM& vm, const cmatch& m): QObject(vm.regexMatchResultClass), match(m)  {}
 virtual ~QRegexMatchResult () = default;
 };
 
 struct QRegexIterator: QSequence {
-boost::regex_iterator<const char*> it, end;
+regex_iterator<const char*> it, end;
 QString& str;
 QRegex& regex;
-QRegexIterator (QVM& vm, QString& s, QRegex& r, boost::regex_constants::match_flag_type options);
+QRegexIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options);
 virtual bool gcVisit () override;
 virtual ~QRegexIterator () = default;
 };
 
 struct QRegexTokenIterator: QSequence {
-boost::regex_token_iterator<const char*> it, end;
+regex_token_iterator<const char*> it, end;
 QString& str;
 QRegex& regex;
-QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, boost::regex_constants::match_flag_type options, int g);
+QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options, int g);
 virtual bool gcVisit () override;
 virtual ~QRegexTokenIterator () = default;
 };

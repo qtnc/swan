@@ -135,7 +135,7 @@ QObject* QForeignClass::instantiate () {
 return QForeignInstance::create(this, nFields);
 }
 
-QString::QString (QVM& vm, uint32_t len): 
+QString::QString (QVM& vm, size_t len): 
 QSequence(vm.stringClass), length(len) {}
 
 QString* QString::create (QVM& vm, const std::string& str) {
@@ -154,7 +154,7 @@ QString* QString::create (QString* s) {
 return create(s->type->vm, s->data, s->length); 
 }
 
-QTuple* QTuple::create (QVM& vm, uint32_t length, const QV* data) {
+QTuple* QTuple::create (QVM& vm, size_t length, const QV* data) {
 QTuple* tuple = newVLS<QTuple, QV>(length, vm, length);
 memcpy(tuple->data, data, length*sizeof(QV));
 return tuple;
@@ -269,37 +269,6 @@ f.popCppCallFrame();
 return re;
 }
 
-std::pair<boost::regex_constants::syntax_option_type, boost::regex_constants::match_flag_type>  QRegex::parseOptions (const char* opt) {
-boost::regex_constants::syntax_option_type options = boost::regex::perl;
-boost::regex_constants::match_flag_type flags = boost::regex_constants::match_default | boost::regex_constants::format_default;
-if (opt) while(*opt) switch(*opt++){
-case 'c': options |= boost::regex::collate; break;
-case 'E': options |= boost::regex::no_empty_expressions; break;
-case 'f': flags |= boost::regex_constants::format_first_only; break;
-case 'i': options |= boost::regex::icase; break;
-case 'L': 
-options &= ~boost::regex::perl; 
-options |= boost::regex::literal; 
-flags |= boost::regex_constants::format_literal; 
-break;
-case 'M': options |= boost::regex::no_mod_m; break;
-case 'N': 
-options |= boost::regex::nosubs; 
-flags |= boost::regex_constants::match_nosubs;
-break;
-case 'o': options |= boost::regex::optimize; break;
-case 'S': 
-options |= boost::regex::no_mod_s; 
-flags |= boost::regex_constants::match_not_dot_newline;
-break;
-case 's': options |= boost::regex::mod_s; break;
-case 'x': options |= boost::regex::mod_x; break;
-case 'y': flags |= boost::regex_constants::match_continuous; break;
-case 'z': flags |= boost::regex_constants::format_all; break;
-}
-return std::make_pair(options, flags);
-}
-
 #ifndef NO_OPTIONAL_COLLECTIONS
 void QLinkedList::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
@@ -327,16 +296,41 @@ return create(s->type->vm, s->data, s->length);
 #endif
 
 #ifndef NO_REGEX
-QRegex::QRegex (QVM& vm, const char* begin, const char* end, boost::regex_constants::syntax_option_type regexOptions, boost::regex_constants::match_flag_type matchOptions0):
+std::pair<regex_constants::syntax_option_type, regex_constants::match_flag_type>  QRegex::parseOptions (const char* opt) {
+regex_constants::syntax_option_type options = regex::ECMAScript | regex::optimize;
+regex_constants::match_flag_type flags = regex_constants::match_default | regex_constants::format_default;
+if (opt) while(*opt) switch(*opt++){
+case 'c': options |= regex::collate; break;
+case 'f': flags |= regex_constants::format_first_only; break;
+case 'i': options |= regex::icase; break;
+case 'y': flags |= regex_constants::match_continuous; break;
+#ifdef USE_BOOST_REGEX
+case 'E': options |= regex::no_empty_expressions; break;
+case 'M': options |= regex::no_mod_m; break;
+case 'S': 
+options |= regex::no_mod_s; 
+flags |= regex_constants::match_not_dot_newline;
+break;
+case 's': options |= regex::mod_s; break;
+case 'x': options |= regex::mod_x; break;
+case 'z': flags |= regex_constants::format_all; break;
+#else
+case 'E': flags |= regex_constants::match_not_null; break;
+#endif
+}
+return std::make_pair(options, flags);
+}
+
+QRegex::QRegex (QVM& vm, const char* begin, const char* end, regex_constants::syntax_option_type regexOptions, regex_constants::match_flag_type matchOptions0):
 QObject(vm.regexClass), regex(begin, end, regexOptions), matchOptions(matchOptions0)
 {}
 
-QRegexIterator::QRegexIterator (QVM& vm, QString& s, QRegex& r, boost::regex_constants::match_flag_type options):
+QRegexIterator::QRegexIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options):
 QSequence(vm.regexIteratorClass), str(s), regex(r),
 it(s.begin(), s.end(), r.regex, options | r.matchOptions)
 {}
 
-QRegexTokenIterator::QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, boost::regex_constants::match_flag_type options, int g):
+QRegexTokenIterator::QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options, int g):
 QSequence(vm.regexTokenIteratorClass), str(s), regex(r), 
 it(s.begin(), s.end(), r.regex, g, options | r.matchOptions)
 {}

@@ -65,12 +65,12 @@ if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_
 else compiler.writeOpArgs<uint8_t, uint_method_symbol_t>(OP_CALL_SUPER, nArgs+1, symbol);
 }
 
-static inline writeOpLoadLocal (QCompiler& compiler, uint_local_index_t slot) {
+static inline void writeOpLoadLocal (QCompiler& compiler, uint_local_index_t slot) {
 if (slot<8) compiler.writeOp(static_cast<QOpCode>(OP_LOAD_LOCAL_0 + slot));
 else compiler.writeOpArg<uint_local_index_t>(OP_LOAD_LOCAL, slot);
 }
 
-static inline writeOpStoreLocal (QCompiler& compiler, uint_local_index_t slot) {
+static inline void writeOpStoreLocal (QCompiler& compiler, uint_local_index_t slot) {
 if (slot<8) compiler.writeOp(static_cast<QOpCode>(OP_STORE_LOCAL_0 + slot));
 else compiler.writeOpArg<uint_local_index_t>(OP_STORE_LOCAL, slot);
 }
@@ -948,7 +948,7 @@ INFIX(LTLTEQ, InfixOp, <<=, ASSIGNMENT),
 INFIX(GTGTEQ, InfixOp, >>=, ASSIGNMENT),
 INFIX(AMPAMPEQ, InfixOp, &&=, ASSIGNMENT),
 INFIX(BARBAREQ, InfixOp, ||=, ASSIGNMENT),
-INFIX(QUESTQUESTEQ, InfixOp, ??=, ASSIGNMENT),
+INFIX(QUESTQUESTEQ, InfixOp, ?\x3F=, ASSIGNMENT),
 
 INFIX_OP(EQEQ, InfixOp, ==, COMPARISON),
 INFIX_OP(EXCLEQ, InfixOp, !=, COMPARISON),
@@ -1172,7 +1172,7 @@ cur = stackedTokens.front();
 stackedTokens.clear();
 in = cur.start;
 }
-#define RET0(X) { cur = { X, start, in-start, QV()}; return cur; }
+#define RET0(X) { cur = { X, start, static_cast<size_t>(in-start), QV()}; return cur; }
 #define RET RET0(T_NAME)
 #define RET2(C) if (utf8::peek_next(in, end)==C) utf8::next(in, end); RET
 #define RET3(C1,C2) if(utf8::peek_next(in, end)==C1 || utf8::peek_next(in, end)==C2) utf8::next(in, end); RET
@@ -1224,6 +1224,7 @@ RET0(T_END)
 #undef RET
 #undef RET0
 #undef RET2
+#undef RET22
 #undef RET3
 #undef RET4
 }
@@ -1235,8 +1236,8 @@ cur = stackedTokens.back();
 stackedTokens.pop_back();
 return cur;
 }
-#define RET(X) { cur = { X, start, in-start, QV()}; return cur; }
-#define RETV(X,V) { cur = { X, start, in-start, V}; return cur; }
+#define RET(X) { cur = { X, start, static_cast<size_t>(in-start), QV()}; return cur; }
+#define RETV(X,V) { cur = { X, start, static_cast<size_t>(in-start), V}; return cur; }
 #define RET2(C,A,B) if (utf8::peek_next(in, end)==C) { utf8::next(in, end); RET(A) } else RET(B)
 #define RET3(C1,A,C2,B,C) if(utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET(A) } else if (utf8::peek_next(in, end)==C2) { utf8::next(in, end); RET(B) } else RET(C)
 #define RET4(C1,R1,C2,R2,C3,R3,C) if(utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET(R1) } else if (utf8::peek_next(in, end)==C2) { utf8::next(in, end); RET(R2) } else if (utf8::peek_next(in, end)==C3) { utf8::next(in, end); RET(R3) }  else RET(C)
@@ -1305,6 +1306,7 @@ RET(T_END)
 #undef RET
 #undef RETV
 #undef RET2
+#undef RET22
 #undef RET3
 #undef RET4
 }
@@ -2393,7 +2395,7 @@ compiler.writeOp(OP_POP);
 }}}
 
 void ClassDeclaration::compile (QCompiler& compiler) {
-struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { parents.size(), 0, 0 };
+struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
 ClassDeclaration* oldClassDecl = compiler.curClass;
 compiler.curClass = this;
 int nameConstant = compiler.findConstant(QV(compiler.vm, string(name.start, name.length)));
@@ -2471,7 +2473,7 @@ else return nullptr;
 
 void QCompiler::pushLoop () {
 pushScope();
-loops.push_back({ curScope, writePosition() });
+loops.emplace_back( curScope, writePosition() );
 }
 
 void QCompiler::popLoop () {

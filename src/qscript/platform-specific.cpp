@@ -1,7 +1,11 @@
 #include "QValue.hpp"
 #include<string>
 #include<utf8.h>
-using namespace std;
+using std::string;
+using std::wstring;
+using std::istream;
+using std::ostream;
+using std::ostringstream;
 
 #ifdef __WIN32
 #include<windows.h>
