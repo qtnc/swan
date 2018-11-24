@@ -1,4 +1,4 @@
-#ifndef ___QS_BINDING_HPP_1
+	#ifndef ___QS_BINDING_HPP_1
 #define ___QS_BINDING_HPP_1
 #include "QScript.hpp"
 #include "cpprintf.hpp"
@@ -12,6 +12,10 @@ namespace Binding {
 
 template<class T> struct is_optional: std::false_type {};
 template<class T> struct is_optional<optional<T>>: std::true_type {};
+template <class T> struct is_std_function: std::false_type {};
+template<class R, class... A> struct is_std_function<std::function<R(A...)>>: std::true_type {};
+template<class R, class... A> struct is_std_function<const std::function<R(A...)>&>: std::true_type {};
+template<class R, class... A> struct is_std_function<const std::function<R(A...)>>: std::true_type {};
 
 template<class T, class B = void> struct QSGetSlot: std::false_type {};
 
@@ -21,13 +25,13 @@ static inline T* get (QS::Fiber& f, int idx) {
 return static_cast<T*>( f.getUserPointer(idx) );
 }};
 
-template <class T> struct QSGetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
+template <class T> struct QSGetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value && !is_std_function<T>::value>::type> {
 typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );
 }};
 
-template <class T> struct QSGetSlot<T, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
+template <class T> struct QSGetSlot<T, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value && !is_std_function<T>::value>::type> {
 typedef T& returnType;
 static inline T& get (QS::Fiber& f, int idx) {
 return *static_cast<T*>( f.getUserPointer(idx) );
@@ -125,6 +129,11 @@ static inline void set (QS::Fiber& f, int idx, const char* value) {
 f.setCString(idx, value);
 }};
 
+template<> struct QSSetSlot<char*> {
+static inline void set (QS::Fiber& f, int idx, const char* value) { 
+f.setCString(idx, value);
+}};
+
 template<> struct QSSetSlot<const std::string&> {
 static inline void  set (QS::Fiber& f, int idx, const std::string& value) { 
 f.setString(idx, value);
@@ -149,6 +158,126 @@ template<class T> struct QSSetSlot<optional<T>> {
 static inline void set (QS::Fiber& f, int idx, const optional<T>& value) { 
 if (value) QSSetSlot<T>::set(f, idx, *value);
 else f.setNull(idx);
+}};
+
+template<class T, class B = void> struct QSPushSlot: std::false_type {};
+
+template<class T> struct QSPushSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value>::type> {
+static inline void push (QS::Fiber& f, const T& value) { 
+void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
+new(ptr) T(value);
+}};
+
+template<class T> struct QSPushSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
+static inline void push (QS::Fiber& f, const T*  value) { 
+if (!value) f.pushNull();
+else {
+void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
+new(ptr) T(*value);
+}}};
+
+template<class T> struct QSPushSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value>::type> {
+static inline void push (QS::Fiber& f, T& value) { 
+void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
+new(ptr) T(std::move(value));
+}};
+
+template<class T> struct QSPushSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
+static inline void push (QS::Fiber& f, T value) { 
+f.pushNum(value);
+}};
+
+template<class T> struct QSPushSlot<T&, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
+static inline void push (QS::Fiber& f, T& value) { 
+f.pushNum(value);
+}};
+
+template<> struct QSPushSlot<bool> {
+static inline void push (QS::Fiber& f, bool value) { 
+f.pushBool(value);
+}};
+
+template<> struct QSPushSlot<bool&> {
+static inline void push (QS::Fiber& f, bool& value) { 
+f.pushBool(value);
+}};
+
+template<> struct QSPushSlot<const char*> {
+static inline void push (QS::Fiber& f, const char* value) { 
+f.pushCString(value);
+}};
+
+template<> struct QSPushSlot<char*> {
+static inline void push (QS::Fiber& f, const char* value) { 
+f.pushCString(value);
+}};
+
+template<> struct QSPushSlot<const std::string&> {
+static inline void  set (QS::Fiber& f, const std::string& value) { 
+f.pushString(value);
+}};
+
+template<> struct QSPushSlot<std::string&> {
+static inline void push (QS::Fiber& f, const std::string& value) { 
+f.pushString(value);
+}};
+
+template<> struct QSPushSlot<std::string> {
+static inline void push (QS::Fiber& f, const std::string& value) { 
+f.pushString(value);
+}};
+
+template<> struct QSPushSlot<const QS::Range&> {
+static inline void  set (QS::Fiber& f, const QS::Range& value) { 
+f.pushRange(value);
+}};
+
+template<> struct QSPushSlot<QS::Range> {
+static inline void push (QS::Fiber& f, const QS::Range& value) { 
+f.pushRange(value);
+}};
+
+static inline void pushMultiple (QS::Fiber& f) {}
+
+template<class T, class... A> static inline void pushMultiple (QS::Fiber& f, T&& arg, A&&... args) {
+QSPushSlot<T>::push(f, arg);
+pushMultiple(f, args...);
+}
+
+template<class R, class... A> struct QSGetSlot<std::function<R(A...)>> {
+typedef std::function<R(A...)> returnType;
+static inline returnType get (QS::Fiber& f, int idx) { 
+if (f.isNull(idx)) return nullptr;
+QS::Handle handle = f.getHandle(idx);
+return [=](A&&... args)->R{
+QS::Fiber& fb = *QS::VM::getActiveFiber();
+fb.pushHandle(handle);
+pushMultiple(fb, args...);
+fb.call(sizeof...(A));
+R result = QSGetSlot<R>::get(fb, -1);
+fb.pop();
+return result;
+};
+}};
+
+template<class... A> struct QSGetSlot<std::function<void(A...)>> {
+typedef std::function<void(A...)> returnType;
+static inline returnType get (QS::Fiber& f, int idx) { 
+if (f.isNull(idx)) return nullptr;
+QS::Handle handle = f.getHandle(idx);
+return [=](A&&... args){
+QS::Fiber& fb = *QS::VM::getActiveFiber();
+fb.pushHandle(handle);
+pushMultiple(fb, args...);
+fb.call(sizeof...(A));
+fb.pop();
+};
+}};
+
+template<class R, class... A> struct QSGetSlot<const std::function<R(A...)>&> {
+typedef std::function<R(A...)> returnType;
+static inline returnType get (QS::Fiber& f, int idx) { 
+return QSGetSlot<returnType>::get(f, idx);
 }};
 
 template<int ...> struct sequence {};

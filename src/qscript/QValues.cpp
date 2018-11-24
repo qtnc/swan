@@ -34,6 +34,31 @@ const char* QV::asCString () const { return asObject<QString>()->begin(); }
 const QS::Range& QV::asRange () const { return *asObject<QRange>(); }
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
 
+export QS::Handle::Handle (): value(QV_NULL) {}
+export QS::Handle::Handle (QS::Handle&& h): value(h.value) { h.value=QV_NULL; }
+QS::Handle& export QS::Handle::operator= (Handle&& h) { value=h.value; h.value=QV_NULL; return *this; }
+
+QS::Handle QV::asHandle () {
+if (isObject()) {
+QObject* obj = asObject<QObject>();
+LOCK_SCOPE(obj->type->vm.globalMutex)
+obj->type->vm.keptHandles.push_back(*this);
+}
+QS::Handle h;
+h.value = i;
+return h;
+}
+
+export QS::Handle::~Handle () {
+QV qv(value);
+if (qv.isObject()) {
+QObject* obj = qv.asObject<QObject>();
+LOCK_SCOPE(obj->type->vm.globalMutex)
+auto& keptHandles = obj->type->vm.keptHandles;
+auto it = find_if(keptHandles.begin(), keptHandles.end(), [&](const auto& x){ return x.i==qv.i; });
+if (it!=keptHandles.end()) keptHandles.erase(it);
+}}
+
 #ifndef NO_BUFFER
 bool QFiber::isBuffer (int i) { return at(i).isInstanceOf(vm.bufferClass); }
 

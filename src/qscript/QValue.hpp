@@ -29,6 +29,7 @@
 #define QV_TAG_OPEN_UPVALUE 0x7FFC000000000000ULL
 #define QV_TAG_UNUSED_3 0x7FFD000000000000ULL
 #define QV_TAG_STD_FUNCTION  0x7FFE000000000000ULL
+#define QV_TAG_UNUSED_4 0x7FFF000000000000ULL
 #define QV_TAGMASK 0xFFFF000000000000ULL
 
 #define QV_TAG_STRING 0xFFF9000000000000ULL
@@ -228,6 +229,7 @@ const char* asCString () const;
 const QS::Range& asRange () const;
 
 QClass& getClass (QVM& vm);
+QS::Handle asHandle ();
 inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
 };
 
@@ -372,6 +374,7 @@ virtual inline const char* getCString (int i) final override { return at(i).asCS
 virtual inline const QS::Range& getRange (int i) final override { return at(i).asRange(); }
 virtual const void* getBufferV (int i, int* length = nullptr) final override;
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
+virtual inline QS::Handle getHandle (int i) final override { return at(i).asHandle(); }
 
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
@@ -385,6 +388,7 @@ virtual inline void setBuffer  (int i, const void* data, int length) final overr
 virtual void setRange  (int i, const QS::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV(); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
+virtual void setHandle (int i, const QS::Handle& h) final override { at(i) = QV(h.value); }
 inline void setObject (int i, QObject* obj) { at(i)=QV(obj); }
 inline void setObject (int i, QObject& obj) { setObject(i, &obj); }
 
@@ -398,6 +402,7 @@ virtual inline void pushNull  () final override { stack.push_back(QV()); }
 virtual inline void pushNativeFunction (QS::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;
+virtual inline void pushHandle (const QS::Handle& h) final override { push(QV(h.value)); }
 virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return at(-1); }
@@ -474,6 +479,7 @@ std::unordered_map<std::string,QV> imports;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, QForeignClass*> foreignClassIds;
 std::vector<QFiber**> fiberThreads;
+std::vector<QV> keptHandles;
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;

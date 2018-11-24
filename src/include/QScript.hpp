@@ -77,6 +77,16 @@ if (finish<begin) finish=begin;
 }
 };
 
+struct Handle {
+uint64_t value;
+export Handle ();
+Handle (const Handle&) = default;
+export Handle (Handle&&);
+Handle& operator= (const Handle&) = default;
+Handle& export operator= (Handle&&);
+export ~Handle ();
+};
+
 struct Fiber {
 
 Fiber () = default;
@@ -101,10 +111,12 @@ virtual const char* getCString (int stackIndex) = 0;
 virtual const Range& getRange (int stackIndex) = 0;
 virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
 virtual void* getUserPointer (int stackIndex) = 0;
+virtual Handle getHandle (int stackIndex) = 0;
 
 double getOptionalNum (int stackIndex, double defaultValue) { return getArgCount()>stackIndex && isNum(stackIndex)? getNum(stackIndex) : defaultValue; }
 bool getOptionalBool (int stackIndex, bool defaultValue) { return getArgCount()>stackIndex && isBool(stackIndex)? getBool(stackIndex) : defaultValue; }
 std::string getOptionalString (int stackIndex, const std::string& defaultValue) { return getArgCount()>stackIndex && isString(stackIndex)? getString(stackIndex) : defaultValue; }
+Handle getOptionalHandle  (int stackIndex, const Handle& defaultValue) { return getArgCount()>stackIndex? getHandle(stackIndex) : defaultValue; }
 
 virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
@@ -114,6 +126,7 @@ virtual void setBuffer (int stackIndex, const void* data, int length) = 0;
 virtual void setRange (int stackIndex, const Range& value) = 0;
 virtual void setNull (int stackIndex) = 0;
 virtual void* setNewUserPointer (int stackIndex, size_t classId) = 0;
+virtual void setHandle (int stackIndex, const Handle& handle) = 0;
 
 virtual void pushNum (double value) = 0;
 virtual void pushBool (bool value) = 0;
@@ -125,9 +138,10 @@ virtual void pushNull () = 0;
 virtual void pushNativeFunction (NativeFunction f) = 0;
 virtual void pushNewForeignClass (const std::string& name, size_t classId, int nUserBytes, int nParents=0) = 0;
 virtual void* pushNewUserPointer (size_t classId) = 0;
+virtual void pushHandle (const Handle& handle) = 0;
+
 virtual void pushCopy (int stackIndex = -1) = 0;
 virtual void pop () = 0;
-
 
 virtual void loadString (const std::string& source, const std::string& name="") = 0;
 virtual void loadFile (const std::string& filename) = 0;

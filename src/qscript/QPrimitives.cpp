@@ -329,6 +329,18 @@ double d = f.getNum(0), base = f.getOptionalNum(1, -1);
 f.returnValue(base>0? log(d)/log(base) : log(d));
 }
 
+static void numGCD (QFiber& f) {
+uint64_t n = gcd(static_cast<uint64_t>(f.getNum(0)), static_cast<uint64_t>(f.getNum(1)) );
+for (int i=2, count=f.getArgCount(); i<count; i++) n = gcd(n, static_cast<uint64_t>(f.getNum(i)) );
+f.returnValue(static_cast<double>(n));
+}
+
+static void numLCM (QFiber& f) {
+uint64_t n = lcm(static_cast<uint64_t>(f.getNum(0)), static_cast<uint64_t>(f.getNum(1)) );
+for (int i=2, count=f.getArgCount(); i<count; i++) n = lcm(n, static_cast<uint64_t>(f.getNum(i)) );
+f.returnValue(static_cast<double>(n));
+}
+
 static bool numToStringBase (QFiber& f, double val) {
 if (isnan(val)) {
 f.returnValue(QV(f.vm, "NaN", 3));
@@ -1461,7 +1473,7 @@ return out.str();
 }
 
 static void import_  (QFiber& f) {
-LOCK_SCOPE(f.vm.globalLock)
+LOCK_SCOPE(f.vm.globalMutex)
 string curFile = f.getString(0), requestedFile = f.getString(1);
 string finalFile = f.vm.pathResolver(curFile, requestedFile);
 auto it = f.vm.imports.find(finalFile);
@@ -1943,6 +1955,8 @@ F(sinh) F(cosh) F(tanh) F(asinh) F(acosh) F(atanh)
 F(exp) F(sqrt) F(cbrt)
 F(abs) F(floor) F(ceil) F(round) F(trunc)
 bindGlobal("log", numLog);
+bindGlobal("gcd", numGCD);
+bindGlobal("lcm", numLCM);
 numClass
 BIND_F(log, numLog)
 BIND_L(frac, { double unused; f.returnValue(modf(f.getNum(0), &unused)); })
