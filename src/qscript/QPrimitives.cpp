@@ -1461,6 +1461,7 @@ return out.str();
 }
 
 static void import_  (QFiber& f) {
+LOCK_SCOPE(f.vm.globalLock)
 string curFile = f.getString(0), requestedFile = f.getString(1);
 string finalFile = f.vm.pathResolver(curFile, requestedFile);
 auto it = f.vm.imports.find(finalFile);
@@ -1468,6 +1469,7 @@ if (it!=f.vm.imports.end()) f.returnValue(it->second);
 else {
 f.loadFile(finalFile);
 f.call(0);
+f.vm.imports[finalFile] = f.at(-1);
 f.returnValue(f.at(-1));
 }}
 
@@ -1926,6 +1928,7 @@ bindGlobal("NaN", QV(QV_NAN));
 bindGlobal("PlusInf", QV(QV_PLUS_INF));
 bindGlobal("MinusInf", QV(QV_MINUS_INF));
 bindGlobal("Pi", acos(-1));
+BIND_GL(garbageCollect, { f.vm.garbageCollect(); f.returnValue(QV()); })
 BIND_GL(clock, { f.returnValue(nativeClock()); })
 
 #ifndef NO_RANDOM

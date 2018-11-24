@@ -148,3 +148,19 @@ fiber.registerMethod("+", METHOD(Point, operator+));
 // We have finished registration, pop the Point class object
 fiber.pop(); 
 ```
+
+## VM settings and language options
+When embedding, you can set a few VM parameters as well as options that will change how scripts are parsed, compiled or run.
+
+SEt language options with the *VM::setOption* method. The following options are available (from Option enum) :
+
+- VAR_DECL_MODE: define how variable declarations are threated; can be one of three possible modes:
+    - VAR_STRICT: when an unknown variable is referenced in the code, compilation is stopped and throws an error. Variables must always be declared with *let* or *const*. This si the recommanded option.
+    - VAR_IMPLICIT: when an unknown variable is referenced in the code, it is implicitly declared as a new local variable, as if *let* or *const* had been used explicitly
+    - VAR_IMPLICIT_GLOBAL: same as VAR_IMPLICIT, except that new variable is implicitly declared global. This is useful for the CLI, but strongly discouraged for usual codes.
+
+Set VM parameters by using the appropriate method. The following settings can be tweaked:
+
+- *Path resolver*: the path resolver resolves a relative path to an absolute one. By default, usual path syntax is used, with indifferent `/` or `\` separators, `..` for parent directory and `.` for current directory. An exception should be thrown when encountering an invalid path.
+- *file loader: the file loader takes an absolute path and loads the corresponding source file. By default, it loads files from the current directory. You can override this to load sources from custom or non file-based storage, to prevent unwanted file access, or to disable imports completely. An exception should be thrown when trying to load an unexisting file.
+- *compilation message receiver*: the compilation message receiver collects messages generated during the compilation (error messages). By default, messages are printed to standard output.

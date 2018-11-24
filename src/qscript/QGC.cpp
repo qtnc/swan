@@ -78,9 +78,10 @@ return false;
 
 bool QFiber::gcVisit () {
 if (QObject::gcVisit()) return true;
+LOCK_SCOPE(mutex)
 for (QV& val: stack) val.gcVisit();
-for (auto& cf: callFrames) cf.closure->gcVisit();
-for (auto upv: openUpvalues) upv->gcVisit();
+for (auto& cf: callFrames) if (cf.closure) cf.closure->gcVisit();
+for (auto upv: openUpvalues) if (upv) upv->gcVisit();
 return false;
 }
 
@@ -177,6 +178,7 @@ for (auto& obj: toDelete) delete obj;
 }
 
 void QVM::garbageCollect () {
+LOCK_SCOPE(globalMutex)
 //println("Starting GC !");
 
 int count = 0;
@@ -198,10 +200,11 @@ dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass,
 #ifndef NO_RANDOM
 randomClass, randomMetaClass,
 #endif
-QFiber::curFiber
 };
 for (QObject* obj: roots) obj->gcVisit();
 for (QV& gv: globalVariables) gv.gcVisit();
+for (auto& im: imports) im.second.gcVisit();
+for (auto fib: fiberThreads) if (*fib) (*fib)->gcVisit();
 
 vector<QObject*> toDelete;
 int used=0, collectable=0;

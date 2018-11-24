@@ -151,9 +151,21 @@ Class of all numbers.
 - Unary operators: ~, +, -
 
 Methods:
- 
+
+- frac: return the fractional part of the number, e.g. 1.23 and -67.89 resp. return  0.23 and -0.89
 - hashCode
+- int: return the integer part of the number, e.g. 1.23 and -67.89 resp. return 1 and -67.
+- sign: return the sign of the number, 1 for positive, -1 for negative or 0 for 0 (a.k.a signum)
 - toString(base=10): where base can be between 2 and 36 inclusive
+
+Math functions: can be indifferently called as Num methods or as traditional gobal functions, e.g. `(-10).abs` or `abs(-10)`.
+
+- abs(n): absolute value
+- acos(n), asin(n), atan(n), cos(n), sin(n), tan(n): trigonometric functions
+- acosh(n), asinh(n), atanh(n), cosh(n), sinh(n), tanh(n): hyperbolic trigonometric functions
+- cbrt(n), sqrt(n): cubic and square root
+- ceil(n), floor(n), round(n), trunc(n): rounding functions
+- exp(n), log(n, [base]): exponential and logarithm
 
 ## Object
 Object is the base class for all objects.

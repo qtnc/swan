@@ -439,6 +439,11 @@ frame.bcp = frame.closure->func.bytecode.data() + catchPoint.catchBlock;
 }}
 
 FiberState QFiber::run ()  {
+if (!curFiber) {
+LOCK_SCOPE(vm.globalMutex)
+vm.fiberThreads.push_back(&curFiber);
+}
+LOCK_SCOPE(mutex)
 curFiber = this;
 state = FiberState::RUNNING;
 auto frame = callFrames.back();

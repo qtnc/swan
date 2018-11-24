@@ -3,6 +3,8 @@
 #include<vector>
 using namespace std;
 
+#define MAX_CACHED_STRING_LENGTH 16
+
 size_t hashBytes (const uint8_t* c, const uint8_t* end) {
 size_t re = FNV_OFFSET;
 for (; c<end; ++c) re = (re^*c) * FNV_PRIME;
@@ -144,14 +146,23 @@ return QString::create(vm, str.data(), str.length());
 
 QString* QString::create (QVM& vm, const char* str, int len) {
 if (len<0) len = strlen(str);
+if (len<=MAX_CACHED_STRING_LENGTH) {
+auto it = vm.stringCache.find(make_pair(str, str+len));
+if (it!=vm.stringCache.end()) return it->second;
+}
 QString* s = newVLS<QString, char>(len+1, vm, len);
 if (len>0) memcpy(s->data, str, len+1);
 s->data[len] = 0;
+if (len<=MAX_CACHED_STRING_LENGTH) vm.stringCache.insert(make_pair(make_pair(s->begin(), s->end()), s));
 return s;
 }
 
 QString* QString::create (QString* s) { 
 return create(s->type->vm, s->data, s->length); 
+}
+
+QString::~QString () {
+if (length<=MAX_CACHED_STRING_LENGTH)  type->vm.stringCache.erase(make_pair(begin(), end()));
 }
 
 QTuple* QTuple::create (QVM& vm, size_t length, const QV* data) {

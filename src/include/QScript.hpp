@@ -19,6 +19,7 @@
 
 namespace QS {
 
+struct VM;
 struct Fiber;
 typedef void(*NativeFunction)(Fiber&);
 
@@ -84,6 +85,7 @@ Fiber& operator= (const Fiber&) = delete;
 virtual ~Fiber () = default;
 
 virtual int getArgCount () = 0;
+virtual VM& getVM () = 0;
 
 virtual bool isBool (int stackIndex) = 0;
 virtual bool isNum (int stackIndex) = 0;

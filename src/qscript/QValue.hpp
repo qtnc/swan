@@ -7,13 +7,10 @@
 #include<string>
 #include<cstring>
 #include<memory>
-#include<functional>
 #include<cstdint>
 #include<exception>
-#include<functional>
 #include<sstream>
 
-//#define _GLIBCXX_DEBUG
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
 #define QV_NAN 0x7FF8000000000000ULL
@@ -50,7 +47,7 @@ typedef uint8_t uint_upvalue_index_t;
 typedef uint8_t uint_local_index_t;
 typedef uint8_t uint_field_index_t;
 
-template<class T> inline T& nullref () { return *reinterpret_cast<T*>(0); }
+//template<class T> inline T& nullref () { return *reinterpret_cast<T*>(0); }
 
 template<class T, class U, class... A> inline T* newVLS (int nU, A&&... args) {
 char* ptr = new char[sizeof(T) + nU*sizeof(U)];
@@ -138,6 +135,8 @@ inline T& back () { return *(top -1); }
 inline const T& back () const { return *(top -1); }
 };
 
+size_t hashBytes (const uint8_t* start, const uint8_t* end);
+
 enum FiberState {
 INITIAL,
 RUNNING,
@@ -151,6 +150,25 @@ typedef void(*QNativeFunction)(QFiber&);
 
 struct QVM;
 struct QClass;
+
+struct StringCacheHasher {
+inline size_t operator() (const std::pair<const char*, const char*>& p) const {
+return hashBytes(reinterpret_cast<const uint8_t*>(p.first), reinterpret_cast<const uint8_t*>(p.second));
+}};
+
+struct StringCacheEqualler {
+inline bool operator() (const std::pair<const char*, const char*>& p1, const std::pair<const char*, const char*>& p2) const {
+return p1.second-p1.first == p2.second-p2.first && 0==memcmp(p1.first, p2.first, p1.second-p1.first);
+}};
+
+#ifndef NO_MUTEX
+#include<mutex>
+typedef std::recursive_mutex Mutex;
+#define LOCK_SCOPE(M) std::lock_guard<Mutex> ___mutexLock_##__LINE__(M);
+#else
+struct Mutex { inline void lock () {} inline void unlock () {} };
+#define LOCK_SCOPE(M) /* do nothing */
+#endif
 
 struct QObject {
 QClass* type;
@@ -231,7 +249,7 @@ QString (QVM& vm, size_t len);
 inline std::string asString () { return std::string(data, length); }
 inline char* begin () { return data; }
 inline char* end () { return data+length; }
-virtual ~QString () = default;
+virtual ~QString ();
 };
 
 struct QInstance: QSequence {
@@ -326,6 +344,7 @@ std::vector<QCallFrame> callFrames;
 std::vector<QCatchPoint> catchPoints;
 std::vector<Upvalue*> openUpvalues;
 QVM& vm;
+Mutex mutex;
 FiberState state;
 
 inline void returnValue (QV value) { stack.at(callFrames.back().stackBase) = value; }
@@ -336,6 +355,7 @@ return i>=0? stack.at(callFrames.back().stackBase+i) : *(stack.end() +i);
 }
 
 virtual inline int getArgCount () final override { return stack.size() - callFrames.back().stackBase; }
+virtual inline QS::VM& getVM () final override;
 
 virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
@@ -451,10 +471,13 @@ static std::unordered_map<std::string, DecodingConversionFn> bufferToStringConve
 std::vector<std::string> methodSymbols, globalSymbols;
 std::vector<QV> globalVariables;
 std::unordered_map<std::string,QV> imports;
+std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, QForeignClass*> foreignClassIds;
+std::vector<QFiber**> fiberThreads;
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
+Mutex globalMutex;
 QObject* firstGCObject;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
 QClass *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
@@ -489,6 +512,8 @@ virtual inline void setCompilationMessageReceiver (const CompilationMessageFn& f
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
 };
+
+inline QS::VM& QFiber::getVM () { return vm; }
 
 inline void QFiber::setString  (int i, const std::string& s)  { at(i) = QV(vm,s); }
 inline void QFiber::pushString (const std::string& s) { stack.push_back(QV(vm,s)); }
