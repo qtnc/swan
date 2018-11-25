@@ -8,6 +8,7 @@
 using namespace std;
 
 void registerIO  (QS::Fiber& f);
+void registerDate (QS::Fiber& f);
 
 void printIntro () {
 println("QScript v0");
@@ -83,6 +84,7 @@ QS::VM& vm = *QS::VM::createVM();
 QS::Fiber& fiber = *vm.createFiber();
 
 registerIO(fiber);
+registerDate(fiber);
 
 if (!expression.empty()) {
 fiber.loadString(expression, "<cmdLine>");

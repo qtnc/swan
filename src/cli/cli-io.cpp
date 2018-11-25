@@ -1,4 +1,4 @@
-#include "../include/QScript.hpp"
+	#include "../include/QScript.hpp"
 #include "../include/QScriptBinding.hpp"
 #include "../include/cpprintf.hpp"
 #include<iostream>
@@ -6,6 +6,7 @@
 #include<fstream>
 #include<exception>
 #include<memory>
+#include<cstdlib>
 using namespace std;
 
 struct IO {
@@ -217,6 +218,7 @@ f.registerMethod("tell", METHOD(IO, tell));
 f.registerMethod("close", METHOD(IO, close));
 f.registerMethod("toBuffer", ioToBuffer);
 f.pop();
+
 f.registerFunction("print", print);
 }
 

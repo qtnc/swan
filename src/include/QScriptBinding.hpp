@@ -406,9 +406,9 @@ storeDestructor(&QS::Binding::QSDestructorWrapper<T>::destructor);
 
 } // namespace QS
 
-#define FUNCTION(FUNC) (&QS::Binding::QSWrapper<decltype(FUNC)>::wrapper<&FUNC>)
-#define METHOD(CLS,METH) (&QS::Binding::QSWrapper<decltype(&CLS::METH)>::wrapper<&CLS::METH>)
-#define STATIC_METHOD(FUNC) (&QS::Binding::QSStaticWrapper<decltype(FUNC)>::wrapper<&FUNC>)
+#define FUNCTION(...) (&QS::Binding::QSWrapper<decltype(__VA_ARGS__)>::wrapper<&(__VA_ARGS__)>)
+#define METHOD(CLS,...) (&QS::Binding::QSWrapper<decltype(&CLS::__VA_ARGS__)>::wrapper<&CLS::__VA_ARGS__>)
+#define STATIC_METHOD(...) (&QS::Binding::QSStaticWrapper<decltype(__VA_ARGS__)>::wrapper<&(__VA_ARGS__)>)
 #define PROPERTY(CLS,PROP) (&QS::Binding::QSPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>), (&QS::Binding::QSPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
 #define GETTER(CLS,PROP) (&QS::Binding::QSPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>)
 #define SETTER(CLS,PROP) (&QS::Binding::QSPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
