@@ -9,7 +9,7 @@
 #include<memory>
 #include<cstdint>
 #include<exception>
-#include<sstream>
+#include<iosfwd>
 
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
@@ -231,6 +231,8 @@ const QS::Range& asRange () const;
 QClass& getClass (QVM& vm);
 QS::Handle asHandle ();
 inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
+void writeBytecode (std::ostream& out);
+static QV readBytecode (QVM& vm, std::istream& in);
 };
 
 struct QSequence: QObject {
@@ -322,8 +324,8 @@ struct QClosure: QObject {
 QFunction& func;
 struct Upvalue* upvalues[];
 QClosure (QVM& vm, QFunction& f);
-virtual ~QClosure () = default;
 virtual bool gcVisit () final override;
+virtual ~QClosure () = default;
 };
 
 struct QCallFrame {
@@ -509,6 +511,7 @@ int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
+void writeSymbolTables (std::ostream& out);
 
 virtual void garbageCollect () final override;
 
