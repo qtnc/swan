@@ -2,6 +2,7 @@
 #include "../include/cpprintf.hpp"
 #include<iostream>
 #include<sstream>
+#include<fstream>
 #include<typeinfo>
 #include<exception>
 #include<cstring>
@@ -94,7 +95,12 @@ vm.garbageCollect();
 
 if (!inFile.empty()) {
 fiber.loadFile(inFile);
-if (compileOnly) cerr << "Compilation to bytecode file isn't yet supported." << endl;
+if (compileOnly) {
+if (outFile.empty()) outFile = inFile + ".qb";
+ofstream out(outFile, ios::binary);
+string bytecode = fiber.dumpBytecode();
+out.write(bytecode.data(), bytecode.size());
+}
 else fiber.call(0);
 vm.garbageCollect();
 }

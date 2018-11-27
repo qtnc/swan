@@ -231,8 +231,6 @@ const QS::Range& asRange () const;
 QClass& getClass (QVM& vm);
 QS::Handle asHandle ();
 inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
-void writeBytecode (std::ostream& out);
-static QV readBytecode (QVM& vm, std::istream& in);
 };
 
 struct QSequence: QObject {
@@ -417,6 +415,9 @@ inline QString* ensureString (int i) { return ensureString(at(i)); }
 
 virtual void loadFile (const std::string& filename) final override;
 virtual void loadString  (const std::string& source, const std::string& name="") final override;
+virtual std::string dumpBytecode () final override;
+void loadBytecode (std::istream& in);
+void saveBytecode (std::ostream& out);
 
 virtual void storeGlobal (const std::string& name) final override;
 virtual void loadGlobal (const std::string& name) final override;
@@ -511,7 +512,6 @@ int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
-void writeSymbolTables (std::ostream& out);
 
 virtual void garbageCollect () final override;
 

@@ -145,6 +145,7 @@ virtual void pop () = 0;
 
 virtual void loadString (const std::string& source, const std::string& name="") = 0;
 virtual void loadFile (const std::string& filename) = 0;
+virtual std::string dumpBytecode () = 0;
 
 virtual void call (int nArgs) = 0;
 virtual void callMethod (const std::string& name, int nArgs) = 0;

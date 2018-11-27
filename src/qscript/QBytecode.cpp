@@ -4,8 +4,10 @@
 #include<algorithm>
 using namespace std;
 
+extern OpCodeInfo OPCODE_INFO[];
+
 static void writeQVBytecode (QV v, ostream& out, unordered_set<void*>& references);
-static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references);
+static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable);
 
 template<class T> static inline void write (ostream& out, const T& x) {
 out.write(reinterpret_cast<const char*>(&x), sizeof(T));
@@ -15,6 +17,13 @@ template<class T> static inline T read (istream& in) {
 T x;
 in.read(reinterpret_cast<char*>(&x), sizeof(T));
 return x;
+}
+
+template<class T> static inline void translateSymbol (T& symbol, unordered_map<int,int>& table) {
+T orig = symbol;
+auto it = table.find(symbol);
+if (it!=table.end()) symbol = it->second;
+println("TranslateSymbol %d => %d, %s", orig, symbol, it!=table.end());
 }
 
 static void writeVLN (ostream& out, size_t x) {
@@ -32,7 +41,7 @@ static size_t readVLN (istream& in) {
 size_t x = 0;
 uint8_t u = 0;
 do {
-in >> u;
+in.read(reinterpret_cast<char*>(&u),1);
 x = (x<<7) | (u&0x7F);
 } while (u>=0x80);
 return x;
@@ -50,13 +59,24 @@ in.read(const_cast<char*>(s.data()), length);
 return s;
 }
 
-void QVM::writeSymbolTables (ostream& out) {
-out << 'T';
-writeVLN(out, globalSymbols.size());
-for (auto& s: globalSymbols) writeString(out, s);
-writeVLN(out, methodSymbols.size());
-for (auto& s: methodSymbols) writeString(out, s);
+static void writeSymbolTable (ostream& out, const vector<string>& table, int offset=0) {
+writeVLN(out, offset);
+writeVLN(out, table.size());
+for (auto& s: table) writeString(out, s);
 }
+
+static void readSymbolTable (istream& in, unordered_map<int,int>& map, vector<string>& table) {
+int offset = readVLN(in);
+int length = readVLN(in);
+for (int i=offset; i<length; i++) {
+string s = readString(in);
+auto it = find(table.begin(), table.end(), s);
+if (it==table.end()) {
+map[i] = table.size();
+table.push_back(s);
+}
+else map[i] = it-table.begin();
+}}
 
 static void writeFunctionBytecode (QFunction& func, ostream& out, unordered_set<void*>& references) {
 if (references.find(&func)!=references.end()) {
@@ -79,9 +99,10 @@ writeVLN(out, upv.slot);
 write<uint8_t>(out, upv.upperUpvalue);
 }
 writeString(out, func.bytecode);
+println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
 }
 
-static QV readFunctionBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references) {
+static QV readFunctionBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
 QFunction& func = *new QFunction(vm);
 references[readVLN(in)] = &func;
 func.nArgs = read<uint8_t>(in);
@@ -90,7 +111,7 @@ func.file = readString(in);
 func.name = readString(in);
 int nConsts = readVLN(in);
 func.constants.reserve(nConsts);
-for (int i=0; i<nConsts; i++) func.constants.push_back(readQVBytecode(vm, in, references));
+for (int i=0; i<nConsts; i++) func.constants.push_back(readQVBytecode(vm, in, references, globalTable, methodTable));
 int nUpvalues = readVLN(in);
 func.upvalues.reserve(nUpvalues);
 for (int i=0; i<nUpvalues; i++) {
@@ -99,6 +120,31 @@ bool upper = read<uint8_t>(in);
 func.upvalues.push_back({ slot, upper });
 }
 func.bytecode = readString(in);
+println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
+for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<end; ) {
+uint8_t op = *bc++;
+switch(op) {
+case OP_LOAD_GLOBAL:
+case OP_STORE_GLOBAL:
+translateSymbol(*reinterpret_cast<uint_global_symbol_t*>(const_cast<char*>(bc)), globalTable);
+break;
+case OP_LOAD_METHOD:
+case OP_STORE_METHOD:
+case OP_STORE_STATIC_METHOD:
+#define C(N) case OP_CALL_METHOD_##N: \
+case OP_CALL_SUPER_##N: 
+C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
+C(9) C(10) C(11) C(12) C(13) C(14) C(15)
+#undef C
+case OP_CALL_METHOD:
+case OP_CALL_SUPER:
+case OP_CALL_METHOD_VARARG:
+case OP_CALL_SUPER_VARARG:
+translateSymbol(*reinterpret_cast<uint_method_symbol_t*>(const_cast<char*>(bc)), methodTable);
+break;
+}
+bc += OPCODE_INFO[op].nArgs;
+}
 return QV(&func, QV_TAG_NORMAL_FUNCTION);
 }
 
@@ -115,9 +161,11 @@ writeVLN(out, reinterpret_cast<uintptr_t>(&closure));
 writeQVBytecode(QV(&closure.func, QV_TAG_NORMAL_FUNCTION), out, references);
 }
 
-static QV readClosureBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references) {
-QFunction& func = *readQVBytecode(vm, in, references).asObject<QFunction>();
+static QV readClosureBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
+size_t ref = readVLN(in);
+QFunction& func = *readQVBytecode(vm, in, references, globalTable, methodTable).asObject<QFunction>();
 QClosure* closure = newVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+references[ref] = closure;
 return QV(closure, QV_TAG_CLOSURE);
 }
 
@@ -147,10 +195,11 @@ else if (v.isNativeFunction()) throw std::logic_error("Couldn't save native func
 else throw std::logic_error(format("Couldn't save an object %s@%p", v.asObject<QObject>()->type->name, v.i));
 }
 
-static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references) {
+static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
 char c;
-if (!(in>>c)) return QV();
-else switch(c){
+in.read(&c,1);
+println("in=%s, c=%d(%c)", !!in, static_cast<int>(c), c);
+switch(c){
 case 'E': return QV();
 case '+': return QV(static_cast<double>(readVLN(in)));
 case '-': return QV(static_cast<double>(-static_cast<int64_t>(readVLN(in))));
@@ -162,19 +211,33 @@ string s = readString(in);
 return QV(QString::create(vm, s), QV_TAG_STRING);
 }
 case 'G': return QV(read<uint_method_symbol_t>(in) | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-case 'F': return readFunctionBytecode(vm, in, references);
-case 'C': return readClosureBytecode(vm, in, references);
+case 'F': return readFunctionBytecode(vm, in, references, globalTable, methodTable);
+case 'C': return readClosureBytecode(vm, in, references, globalTable, methodTable);
 case 'R': return QV(references[readVLN(in)], QV_TAG_NORMAL_FUNCTION);
 case 'Q': return QV(references[readVLN(in)], QV_TAG_CLOSURE);
 default: throw std::logic_error(format("Unknown type specifier '%c'", c));
 }}
 
-void QV::writeBytecode (ostream& out) {
+void QFiber::saveBytecode (ostream& out) {
 unordered_set<void*> references;
-writeQVBytecode(*this, out, references);
+out.write("\x1B\x01", 2);
+writeSymbolTable(out, vm.globalSymbols);
+writeSymbolTable(out, vm.methodSymbols);
+writeQVBytecode(at(-1), out, references);
 }
 
-QV QV::readBytecode (QVM& vm, istream& in) {
+void QFiber::loadBytecode (istream& in) {
+char magic[2];
+in.read(magic, 2);
+unordered_map<int,int> globals, methods;
 unordered_map<uintptr_t, QObject*> references;
-return readQVBytecode(vm, in, references);
+readSymbolTable(in, globals, vm.globalSymbols);
+readSymbolTable(in, methods, vm.methodSymbols);
+push(readQVBytecode(vm, in, references, globals, methods));
+}
+
+string QFiber::dumpBytecode () {
+ostringstream out;
+saveBytecode(out);
+return out.str();
 }

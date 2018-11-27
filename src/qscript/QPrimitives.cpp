@@ -1499,11 +1499,13 @@ return boost::join(cur, "/");
 }
 
 static string defaultFileLoader (const string& filename) {
-ifstream in(filename);
+ifstream in(filename, ios::binary);
 if (!in) return "";
-ostringstream out;
+ostringstream out(ios::binary);
 out << in.rdbuf();
-return out.str();
+string s = out.str();
+println("%s: %d bytes", filename, s.size());
+return s;
 }
 
 static void import_  (QFiber& f) {

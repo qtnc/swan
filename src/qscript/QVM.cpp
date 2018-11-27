@@ -663,16 +663,16 @@ frame = callFrames.back();
 BREAK
 
 CASE(OP_CALL_METHOD)
-arg2 = frame.read<uint8_t>();
 arg1 = frame.read<uint_method_symbol_t>();
+arg2 = frame.read<uint8_t>();
 callFrames.back() = frame;
 callSymbol(arg1, arg2);
 frame = callFrames.back();
 BREAK
 
 CASE(OP_CALL_SUPER)
-arg2 = frame.read<uint8_t>();
 arg1 = frame.read<uint_method_symbol_t>();
+arg2 = frame.read<uint8_t>();
 callFrames.back() = frame;
 callSuperSymbol(arg1, arg2);
 frame = callFrames.back();

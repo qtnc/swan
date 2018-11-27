@@ -5,6 +5,7 @@
 #include<memory>
 #include<algorithm>
 #include<unordered_map>
+#include<boost/algorithm/string.hpp>
 #include<utf8.h>
 using namespace std;
 
@@ -57,12 +58,12 @@ else compiler.writeOpArg<uint8_t>(OP_CALL_FUNCTION, nArgs);
 
 static inline void writeOpCallMethod (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
 if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
-else compiler.writeOpArgs<uint8_t, uint_method_symbol_t>(OP_CALL_METHOD, nArgs+1, symbol);
+else compiler.writeOpArgs<uint_method_symbol_t, uint8_t>(OP_CALL_METHOD, symbol, nArgs+1);
 }
 
 static inline void writeOpCallSuper  (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
 if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
-else compiler.writeOpArgs<uint8_t, uint_method_symbol_t>(OP_CALL_SUPER, nArgs+1, symbol);
+else compiler.writeOpArgs<uint_method_symbol_t, uint8_t>(OP_CALL_SUPER, symbol, nArgs+1);
 }
 
 static inline void writeOpLoadLocal (QCompiler& compiler, uint_local_index_t slot) {
@@ -2681,7 +2682,6 @@ else if (lastOp!=OP_RETURN) {
 writeOp(OP_LOAD_NULL);
 writeOp(OP_RETURN);
 }
-//dump();
 }
 }
 
@@ -2708,11 +2708,17 @@ loadString(source, filename);
 }
 
 void QFiber::loadString  (const string& initialSource, const string& filename) {
+println("Initial source: %d bytes", initialSource.size());
 string displayName = "<string>";
 if (!filename.empty()) {
 int lastSlash = filename.rfind('/');
 if (lastSlash<0 || lastSlash>=filename.length()) lastSlash=-1;
 displayName = filename.substr(lastSlash+1);
+}
+if (boost::starts_with(initialSource, "\x1B\x01")) {
+istringstream in(initialSource, ios::binary);
+loadBytecode(in);
+return;
 }
 string source = initialSource;
 if (utf8::is_valid(source.begin(), source.end())) {
