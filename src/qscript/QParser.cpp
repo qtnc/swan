@@ -78,6 +78,7 @@ else compiler.writeOpArg<uint_local_index_t>(OP_STORE_LOCAL, slot);
 
 static inline bool isUnpack (const shared_ptr<Expression>& expr);
 static inline bool isComprehension (const shared_ptr<Expression>& expr);
+static inline void doCompileTimeImport (const string& baseFile, shared_ptr<Expression> exprRequestedFile);
 
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
@@ -472,6 +473,7 @@ shared_ptr<Expression> optimize () { from=from->optimize(); return shared_this()
 const QToken& nearestToken () { return from->nearestToken(); }
 string print () { return "import " + from->print(); }
 void compile (QCompiler& compiler) {
+doCompileTimeImport(compiler.parser.filename, from);
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, false));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
@@ -800,6 +802,7 @@ s += string(p.first.start, p.first.length) + " as " + string(p.second.start, p.s
 return s;
 }
 void compile (QCompiler& compiler) {
+doCompileTimeImport(compiler.parser.filename, from);
 static int importCount = 0;
 int subscriptSymbol = compiler.parser.vm.findMethodSymbol("[]");
 compiler.writeDebugLine(nearestToken());
@@ -892,6 +895,15 @@ return !!dynamic_pointer_cast<UnpackExpression>(expr);
 static inline bool isComprehension  (const shared_ptr<Expression>& expr) {
 return !!dynamic_pointer_cast<ComprehensionExpression>(expr);
 }
+
+static inline void doCompileTimeImport (const string& baseFile, shared_ptr<Expression> exprRequestedFile) {
+auto expr = dynamic_pointer_cast<ConstantExpression>(exprRequestedFile);
+if (expr && expr->token.value.isString()) {
+QFiber& f = *QFiber::curFiber;
+LOCK_SCOPE(f.mutex)
+f.import(baseFile, expr->token.value.asString());
+f.pop();
+}}
 
 struct ParserRule {
 typedef shared_ptr<Expression>(QParser::*PrefixFn)(void);
@@ -2365,8 +2377,8 @@ void VariableDeclaration::compile (QCompiler& compiler) {
 bool isConst = flags&VD_CONST;
 bool isGlobal = flags&VD_GLOBAL;
 bool exporting = flags&VD_EXPORT;
-if (compiler.parent || compiler.curScope>0) {
-if (isGlobal) compiler.compileError(nearestToken(), ("Cannot declare global in a local scope"));
+if (compiler.parent || compiler.curScope>1) {
+if (isGlobal) compiler.compileError(nearestToken(), "Cannot declare global in a local scope, curScope=%d, parent=%p", compiler.curScope, compiler.parent);
 if (exporting) compiler.compileError(nearestToken(), ("Cannot declare export in a local scope"));
 }
 for (auto& p: vars) {
@@ -2708,7 +2720,7 @@ loadString(source, filename);
 }
 
 void QFiber::loadString  (const string& initialSource, const string& filename) {
-println("Initial source: %d bytes", initialSource.size());
+LOCK_SCOPE(vm.globalMutex)
 string displayName = "<string>";
 if (!filename.empty()) {
 int lastSlash = filename.rfind('/');

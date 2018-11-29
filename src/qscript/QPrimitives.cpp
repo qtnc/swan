@@ -1504,22 +1504,14 @@ if (!in) return "";
 ostringstream out(ios::binary);
 out << in.rdbuf();
 string s = out.str();
-println("%s: %d bytes", filename, s.size());
 return s;
 }
 
 static void import_  (QFiber& f) {
-LOCK_SCOPE(f.vm.globalMutex)
 string curFile = f.getString(0), requestedFile = f.getString(1);
-string finalFile = f.vm.pathResolver(curFile, requestedFile);
-auto it = f.vm.imports.find(finalFile);
-if (it!=f.vm.imports.end()) f.returnValue(it->second);
-else {
-f.loadFile(finalFile);
-f.call(0);
-f.vm.imports[finalFile] = f.at(-1);
+f.import(curFile, requestedFile);
 f.returnValue(f.at(-1));
-}}
+}
 
 QVM::QVM ():
 firstGCObject(nullptr),

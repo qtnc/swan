@@ -42,7 +42,13 @@ return new QVM();
 }
 
 QFiber* QVM::createFiber () {
-return new QFiber(*this);
+auto f = new QFiber(*this);
+if (!QFiber::curFiber) {
+LOCK_SCOPE(globalMutex)
+fiberThreads.push_back(&QFiber::curFiber);
+QFiber::curFiber=f;
+}
+return f;
 }
 
 QFiber::QFiber (QVM& vm0): QSequence(vm0.fiberClass), vm(vm0), state(FiberState::INITIAL)
@@ -371,6 +377,18 @@ QForeignInstance* instance = static_cast<QForeignInstance*>(cls.instantiate());
 at(idx) = instance;
 return &instance->userData[0];
 }
+
+void QFiber::import (const std::string& baseFile, const std::string& requestedFile) {
+LOCK_SCOPE(vm.globalMutex)
+string finalFile = vm.pathResolver(baseFile, requestedFile);
+auto it = vm.imports.find(finalFile);
+if (it!=vm.imports.end()) push(it->second);
+else {
+vm.imports[finalFile] = true;
+loadFile(finalFile);
+call(0);
+vm.imports[finalFile] = at(-1);
+}}
 
 int QVM::getOption (QVM::Option opt) {
 switch(opt){

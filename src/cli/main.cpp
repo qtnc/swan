@@ -41,7 +41,8 @@ println("Type 'exit', 'quit' or press Ctrl+Z to quit");
 print(">>>");
 while(getline(cin, line)) {
 if (line=="exit" || line=="quit") break;
-code += line + "\n";
+code.append(line);
+code.push_back('\n');
 try {
 fiber.loadString(code, "REPL");
 fiber.call(0);
@@ -61,6 +62,7 @@ printStackTrace(e);
 code.clear();
 }
 print(code.empty()? ">>>" : " ...");
+line.clear();
 }}
 
 

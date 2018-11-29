@@ -413,11 +413,12 @@ inline void popCppCallFrame () { callFrames.pop_back(); }
 inline QString* ensureString (QV& val);
 inline QString* ensureString (int i) { return ensureString(at(i)); }
 
-virtual void loadFile (const std::string& filename) final override;
 virtual void loadString  (const std::string& source, const std::string& name="") final override;
+virtual void loadFile (const std::string& filename) final override;
 virtual std::string dumpBytecode () final override;
 void loadBytecode (std::istream& in);
 void saveBytecode (std::ostream& out);
+void import (const std::string& baseFile, const std::string& requestedFile);
 
 virtual void storeGlobal (const std::string& name) final override;
 virtual void loadGlobal (const std::string& name) final override;
