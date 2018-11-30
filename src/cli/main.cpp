@@ -83,8 +83,8 @@ else break;
 if (inFile.empty() && expression.empty()) runREPL=true;
 
 try {
-QS::VM& vm = *QS::VM::createVM();
-QS::Fiber& fiber = *vm.createFiber();
+QS::VM& vm = QS::VM::getVM();
+QS::Fiber& fiber = vm.getActiveFiber();
 
 registerIO(fiber);
 registerDate(fiber);

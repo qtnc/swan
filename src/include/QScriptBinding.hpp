@@ -250,7 +250,8 @@ static inline returnType get (QS::Fiber& f, int idx) {
 if (f.isNull(idx)) return nullptr;
 QS::Handle handle = f.getHandle(idx);
 return [=](A&&... args)->R{
-QS::Fiber& fb = *QS::VM::getActiveFiber();
+QS::Fiber& fb = QS::VM::getVM().getActiveFiber();
+QS::ScopeLocker<QS::Fiber> lock(fb);
 fb.pushHandle(handle);
 pushMultiple(fb, args...);
 fb.call(sizeof...(A));
@@ -266,7 +267,8 @@ static inline returnType get (QS::Fiber& f, int idx) {
 if (f.isNull(idx)) return nullptr;
 QS::Handle handle = f.getHandle(idx);
 return [=](A&&... args){
-QS::Fiber& fb = *QS::VM::getActiveFiber();
+QS::Fiber& fb = QS::VM::getVM().getActiveFiber();
+QS::ScopeLocker<QS::Fiber> lock(fb);
 fb.pushHandle(handle);
 pushMultiple(fb, args...);
 fb.call(sizeof...(A));

@@ -367,7 +367,7 @@ virtual bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }
-virtual inline double getNum (int i) final override { return at(i).asNum(); }
+virtual inline double getNum (int i) final override {  return at(i).asNum(); }
 virtual inline bool getBool (int i) final override { return at(i).asBool(); }
 virtual inline std::string getString (int i) final override { return at(i).asString(); }
 virtual inline const char* getCString (int i) final override { return at(i).asCString(); }
@@ -413,6 +413,8 @@ inline void popCppCallFrame () { callFrames.pop_back(); }
 inline QString* ensureString (QV& val);
 inline QString* ensureString (int i) { return ensureString(at(i)); }
 
+virtual void lock () final override { mutex.lock(); }
+virtual void unlock () final override { mutex.unlock(); }
 virtual void loadString  (const std::string& source, const std::string& name="") final override;
 virtual void loadFile (const std::string& filename) final override;
 virtual std::string dumpBytecode () final override;
@@ -507,7 +509,7 @@ uint8_t varDeclMode = Option::VAR_STRICT;
 
 QVM ();
 virtual ~QVM ();
-virtual QFiber* createFiber () final override;
+virtual QFiber& getActiveFiber () final override;
 
 int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
@@ -515,6 +517,7 @@ void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
 virtual void garbageCollect () final override;
+virtual void reset () final override;
 
 virtual inline void setPathResolver (const PathResolverFn& fn) final override { pathResolver=fn; }
 virtual inline void setFileLoader (const FileLoaderFn& fn) final override { fileLoader=fn; }

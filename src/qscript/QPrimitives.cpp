@@ -8,6 +8,8 @@
 #include<utf8.h>
 using namespace std;
 
+#include "builtin-code.h"
+
 template<class T> void unordered_set_union (const T& set1, const T& set2, T& result) {
 for (auto& val: set1) result.insert(val);
 for (auto& val: set2) result.insert(val);
@@ -1564,14 +1566,34 @@ randomMetaClass = QClass::create(*this, classClass, classClass, "RandomMetaClass
 randomClass = QClass::create(*this, randomMetaClass, sequenceClass, "Random");
 #endif
 objectClass->type = classClass->type = classClass;
+reset();
+}
 
+void QVM::reset () {
 #define FUNC(BODY) [](QFiber& f){ BODY }
 #define BIND_L(NAME, BODY) ->bind(#NAME, FUNC(BODY))
 #define BIND_GL(NAME, BODY) bindGlobal(#NAME, QV(FUNC(BODY)));
 #define BIND_F(NAME, F) ->bind(#NAME, F)
 #define BIND_N(NAME) BIND_F(NAME, doNothing)
 
+LOCK_SCOPE(globalMutex)
+for (auto pf: fiberThreads) {
+if (*pf) { (*pf)->lock(); (*pf)->unlock(); }
+*pf = nullptr;
+}
+globalVariables.clear();
+globalSymbols.clear();
+methodSymbols.clear();
+imports.clear();
+stringCache.clear();
+foreignClassIds.clear();
+keptHandles.clear();
+fiberThreads.clear();
+garbageCollect();
+initPlatformEncodings();
+
 objectClass
+->copyParentMethods()
 BIND_L(type, { f.returnValue(&f.at(0).getClass(f.vm)); })
 BIND_F(toString, objectToString)
 BIND_L(is, { f.returnValue(f.at(0).i == f.at(1).i); })
@@ -1942,8 +1964,6 @@ functionMetaClass
 ->copyParentMethods()
 ;
 
-initPlatformEncodings();
-
 QClass* globalClasses[] = { 
 boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, sequenceClass, setClass, stringClass, tupleClass
 #ifndef NO_BUFFER
@@ -1999,6 +2019,11 @@ BIND_L(frac, { double unused; f.returnValue(modf(f.getNum(0), &unused)); })
 BIND_L(int, { double re; modf(f.getNum(0), &re); f.returnValue(re); })
 BIND_L(sign, { double d=f.getNum(0); f.returnValue(copysign(d==0?0:1,d)); })
 ;
+
+auto& f = getActiveFiber();
+f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
+f.call(0);
+f.pop();
 
 #undef BIND_L
 #undef BIND_F

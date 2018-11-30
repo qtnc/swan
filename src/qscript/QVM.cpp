@@ -33,22 +33,28 @@ f.callSymbol(ctorSymbol, f.getArgCount());
 f.returnValue(instance);
 }
 
-QS::Fiber* export QS::VM::getActiveFiber () {
-return QFiber::curFiber;
-}
-
-QS::VM* export QS::VM::createVM  () {
-return new QVM();
-}
-
-QFiber* QVM::createFiber () {
-auto f = new QFiber(*this);
+QFiber& QVM::getActiveFiber () {
 if (!QFiber::curFiber) {
 LOCK_SCOPE(globalMutex)
+auto f = new QFiber(*this);
 fiberThreads.push_back(&QFiber::curFiber);
 QFiber::curFiber=f;
 }
-return f;
+return *QFiber::curFiber;
+}
+
+QS::VM& export QS::VM::getVM  () {
+static QVM* vm = nullptr;
+if (!vm) {
+#ifdef NO_MUTEX
+vm = new QVM();
+#else
+static std::once_flag onceFlag;
+auto func = [&](){ vm = new QVM(); };
+std::call_once(onceFlag, func);
+#endif
+}
+return *vm;
 }
 
 QFiber::QFiber (QVM& vm0): QSequence(vm0.fiberClass), vm(vm0), state(FiberState::INITIAL)

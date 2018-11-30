@@ -77,7 +77,7 @@ if (finish<begin) finish=begin;
 }
 };
 
-struct Handle {
+struct export Handle {
 uint64_t value;
 export Handle ();
 Handle (const Handle&) = default;
@@ -89,10 +89,15 @@ export ~Handle ();
 
 struct Fiber {
 
+protected:
 Fiber () = default;
-Fiber (const Fiber&) = delete;
-Fiber& operator= (const Fiber&) = delete;
 virtual ~Fiber () = default;
+
+public:
+Fiber (const Fiber&) = delete;
+Fiber (Fiber&&) = delete;
+Fiber& operator= (const Fiber&) = delete;
+Fiber& operator= (Fiber&&) = delete;
 
 virtual int getArgCount () = 0;
 virtual VM& getVM () = 0;
@@ -154,6 +159,9 @@ virtual void loadGlobal (const std::string& name) = 0;
 virtual void storeMethod (const std::string& name) = 0;
 virtual void storeStaticMethod (const std::string& name) = 0;
 virtual void storeDestructor ( void(*)(void*) ) = 0;
+
+virtual void lock () = 0;
+virtual void unlock () = 0;
 
 template<class T> inline const T* getBuffer (int stackIndex, int* length = nullptr) {
 const T* re = reinterpret_cast<const T*>(getBufferV(stackIndex, length));
@@ -238,12 +246,17 @@ VAR_IMPLICIT, // Using an undefined variable cause it to be declared implicitly,
 VAR_IMPLICIT_GLOBAL // Same as VAR_IMPLICIT except that the variable is implicitly declared global. Useful for interactive mode.
 };
 
+protected: 
 VM () = default;
-VM (const VM&) = delete;
-VM& operator= (const VM&) = delete;
 virtual ~VM () = default;
 
-virtual Fiber* createFiber () = 0;
+public: 
+VM (const VM&) = delete;
+VM (VM&&) = delete;
+VM& operator= (const VM&) = delete;
+VM& operator= (VM&&) = delete;
+
+virtual Fiber& getActiveFiber () = 0;
 
 virtual void setPathResolver (const PathResolverFn& fn) = 0;
 virtual void setFileLoader (const FileLoaderFn& fn) = 0;
@@ -252,13 +265,25 @@ virtual int getOption (Option opt) = 0;
 virtual void setOption (Option opt, int value = 1) = 0;
 
 virtual void garbageCollect () = 0;
+virtual void reset () = 0;
 
-static VM* export createVM ();
-static Fiber* export getActiveFiber ();
+static VM& export getVM ();
 static EncodingConversionFn export getEncoder (const std::string& name);
 static DecodingConversionFn export getDecoder (const std::string& name);
 static void export registerEncoder (const std::string& name, const EncodingConversionFn& func);
 static void export registerDecoder (const std::string& name, const DecodingConversionFn& func);
+};
+
+template<class T> struct ScopeLocker {
+T& ref;
+inline ScopeLocker (T& x): ref(x) { ref.lock(); }
+inline ~ScopeLocker () { ref.unlock(); }
+};
+
+template<class T> struct ScopeUnlocker {
+T& ref;
+inline ScopeUnlocker (T& x): ref(x) { ref.unlock(); }
+inline ~ScopeUnlocker () { ref.lock(); }
 };
 
 } // namespace QS

@@ -1,12 +1,14 @@
 # Enbedding
 
 ## Initialisation
-First of all, you need to instantiate the VM, as well as create the initial fiber where QScript code will be executed.
+First of all, you need to obtain the VM, as well as the fiber where QScript code will be executed.
 
 ```cpp
-QS::VM& vm = *QS::VM::createVM();
-QS::Fiber& fiber = *vm.createFiber();
+QS::VM& vm = QS::VM::getVM();
+QS::Fiber& fiber = vm.getActiveFiber();
 ```
+
+A single VM can exist for your entire program. VM and fibers can only be manipulated through references.
 
 ## Fiber and stack
 A *fiber* is a thread of execution.
@@ -148,6 +150,18 @@ fiber.registerMethod("+", METHOD(Point, operator+));
 // We have finished registration, pop the Point class object
 fiber.pop(); 
 ```
+
+## Multithreading
+Unless compilation has been done with the NO_MUTEX option, multithreading is supported but limited. 
+There are two ways in which you can handle multithreading, each with advantages and drawbacks:
+
+- Use a distinct fiber per C++ thread. To do that, use `vm.getActiveFiber()`. A different fiber is returned for each thread.
+    - Scripts in the different fibers will effectively run concurrently
+    - Global variables as well as bound C++ objects that have some global state **are not thread-safe** by default.
+    - Running the garbage collector requires locking all active fibers on all threads
+- Use a single fiber for all C++ threads. To do that, simply pass your QS::Fiber reference around, you will always use the same object.
+    - Fibers themselves aren't thread-safe. You must use `fiber.lock()`and `fiber.unlock()` to make sure the same fiber isn't used concurrently.
+    - Scripts aren't really run concurrently. You rely on the fact that the fiber lock is released when doing I/O and other expensive operations.
 
 ## VM settings and language options
 When embedding, you can set a few VM parameters as well as options that will change how scripts are parsed, compiled or run.

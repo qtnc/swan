@@ -2719,7 +2719,7 @@ return;
 loadString(source, filename);
 }
 
-void QFiber::loadString  (const string& initialSource, const string& filename) {
+void QFiber::loadString (const string& initialSource, const string& filename) {
 LOCK_SCOPE(vm.globalMutex)
 string displayName = "<string>";
 if (!filename.empty()) {
@@ -2737,8 +2737,8 @@ if (utf8::is_valid(source.begin(), source.end())) {
 if (utf8::starts_with_bom(source.begin(), source.end())) source = source.substr(3);
 }
 else {
-istringstream in(source);
-ostringstream out;
+istringstream in(source, ios::binary);
+ostringstream out(ios::binary);
 QVM::bufferToStringConverters["native"](in, out, 0);
 source = out.str();
 }

@@ -187,7 +187,7 @@ out.write(s.begin(), s.length);
 else if (v.isGenericSymbolFunction()) {
 uint_method_symbol_t x = v.asInt();
 out << 'G';
-write(out, x);
+writeVLN(out, x);
 }
 else if (v.isNormalFunction()) writeFunctionBytecode(*v.asObject<QFunction>(), out, references);
 else if (v.isClosure()) writeClosureBytecode(*v.asObject<QClosure>(), out, references);
@@ -198,7 +198,6 @@ else throw std::logic_error(format("Couldn't save an object %s@%p", v.asObject<Q
 static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
 char c;
 in.read(&c,1);
-println("in=%s, c=%d(%c)", !!in, static_cast<int>(c), c);
 switch(c){
 case 'E': return QV();
 case '+': return QV(static_cast<double>(readVLN(in)));
@@ -210,7 +209,11 @@ case 'S': {
 string s = readString(in);
 return QV(QString::create(vm, s), QV_TAG_STRING);
 }
-case 'G': return QV(read<uint_method_symbol_t>(in) | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+case 'G': {
+uint_method_symbol_t symbol = readVLN(in);
+translateSymbol(symbol, methodTable);
+return QV(symbol  | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+}
 case 'F': return readFunctionBytecode(vm, in, references, globalTable, methodTable);
 case 'C': return readClosureBytecode(vm, in, references, globalTable, methodTable);
 case 'R': return QV(references[readVLN(in)], QV_TAG_NORMAL_FUNCTION);

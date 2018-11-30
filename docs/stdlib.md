@@ -132,9 +132,13 @@ Methods:
 
 - static Map.of(sequences...): construct a Map from one or more source mappings
 - clear: remove all items from the map
+- flipped: return a map where keys become values and values become keys.
+- getOrCompute(key, func): return this[key] if it is present in the map; otherwise, compute func(key) and store it in the map before returning it.
+- keys: return a sequence enumerating all existing keys
 - length: return the number of key/value pairs present in the map
 - remove(...keys): remove one or more keys from the map
 - toString: return a string like "{a: 1, b: 2, c: 3, d: 4}"
+- values: return a sequence enumerating all values
 
 ## Null: is Object
 The Null class has only one instance, null itself.
@@ -253,7 +257,30 @@ For more info about iterator, iterate and iteratorValue methods, see iteration p
 
 Other methods:
 
+- all(predicate): return true if predicate(x) returned true for all x in the sequence. Return true for empty sequence.
+- any(predicate): return true if predicate(x) returned true for at least one x in the sequence. Return false for empty sequence.
+- count(needle): return the number of elements in the sequence that are equal to needle.
+- countIf(predicate): return the number of x in the sequence for which predicate(x) returned true
+- dropWhile(predicate): return a sequence with all x in this sequence, until predicate(x) returns true
+- enumerate(n=0): return a sequence where each elements in the sequence are transformed into tuples `(n, this[0]), (n+1, this[1]), (n+2, this[2]), ..., (n+l, this[l])`
+- filter(predicate): return a sequence containing only x for which predicate(x) returned true
+- find(predicate)): return the first x for which predicate(x) returns true, or null if none returned true.
+- first: return the first element of the sequence. Note that the sequence may don't have a predictable orders, e.g. Set
 - join(separator=""): return a string by concatenating all elements from the sequence in turn, separating them with the given separator.
+- last: return the last element of the sequence. Note that the sequence may don't have a predictable orders, e.g. Set
+- limit(n): return a sequence limited to n elements, i.e. all elements after the nth are dropped
+- map(mapper): return a new sequence with elements mapped from this sequence
+- max(comparator): return the greatest element of the sequence according to the comparator given. 
+- min(comparator): return the least element of the sequence according to the comparator given. 
+- none(predicate): return true if predicate(x) returned true for none of the x in the sequence. Return true for empty sequence.
+- reduce(reducer, initial=null): iteratively reduce elements from this sequence using the reducer given. Return null for empty sequence, initial if the sequence has a single element.
+- skip(n): return a sequence with n first elements skipped
+- skipWhile(predicate): return a sequence with all x in this sequence, skipping initial elements as long as predicate(x) returns true
+- toList: return a list containing the elements of this sequence
+- toMap: return a map containing the elements of this sequence
+- toSet: return a set containing the elements of this sequence
+- toTuple: return a tuple containing the elements of this sequence
+- zipWith(sequences...): produce a sequence of tuples containing paired elements. For example, `(1, 2, 3).zipWith(('a', 'b', 'c'))` whould produce `(1, 'a'), (2, 'b'), (3, 'c')`
 
 ## Set: is Sequence
 A Set is a collection of items, in principle all of the same type (although nothing is enforced), where order has no importance and where any item may only be present once.
@@ -313,4 +340,11 @@ Methods:
 - hashCode
 - length: return the number of elements in this tuple
 - toString: return a string like "(1, 2, 3, 4, 5)"
+
+
+## Global functions
+- gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
+- max(...items), min(...items): return the least or greatest of the given items
+
+Additionally, math functions (sin, cos, log, etc.) as well as rounding functions (floor, round, ceil, etc.) may or not be available as global functions. See Num class for a list of math functions.
 

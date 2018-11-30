@@ -134,11 +134,12 @@ QObject(type0), vm(vm0), parent(parent0), nFields(nf), name(name0)
 
 QClass* QClass::copyParentMethods () {
 if (parent) methods = parent->methods;
+else methods.clear();
 return this;
 }
 
 QClass* QClass::mergeMixinMethods (QClass* cls) {
-for (int i=methods.size(); i<cls->methods.size(); i++) methods.push_back(QV());
+insert_n(methods, static_cast<int>(cls->methods.size())-static_cast<int>(methods.size()), QV());
 for (int i=0; i<cls->methods.size(); i++) if (!cls->methods[i].isNull()) methods[i] = cls->methods[i];
 return this;
 }

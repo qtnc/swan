@@ -91,11 +91,13 @@ static void ioWrite (QS::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 if (io.encoder) {
 istringstream in(f.getString(1));
+QS::ScopeUnlocker<QS::Fiber> unlocker(f);
 io.encoder(in, *io.out);
 }
 else {
 int length;
 const char* buffer = f.getBuffer<char>(1, &length);
+QS::ScopeUnlocker<QS::Fiber> unlocker(f);
 io.out->write(buffer, length);
 }}
 
@@ -111,18 +113,24 @@ int num = f.getOptionalNum(1, -1);
 ostringstream out;
 if (!io.in || !*io.in) { f.setNull(0); return; }
 if (io.decoder) {
+f.unlock();
 if (num<0) io.decoder(*io.in, out, 0);
 else while(--num>=0 && io.in && *io.in) io.decoder(*io.in, out, 1);
+f.lock();
 f.setString(0, out.str());
 }
 else if (num<0) {
+f.unlock();
 out << io.in->rdbuf();
 string s = out.str();
+f.lock();
 f.setBuffer(0, s.data(), s.size());
 }
 else {
+f.unlock();
 auto buf = make_unique<char[]>(num);
 io.in->read(&buf[0], num);
+f.lock();
 f.setBuffer(0, &buf[0], io.in->gcount());
 }}
 
@@ -130,17 +138,22 @@ static void ioReadLine (QS::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 if (!io.in || !*io.in) { f.setNull(0); return; }
 if (io.decoder) {
+f.unlock();
 ostringstream out;
 io.decoder(*io.in, out, 2);
+f.lock();
 f.setString(0, out.str());
 }
 else {
+f.unlock();
 string s;
 getline(*io.in, s);
+f.lock();
 f.setBuffer(0, s.data(), s.size());
 }}
 
-static IO ioOpen (const string& target, optional<string> omode, optional<string> encoding) {
+static IO ioOpen (const string& target, optional<string> omode, optional<string> encoding, QS::Fiber& f) {
+QS::ScopeUnlocker<QS::Fiber> unlocker(f);
 string mode = omode.value_or("r");
 string enc = encoding.value_or("utf8");
 if (mode.size()>3) { enc=mode; mode=""; }
