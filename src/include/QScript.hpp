@@ -108,6 +108,7 @@ virtual bool isString (int stackIndex) = 0;
 virtual bool isRange (int stackIndex) = 0;
 virtual bool isBuffer (int stackIndex) = 0;
 virtual bool isNull (int stackIndex) = 0;
+virtual bool isUserPointer (int stackIndex, size_t classId) = 0;
 
 virtual double getNum (int stackIndex) = 0;
 virtual bool getBool (int stackIndex) = 0;
@@ -151,6 +152,7 @@ virtual void pop () = 0;
 virtual void loadString (const std::string& source, const std::string& name="") = 0;
 virtual void loadFile (const std::string& filename) = 0;
 virtual std::string dumpBytecode () = 0;
+virtual void import (const std::string& baseFile, const std::string& toImport) = 0;
 
 virtual void call (int nArgs) = 0;
 virtual void callMethod (const std::string& name, int nArgs) = 0;
@@ -169,16 +171,20 @@ if (length) *length /= sizeof(T);
 return re;
 }
 
-template<class T> T& getUserObject (int stackIndex) {
+template<class T> inline bool isUserObject (int stackIndex) {
+return isUserPointer(stackIndex, typeid(T).hash_code());
+}
+
+template<class T> inline T& getUserObject (int stackIndex) {
 return *static_cast<T*>(getUserPointer(stackIndex));
 }
 
-template<class T> void setUserObject (int stackIndex, const T& obj) {
+template<class T> inline void setUserObject (int stackIndex, const T& obj) {
 void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
 new(ptr) T(obj);
 }
 
-template<class T, class... A> void emplaceUserObject (int stackIndex, A&&... args) {
+template<class T, class... A> inline void emplaceUserObject (int stackIndex, A&&... args) {
 void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
 new(ptr) T(args...);
 }

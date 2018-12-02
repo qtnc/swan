@@ -34,9 +34,11 @@ Other methods:
 - toString: for memory output stream created by IO.create() only, creates an UTF-8 string of all data written so far to the stream; for other types of streams, call the usual toString.
 - write(data): write data to the stream; depending on context, data must be a string or a buffer.
 
-Properties:
 
-- static IO.stdin: Read-only IO stream connected to the standard input, using native-dependent encoding
-- static IO.stdout: WRite-only IO stream connected to the standard output, using native-dependent encoding
-- static IO.stderr: Write-only IO stream connected to the standard error output, using native-dependent encoding
+## ADditions to System class
 
+Static properties:
+
+- in: Read-only IO stream connected to the standard input, using native-dependent encoding
+- out: WRite-only IO stream connected to the standard output, using native-dependent encoding
+- err: Write-only IO stream connected to the standard error output, using native-dependent encoding

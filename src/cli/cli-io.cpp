@@ -1,4 +1,5 @@
-	#include "../include/QScript.hpp"
+#include<optional>
+#include "../include/QScript.hpp"
 #include "../include/QScriptBinding.hpp"
 #include "../include/cpprintf.hpp"
 #include<iostream>
@@ -7,6 +8,7 @@
 #include<exception>
 #include<memory>
 #include<cstdlib>
+#include<cstdio>
 using namespace std;
 
 struct IO {
@@ -215,9 +217,6 @@ f.registerDestructor<IO>();
 f.registerStaticMethod("open", STATIC_METHOD(ioOpen));
 f.registerStaticMethod("create", STATIC_METHOD(ioCreate));
 f.registerStaticMethod("of", ioOf);
-f.registerStaticProperty("stdout", STATIC_METHOD(ioGetStdout), STATIC_METHOD(ioSetStdout));
-f.registerStaticProperty("stderr", STATIC_METHOD(ioGetStderr), STATIC_METHOD(ioSetStderr));
-f.registerStaticProperty("stdin", STATIC_METHOD(ioGetStdin), STATIC_METHOD(ioSetStdin));
 f.registerMethod("read", ioRead);
 f.registerMethod("readLine", ioReadLine);
 f.registerMethod("!", METHOD(IO, operator!));
@@ -230,6 +229,12 @@ f.registerMethod("seek", METHOD(IO, seek));
 f.registerMethod("tell", METHOD(IO, tell));
 f.registerMethod("close", METHOD(IO, close));
 f.registerMethod("toBuffer", ioToBuffer);
+f.pop();
+
+f.loadGlobal("System");
+f.registerStaticProperty("out", STATIC_METHOD(ioGetStdout), STATIC_METHOD(ioSetStdout));
+f.registerStaticProperty("err", STATIC_METHOD(ioGetStderr), STATIC_METHOD(ioSetStderr));
+f.registerStaticProperty("in", STATIC_METHOD(ioGetStdin), STATIC_METHOD(ioSetStdin));
 f.pop();
 
 f.registerFunction("print", print);

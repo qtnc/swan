@@ -65,7 +65,7 @@ Numbers are all 64-bit floating point values (C double). Valid number forms incl
 
 Strings can be quoted using double quotes `"`, single quotes `'` or backtick `\``. 
 
-@TODO: implement regular expression literal with the usual syntax `/pattern/options`
+Regular expressions can be literaly written as /pattern/options.
 
 ## Operators and their priority
 Here are all available operators, ordered by priority from highest to lowest:

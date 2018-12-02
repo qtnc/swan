@@ -402,6 +402,32 @@ f.returnValue(QV(f.vm, buf));
 else f.returnValue(QV(f.vm, format("%.14g", val) ));
 }}
 
+static void numFormat (QFiber& f) {
+double value = f.getNum(0);
+int decimals = f.getOptionalNum(1, 2);
+string decimalSeparator = f.getOptionalString(2, ".");
+string groupSeparator = f.getOptionalString(3, "");
+int width = f.getOptionalNum(4, 0);
+int groupLength = f.getOptionalNum(5, 3);
+string s;
+if (decimals>=0 && width<=0) s = format("%.*f", decimals, value);
+else if (decimals>=0 && width>0) s = format("%0.*$*f", decimals, width, value);
+else if (decimals<0) {
+int exponent = log10(value);
+double mantissa = value/pow(10, exponent);
+if (width>0)  s = format("%.*ge%0$*d", -decimals, mantissa, width, exponent);
+else s = format("%.*ge%d", -decimals, mantissa, exponent);
+}
+auto pos = s.find('.');
+if (pos!=string::npos) s.replace(pos, 1, decimalSeparator);
+else pos = s.size();
+while(pos>groupLength) {
+pos -= groupLength;
+s.insert(pos, groupSeparator);
+}
+f.returnValue(QV(f.vm, s));
+}
+
 static void objectInstantiate (QFiber& f) {
 QClass& cls = f.getObject<QClass>(0);
 QObject* instance = cls.instantiate();
@@ -1524,26 +1550,27 @@ messageReceiver(defaultMessageReceiver)
 objectClass = QClass::create(*this, nullptr, nullptr, "Object");
 classClass = QClass::create(*this, nullptr, objectClass, "Class");
 fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass");
-functionMetaClass = QClass::create(*this, classClass, classClass, "FunctionMetaClass");
 listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass");
 mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass");
 numMetaClass = QClass::create(*this, classClass, classClass, "NumMetaClass");
 rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass");
 setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass");
 stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass");
+systemMetaClass = QClass::create(*this, classClass, classClass, "SystemMetaClass");
 tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass");
 boolClass = QClass::create(*this, classClass, objectClass, "Bool");
-functionClass = QClass::create(*this, functionMetaClass, objectClass, "Function");
+functionClass = QClass::create(*this, classClass, objectClass, "Function");
 sequenceClass = QClass::create(*this, classClass, objectClass, "Sequence");
 fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber");
 listClass = QClass::create(*this, listMetaClass, sequenceClass, "List");
 mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map");
 nullClass = QClass::create(*this, classClass, objectClass, "Null");
 numClass = QClass::create(*this, numMetaClass, objectClass, "Num");
+rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range");
 setClass = QClass::create(*this, setMetaClass, sequenceClass, "Set");
 stringClass = QClass::create(*this, stringMetaClass, sequenceClass, "String");
+systemClass = QClass::create(*this, systemMetaClass, objectClass, "System");
 tupleClass = QClass::create(*this, tupleMetaClass, sequenceClass, "Tuple");
-rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range");
 #ifndef NO_BUFFER
 bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass");
 bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer");
@@ -1656,6 +1683,7 @@ BIND_L(unp, { f.returnValue(+f.getNum(0)); })
 BIND_L(~, { f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); })
 BIND_F(toString, numToString)
 BIND_F(hashCode, objectHashCode)
+BIND_F(format, numFormat)
 BIND_L(.., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), false)); })
 BIND_L(..., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); })
 ;
@@ -1960,12 +1988,13 @@ fiberMetaClass
 BIND_F( (), fiberInstantiate)
 ;
 
-functionMetaClass
-->copyParentMethods()
+systemMetaClass ->copyParentMethods()
+BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV()); })
 ;
+systemClass->copyParentMethods();
 
 QClass* globalClasses[] = { 
-boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, sequenceClass, setClass, stringClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, sequenceClass, setClass, stringClass, systemClass, tupleClass
 #ifndef NO_BUFFER
 , bufferClass
 #endif
@@ -1982,14 +2011,11 @@ boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass
 for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 
 bindGlobal("import", import_);
-bindGlobal("dir", objectDir);
 bindGlobal("format", stringFormat);
 bindGlobal("NaN", QV(QV_NAN));
 bindGlobal("PlusInf", QV(QV_PLUS_INF));
 bindGlobal("MinusInf", QV(QV_MINUS_INF));
 bindGlobal("Pi", acos(-1));
-BIND_GL(garbageCollect, { f.vm.garbageCollect(); f.returnValue(QV()); })
-BIND_GL(clock, { f.returnValue(nativeClock()); })
 
 #ifndef NO_RANDOM
 bindGlobal("rand", QV(new QRandom(*this)));
@@ -2001,7 +2027,7 @@ bindGlobal(#X, numMathFunc<X>);
 F(abs)
 F(sin) F(cos) F(tan) F(asin) F(acos) F(atan)
 F(sinh) F(cosh) F(tanh) F(asinh) F(acosh) F(atanh)
-F(exp) F(sqrt) F(cbrt)
+F(exp) F(sqrt) F(cbrt) F(log2) F(log10)
 #undef F
 #define F(X) \
 numClass BIND_F(X, numRoundingFunc<X>); \

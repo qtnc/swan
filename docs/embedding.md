@@ -151,6 +151,8 @@ fiber.registerMethod("+", METHOD(Point, operator+));
 fiber.pop(); 
 ```
 
+The IO and Date modules of the CLI give more elaborated examples of C++ API made available to scripts.
+
 ## Multithreading
 Unless compilation has been done with the NO_MUTEX option, multithreading is supported but limited. 
 There are two ways in which you can handle multithreading, each with advantages and drawbacks:
@@ -160,7 +162,7 @@ There are two ways in which you can handle multithreading, each with advantages 
     - Global variables as well as bound C++ objects that have some global state **are not thread-safe** by default.
     - Running the garbage collector requires locking all active fibers on all threads
 - Use a single fiber for all C++ threads. To do that, simply pass your QS::Fiber reference around, you will always use the same object.
-    - Fibers themselves aren't thread-safe. You must use `fiber.lock()`and `fiber.unlock()` to make sure the same fiber isn't used concurrently.
+    - *Fibers themselves aren't thread-safe*. You must use `fiber.lock()`and `fiber.unlock()` to make sure the same fiber isn't used concurrently.
     - Scripts aren't really run concurrently. You rely on the fact that the fiber lock is released when doing I/O and other expensive operations.
 
 ## VM settings and language options

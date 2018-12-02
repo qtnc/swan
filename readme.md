@@ -6,6 +6,14 @@ QScript is a small scripting language designed to be embedded into C++ applicati
 ```
 # Define a vector class
 class Vector {
+# Define the constructor
+constructor (x, y, z) {
+# Fill the instance fields with the passed parameters
+_x=x 
+_y=y
+_z=z
+}
+
   # Define a property x (a getter and a setter)
   x { _x } 
   x= (value) { _x=value }
@@ -33,19 +41,12 @@ let v3 = v1 + v2
 # Call the length method and pritns 5
 print(v3.length)
 
-# Let's write a function that takes a 3-tuple and convert it into a Vector
-let tupleToVector = $(tuple) {
-  return Vector(tuple[0], tuple[1], tuple[2])
-}
-
-# Create a tuple and use the function
-let tuple = (7, 8, 9)
-let v4 = tupleToVector(tuple)
-
 # WE missed a toString method in our Vector class ! No problem, let's add it
 Vector::toString = $(this){ "Vector(%1, %2, %3)".format(this.x, this.y, this.z) }
 
 # Prints: the length of Vector(7, 8, 9) is 13.93
+let coords = [7, 8, 9]
+let v4 = Vector(...coords)
 print("The length of " + v4 + " is " + v4.length) 
 ```
 

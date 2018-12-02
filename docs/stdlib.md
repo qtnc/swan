@@ -156,6 +156,7 @@ Class of all numbers.
 
 Methods:
 
+- format(precision=2, decimalSeparator=".", groupSeparator="", padding=0, groupLength=3): format the number into a string with the specified parameters: precision is the number of digits after the decimal separator. Example: `12345.6789.format(2, ",", "'")` results in `12'345.68`. Giving a precision <0 requests for exponential notation. IF padding!=0, the appropriate number of 0s are prepended to make a string of the given length.
 - frac: return the fractional part of the number, e.g. 1.23 and -67.89 resp. return  0.23 and -0.89
 - hashCode
 - int: return the integer part of the number, e.g. 1.23 and -67.89 resp. return 1 and -67.
@@ -213,11 +214,12 @@ Regular expression options:
 - M: no multiline; `^`and `$` only match at the beginning/end 
 - S: no dot all; `.` don't match newlines
 - s: dot all: `.`matches newlines
-	- x: extended mode; allow spaces in the regex expression
+- x: extended mode; allow spaces in the regex expression
 - z: extended replacement format: allow certain special syntaxes in replacement strings
 
-Depending if compilation has been done with boost::regex or std::regex, some syntax constructs may, or may not be available.
+Depending if compilation has been done with boost::regex or std::regex, some syntax constructs and options may, or may not be available.
 For example, look-behind assertions `(?<=...)` are only available with boost.
+Options c, s, x, z, E, M, S are also only available with boost.
 
 ## RegexMatchResult
 RegexMatchResult represent a match result of a regular expression match or search. This object can be returned by String.search or in the callback of String.replace.
@@ -313,6 +315,7 @@ Methods:
 - endsWith(needle): return true if needle is found at the end of the string
 - findAll(regex, returnedGroup=0, returnFullMatchResult=false): find all matches of the regular expression against this string. For each match, take the returnedGroup group number as result, or return a list of RegexMatchResult objects if returnFullMatchResults=true.
 - findFirstOf(needles, start=0): search for the first occurence of one of the characters inside needle; return -1 if nothing is found.
+- format(...items): take this string as a format string and format accordingly; see the format global function for more info.
 - hashCode: return the hash code of the object, especially used as hashing key for maps, sets and similar structures.
 - indexOf(needle, start=0): search for needle in the string, returning the position where it has been found, or -1 if not found.
 - lastIndexOf(needle, start=length): search for needle in the string from its end, returning the position where it has been found, or -1 if not found.
@@ -341,8 +344,16 @@ Methods:
 - length: return the number of elements in this tuple
 - toString: return a string like "(1, 2, 3, 4, 5)"
 
+## System class
+The System class isn't instantiable. It provies general System information and features.
+
+Static methods:
+
+- gc: run the garbage collector
 
 ## Global functions
+- format(fmt, ...items): create a string where %1, %2, %3, etc. are replaced by the 1st, 2nd, 3rd, etc. parameters after fmt.
+- format(fmt, map): create a string where expression $([a-z]+) are replaced by the corresponding value in the map.
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
 

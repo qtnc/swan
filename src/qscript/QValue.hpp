@@ -223,7 +223,8 @@ template<class T = int> inline T asInt () const { return static_cast<T>(i&~QV_TA
 template<class T> inline T* asObject () const { return static_cast<T*>(reinterpret_cast<QObject*>(static_cast<uintptr_t>( i&~QV_TAGMASK ))); }
 template<class T> inline T* asPointer () const { return reinterpret_cast<T*>(static_cast<uintptr_t>( i&~QV_TAGMASK )); }
 inline QNativeFunction asNativeFunction () const { return reinterpret_cast<QNativeFunction>(asPointer<void>()); }
-inline bool isInstanceOf (QClass* tp) const { return isObject() && asObject<QObject>()->type==tp; }
+bool isInstanceOf (QClass* tp) const;
+
 std::string asString () const;
 const char* asCString () const;
 const QS::Range& asRange () const;
@@ -365,6 +366,7 @@ virtual inline bool isString (int i) final override { return at(i).isString(); }
 virtual bool isRange (int i) final override;
 virtual bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
+virtual bool isUserPointer (int i, size_t classId) final override;
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }
 virtual inline double getNum (int i) final override {  return at(i).asNum(); }
@@ -415,12 +417,12 @@ inline QString* ensureString (int i) { return ensureString(at(i)); }
 
 virtual void lock () final override { mutex.lock(); }
 virtual void unlock () final override { mutex.unlock(); }
+virtual void import (const std::string& baseFile, const std::string& requestedFile) final override;
 virtual void loadString  (const std::string& source, const std::string& name="") final override;
 virtual void loadFile (const std::string& filename) final override;
 virtual std::string dumpBytecode () final override;
 void loadBytecode (std::istream& in);
 void saveBytecode (std::ostream& out);
-void import (const std::string& baseFile, const std::string& requestedFile);
 
 virtual void storeGlobal (const std::string& name) final override;
 virtual void loadGlobal (const std::string& name) final override;
@@ -491,8 +493,8 @@ FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 Mutex globalMutex;
 QObject* firstGCObject;
-QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *tupleClass;
-QClass *fiberMetaClass, *functionMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *setMetaClass, *stringMetaClass, *rangeMetaClass, *tupleMetaClass;
+QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
+QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
 #ifndef NO_BUFFER
 QClass *bufferMetaClass, *bufferClass;
 #endif
@@ -544,6 +546,10 @@ pop();
 popCppCallFrame();
 return re;
 }}
+
+inline bool QFiber::isUserPointer (int i, size_t classId) {
+return at(i) .isInstanceOf( vm.foreignClassIds[classId] );
+}
 
 template<class F> static inline void iterateSequence (QFiber& f, const QV& initial, const F& func) {
 int iteratorSymbol = f.vm.findMethodSymbol(("iterator"));

@@ -19,13 +19,15 @@ println("For more info, go to http://github.com/qtnc/qscript");
 
 void printHelp (const std::string& argv0) {
 printIntro();
-println("Synopsis: %s [options] [script]", argv0);
-println("Where [script] is the QScript to execute");
+println("Synopsis: %s [options] [script] [args...]", argv0);
+println("Where [script] is the script to execute");
 println("And where [options] can be: ");
-println("-c: compile script but don't run it; not yet supported");
+println("-c: compile script but don't run it");
 println("-e: execute the following expression given on the command line");
 println("-h: print this help message and exit");
 println("-i: run interactive REPL (default when no script file is specified)");
+println("-m: import the following given module");
+println("-o: output compiled bytecode to specified file");
 }
 
 void printStackTrace (QS::RuntimeException& e) {
@@ -65,22 +67,33 @@ print(code.empty()? ">>>" : " ...");
 line.clear();
 }}
 
-
 int main (int argc, char** argv) {
-string inFile, outFile, expression;
+vector<string> args, importModules;
+string inFile, outFile, expression, outDir;
 bool runREPL=false, compileOnly=false;
-int argIndex=1;
+int argIndex=1, exitCode=0;
 while(argIndex<argc) {
 string arg = argv[argIndex++];
 if (arg=="-c") compileOnly=true;
+else if (arg=="-d") outDir = argv[argIndex++];
 else if (arg=="-e") expression = argv[argIndex++];
 else if (arg=="-h" || arg=="--help" || arg=="-?") { printHelp(argv[0]); return 0; }
 else if (arg=="-i") runREPL=true;
+else if (arg=="-m") importModules.push_back(argv[argIndex++]);
 else if (arg=="-o") outFile = argv[argIndex++];
-else if (inFile.empty()) inFile = arg;
-else break;
+else if (arg=="--") break;
+else if (!compileOnly && inFile.empty()) inFile = arg;
+else {
+argIndex -= compileOnly;
+break;
+}}
+while(argIndex<argc) args.push_back(argv[argIndex++]);
+
+if (!compileOnly && inFile.empty() && expression.empty()) runREPL=true;
+if (compileOnly && !outFile.empty() && args.size()>1) {
+println(std::cerr, "Warning: output file ignored when compliling multiple files at once");
+outFile.clear();
 }
-if (inFile.empty() && expression.empty()) runREPL=true;
 
 try {
 QS::VM& vm = QS::VM::getVM();
@@ -89,22 +102,43 @@ QS::Fiber& fiber = vm.getActiveFiber();
 registerIO(fiber);
 registerDate(fiber);
 
+for (auto& mod: importModules) {
+fiber.import("", mod);
+fiber.pop();
+}
+
+if (!compileOnly) {
+fiber.loadGlobal("List");
+for (auto& arg: args) fiber.pushString(arg);
+fiber.call(args.size());
+fiber.storeGlobal("argv");
+}
+
 if (!expression.empty()) {
-fiber.loadString(expression, "<cmdLine>");
+fiber.loadString(expression, "<inline>");
 fiber.call(0);
 vm.garbageCollect();
 }
 
 if (!inFile.empty()) {
-fiber.loadFile(inFile);
-if (compileOnly) {
-if (outFile.empty()) outFile = inFile + ".qb";
-ofstream out(outFile, ios::binary);
-string bytecode = fiber.dumpBytecode();
-out.write(bytecode.data(), bytecode.size());
+if (inFile=="-") {
+ostringstream out;
+out << std::cin.rdbuf();
+fiber.loadString(out.str(), "<stdin>");
 }
-else fiber.call(0);
+else fiber.loadFile(inFile);
+fiber.call(0);
+exitCode = fiber.getOptionalNum(-1, 0);
+fiber.pop();
 vm.garbageCollect();
+}
+
+if (compileOnly) for (auto& file: args) {
+string bytecode = fiber.dumpBytecode();
+if (!outFile.empty())  file=outFile;
+else file += ".qb";
+ofstream out(file, ios::binary);
+out.write(bytecode.data(), bytecode.size());
 }
 
 if (runREPL) repl(vm, fiber);
@@ -112,11 +146,14 @@ if (runREPL) repl(vm, fiber);
 } 
 catch (QS::RuntimeException& e) {
 printStackTrace(e);
+exitCode = 3;
 }
 catch (std::exception& ex) {
 println(std::cerr, "Exception caught: %s: %s", typeid(ex).name(), ex.what());
+exitCode = 3;
 } catch (...) {
 println(std::cerr, "Caught unknown exception !");
+exitCode = 3;
 }
-return 0;
+return exitCode;
 }

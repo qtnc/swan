@@ -190,7 +190,7 @@ unmark(*it);
 //println("%d allocated objects found", count);
 
 vector<QObject*> roots = { 
-boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, tupleClass,
+boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass,
 #ifndef NO_REGEX
 regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
 #endif

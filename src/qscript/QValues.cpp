@@ -34,6 +34,15 @@ const char* QV::asCString () const { return asObject<QString>()->begin(); }
 const QS::Range& QV::asRange () const { return *asObject<QRange>(); }
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
 
+bool QV::isInstanceOf (QClass* tp) const {
+if (!isObject()) return false;
+QClass* type = asObject<QObject>()->type;
+do {
+if (type==tp) return true;
+} while ((type=type->parent));
+return false;
+}
+
 export QS::Handle::Handle (): value(QV_NULL) {}
 export QS::Handle::Handle (QS::Handle&& h): value(h.value) { h.value=QV_NULL; }
 QS::Handle& export QS::Handle::operator= (Handle&& h) { value=h.value; h.value=QV_NULL; return *this; }
