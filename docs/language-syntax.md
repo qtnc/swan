@@ -71,11 +71,11 @@ Regular expressions can be literaly written as /pattern/options.
 Here are all available operators, ordered by priority from highest to lowest:
 
 * Call operator: `(...)`
-* Lookup operators: `.` and `::`
+* Lookup operators: `.`, `.?` and `::`
 * Subscript operator: `[...]`, multiple indices are supported
 * Postfix operators: currently none, reserved for future uses
 * Prefix operators: `!, +, -, ~`
-* Exponentiation operator: `**`
+* Exponentiation operators: `**` and `@`
 * Multiplication, division and modulus: `*, /, %`
 * Addition and subtraction: `+, -`
 * Bitwise operators: `|, &, ^, <<, >>`
@@ -83,7 +83,7 @@ Here are all available operators, ordered by priority from highest to lowest:
 * Comparison operators: `==, !=, <, >, <=, >=, in, is`
 * Logical short-circuiting operators: `&&, ||, ??`, resp. logical and, logical or, null coalescing; `and` and `or` can be used as alternatives to `&&` and `||` with the same priority
 * Conditional ternary operator: `?:`
-* Assignment operators: `=, +=, -=, *=, /=, %=, **=, &=, |=, ^=, <<=, >>=, &&=, ||=, ??=`
+* Assignment operators: `=, +=, -=, *=, /=, %=, **=, @=, &=, |=, ^=, <<=, >>=, &&=, ||=, ??=`
 
 Arithmetic, bitwise, comparison, range and prefix operators can be overloaded.
 Other cannot. Compound assignment operators are always compiled down to operation and then assignment, i.e. `a+=b`  is always compiled as it has been written `a=a+b`.

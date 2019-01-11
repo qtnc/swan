@@ -6,6 +6,7 @@
 #include<cstdlib>
 using namespace std;
 
+extern double nativeClock ();
 static const int MONTH_LENGTHS[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 template<int tm::*prop, int delta> static int tmGetter (const tm& t) {
@@ -29,7 +30,7 @@ return time;
 
 static int getTimeZoneOffset () {
 __time64_t time = 86400;
-tm t = *localtime(&time);
+tm t = *_localtime64(&time);
 if (t.tm_mday==2) return t.tm_min + 60*t.tm_hour;
 else if (t.tm_mday==1) return t.tm_min + 60*t.tm_hour -86400;
 else return 0;
@@ -120,5 +121,9 @@ F(year, tm_year, 1900)
 f.registerMethod("week", FUNCTION(getWeek));
 f.registerMethod("lengthOfMonth", FUNCTION(getLengthOfMonth));
 f.registerMethod("leapYear", FUNCTION(isLeapYear));
+f.pop();
+
+f.loadGlobal("System");
+f.registerStaticMethod("clock", STATIC_METHOD(nativeClock));
 f.pop();
 }

@@ -68,7 +68,6 @@ double power = pow(10, f.getOptionalNum(1, 0));
 f.returnValue( func(value * power) / power );
 }
 
-double nativeClock ();
 void initPlatformEncodings ();
 bool isName (uint32_t c);
 bool isDigit (uint32_t c);

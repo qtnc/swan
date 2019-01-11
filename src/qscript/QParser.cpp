@@ -938,6 +938,7 @@ INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
 INFIX_OP(BAR, InfixOp, |, BITWISE),
 INFIX_OP(AMP, InfixOp, &, BITWISE),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE),
+INFIX_OP(AT, InfixOp, @, EXPONENT),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE),
 INFIX_OP(DOTDOT, InfixOp, .., RANGE),
@@ -957,6 +958,7 @@ INFIX(STARSTAREQ, InfixOp, **=, ASSIGNMENT),
 INFIX(BAREQ, InfixOp, |=, ASSIGNMENT),
 INFIX(AMPEQ, InfixOp, &=, ASSIGNMENT),
 INFIX(CIRCEQ, InfixOp, ^=, ASSIGNMENT),
+INFIX(ATEQ, InfixOp, @=, ASSIGNMENT),
 INFIX(LTLTEQ, InfixOp, <<=, ASSIGNMENT),
 INFIX(GTGTEQ, InfixOp, >>=, ASSIGNMENT),
 INFIX(AMPAMPEQ, InfixOp, &&=, ASSIGNMENT),
@@ -973,7 +975,6 @@ INFIX_OP(IS, InfixOp, is, COMPARISON),
 INFIX_OP(IN, InfixOp, in, COMPARISON),
 
 OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL),
-
 PREFIX_OP(EXCL, PrefixOp, !),
 PREFIX_OP(TILDE, PrefixOp, ~),
 
@@ -982,6 +983,7 @@ PREFIX_OP(TILDE, PrefixOp, ~),
 { T_LEFT_BRACE, { &QParser::parseLiteralMap, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX }},
 { T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX }},
 INFIX(DOT, InfixOp, ., MEMBER),
+INFIX(DOTQUEST, InfixOp, .?, MEMBER),
 MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER),
 PREFIX(DOLLAR, Lambda, $),
 PREFIX(UND, Field, _),
@@ -1088,6 +1090,10 @@ static inline bool isSpace (uint32_t c) {
 return c==' ' || c=='\t' || c=='\r';
 }
 
+static inline bool isLine (uint32_t c) {
+return c=='\n';
+}
+
 bool isName (uint32_t c) {
 return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' || c>=128;
 }
@@ -1109,7 +1115,7 @@ return d;
 static void skipComment (const char*& in, const char* end) {
 int c = utf8::peek_next(in, end);
 if (isSpace(c) || isName(c)) {
-while(c && c!='\n') c=utf8::next(in, end);
+while(c && !isLine(c)) c=utf8::next(in, end);
 return;
 }
 int opening = c, closing = c, nesting = 1;
@@ -1130,6 +1136,14 @@ buf[n]=0;
 in += n;
 return strtoul(buf, nullptr, base);
 }
+
+static int getStringEndingChar (int c) {
+switch(c){
+case 147: return 148;
+case 171: return 187;
+case 8220: return 8221;
+default:  return c;
+}}
 
 static QV parseString (QVM& vm, const char*& in, const char* end, int ending) {
 string re;
@@ -1158,7 +1172,7 @@ return QV(vm, re);
 static shared_ptr<BinaryOperation> createBinaryOperation (shared_ptr<Expression> left, QTokenType op, shared_ptr<Expression> right) {
 switch(op){
 case T_EQ:
-case T_PLUSEQ: case T_MINUSEQ: case T_STAREQ: case T_STARSTAREQ: case T_SLASHEQ: case T_BACKSLASHEQ: case T_PERCENTEQ:
+case T_PLUSEQ: case T_MINUSEQ: case T_STAREQ: case T_STARSTAREQ: case T_SLASHEQ: case T_BACKSLASHEQ: case T_PERCENTEQ: case T_ATEQ:
 case T_BAREQ: case T_AMPEQ: case T_CIRCEQ: case T_AMPAMPEQ: case T_BARBAREQ: case T_LTLTEQ: case T_GTGTEQ: case T_QUESTQUESTEQ:
 return make_shared<AssignmentOperation>(left, op, right);
 case T_DOT: 
@@ -1169,6 +1183,8 @@ case T_AMPAMP: case T_QUESTQUEST: case T_BARBAR:
 return make_shared<ShortCircuitingBinaryOperation>(left, op, right);
 case T_IN: case T_IS:
 return make_shared<BinaryOperation>(right, op, left);
+case T_DOTQUEST:
+return createBinaryOperation(left, T_AMPAMP, createBinaryOperation(left, T_DOT, right));
 default: 
 return make_shared<BinaryOperation>(left, op, right);
 }}
@@ -1196,7 +1212,7 @@ if (in>=end || !*in) RET0(T_END)
 int c;
 do {
 c = utf8::next(in, end);
-} while((isSpace(c) || c=='\n') && *(start=in) && in<end);
+} while((isSpace(c) || isLine(c)) && *(start=in) && in<end);
 switch(c){
 case '\0': RET0(T_END)
 case '(':
@@ -1219,6 +1235,7 @@ case '|': RET
 case '&': RET
 case '^': RET
 case '~': RET
+case '@': RET
 case '!': RET3('=', '~')
 case '=': RET4('=', '~', '>')
 case '<': RET3('<', '=')
@@ -1274,9 +1291,7 @@ case ',': RET(T_COMMA)
 case ';': RET(T_SEMICOLON)
 case ':': RET2(':', T_COLONCOLON, T_COLON)
 case '_': RET2('_', T_UNDUND, T_UND)
-case '@': RET(T_AT)
 case '$': RET(T_DOLLAR)
-case '.': RET22('.', '.', T_DOTDOTDOT, T_DOTDOT, T_DOTDOT, T_DOT)
 case '+': RET3('+', T_PLUSPLUS, '=', T_PLUSEQ, T_PLUS)
 case '-': RET4('-', T_MINUSMINUS, '=', T_MINUSEQ, '>', T_MINUSGT, T_MINUS)
 case '*': RET22('*', '=', T_STARSTAREQ, T_STARSTAR, T_STAREQ, T_STAR)
@@ -1286,14 +1301,21 @@ case '%': RET2('=', T_PERCENTEQ, T_PERCENT)
 case '|': RET22('|', '=', T_BARBAREQ, T_BARBAR, T_BAREQ, T_BAR)
 case '&': RET22('&', '=', T_AMPAMPEQ, T_AMPAMP, T_AMPEQ, T_AMP)
 case '^': RET2('=', T_CIRCEQ, T_CIRC)
+case '@': RET2('=', T_ATEQ, T_AT)
 case '~': RET(T_TILDE)
 case '!': RET2('=', T_EXCLEQ, T_EXCL)
 case '=': RET3('=', T_EQEQ, '>', T_EQGT, T_EQ) 
 case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
 case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) 
-case '"': case '\'': case '`': {
-QV str = parseString(vm, in, end, c);
+case '.':
+if (utf8::peek_next(in, end)=='?') { utf8::next(in, end); RET(T_DOTQUEST) } 
+else if (utf8::peek_next(in, end)=='.') { utf8::next(in, end); RET2('.', T_DOTDOTDOT, T_DOTDOT) }
+else RET(T_DOT)
+case '"': case '\'': case '`':
+case 146: case 147: case 171: case 8216: case 8217: case 8220: 
+{
+QV str = parseString(vm, in, end, getStringEndingChar(c));
 RETV(T_STRING, str)
 }
 case '#': skipComment(in, end); return nextToken();
@@ -1328,7 +1350,7 @@ pair<int,int> QParser::getPositionOf (const char* pos) {
 if (pos<start || pos>=end) return { -1, -1 };
 int line=1, column=1;
 for (const char* c=start; c<pos && *c; c++) {
-if (*c=='\n') { line++; column=1; }
+if (isLine(*c)) { line++; column=1; }
 else column++;
 }
 return { line, column };
@@ -1648,7 +1670,20 @@ return params;
 }
 
 void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
-stackedTokens.push_back(cur);
+prevToken();
+while (match(T_AT)) {
+const char* c = in;
+while(isSpace(*c) || isLine(*c)) c++;
+if (*c=='(') {
+prevToken();
+break;
+}
+skipNewlines();
+auto annotExpr = parseExpression(P_PREFIX);
+skipNewlines();
+println("annotExpr=%s", annotExpr->print());
+//##todo
+}
 QToken name = nextNameToken(true);
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(true);
 shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
@@ -1913,12 +1948,12 @@ return make_shared<NameExpression>(cur);
 }
 
 shared_ptr<Expression> QParser::parseField () {
-consume(T_NAME, ("Expected field name after '@'"));
+consume(T_NAME, ("Expected field name after '_'"));
 return make_shared<FieldExpression>(cur);
 }
 
 shared_ptr<Expression> QParser::parseStaticField () {
-consume(T_NAME, ("Expected static field name after '@@'"));
+consume(T_NAME, ("Expected static field name after '@_'"));
 return make_shared<StaticFieldExpression>(cur);
 }
 
