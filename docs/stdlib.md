@@ -4,7 +4,7 @@ Here's a very quick reference of the standard library included with the language
 The following classes, objects, methods, functions, form the core part of the language.
 
 Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList.
-Unless so disabled, in principle, they are always available in the CLI as well as when embedding QScript into your own C++ application.
+Unless so disabled, they are always available in the CLI as well as when embedding QScript into your own C++ application.
 
 ## Bool: is Object
 A bool can take only two values: true or false.
@@ -145,7 +145,7 @@ The Null class has only one instance, null itself.
 
 No specific method
 
-## Num: is Object
+## Number: is Object
 Class of all numbers.
 
 - Constructor: Num(string, base=10): where base can be between 2 and 36 inclusive
@@ -201,7 +201,7 @@ A Regex object holds a compiled regular expression.
 
 Methods: 
 
-- length: return the number of capturing parents
+- length: return the number of capturing parens
 - test(string): return true if the string completely matches the regular expression
 
 Regular expression options:
@@ -313,7 +313,7 @@ Methods:
 - static String.of(...sequences): construct a string by concatenating one or more other strings or objects
 - codePointAt(index): return the code point at given character position 0..0x1FFFFF
 - endsWith(needle): return true if needle is found at the end of the string
-- findAll(regex, returnedGroup=0, returnFullMatchResult=false): find all matches of the regular expression against this string. For each match, take the returnedGroup group number as result, or return a list of RegexMatchResult objects if returnFullMatchResults=true.
+- findAll(regex, group=0): find all matches of the regular expression against this string. For each match, take the group number given as result, or return a list of RegexMatchResult objects if group=true.
 - findFirstOf(needles, start=0): search for the first occurence of one of the characters inside needle; return -1 if nothing is found.
 - format(...items): take this string as a format string and format accordingly; see the format global function for more info.
 - hashCode: return the hash code of the object, especially used as hashing key for maps, sets and similar structures.
@@ -325,7 +325,7 @@ Methods:
 - search(regex, start=0, returnFullMatchResult=false): search for a match of the Regex against the string. Return a position or -1 if returnFullMatchResult=false, a RegexMatchResult object or null if returnFullMatchResult=true.
 - split(separator): split the string into a sequence of elements using a given separator. The separator can be a string or a regex.
 - startsWith(needle): return true if needle is found at the start of the string
-- toNum(base=10): convert the string to a number; base can be between 2 and 36.
+- toNumber(base=10): convert the string to a number; base can be between 2 and 36.
 - toString: return itself
 - upper: transform the string to uppercase
 
@@ -357,5 +357,5 @@ Static methods:
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
 
-Additionally, math functions (sin, cos, log, etc.) as well as rounding functions (floor, round, ceil, etc.) may or not be available as global functions. See Num class for a list of math functions.
+Additionally, math functions (sin, cos, log, etc.) as well as rounding functions (floor, round, ceil, etc.) may or not be available as global functions. See Number class for a list of math functions.
 

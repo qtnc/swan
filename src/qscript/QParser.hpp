@@ -125,11 +125,13 @@ std::shared_ptr<Expression> parseLambda ();
 std::shared_ptr<Expression> parseSuper ();
 std::shared_ptr<Expression> parseUnpack ();
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
+std::shared_ptr<Expression> parseDecoratedExpression ();
 std::vector<std::shared_ptr<struct FunctionParameter>> parseFunctionParameters (bool implicitThis);
 
 std::shared_ptr<Statement> parseStatement ();
 std::shared_ptr<Statement> parseStatements ();
 std::shared_ptr<Statement> parseSimpleStatement ();
+std::shared_ptr<Statement> parseDecoratedStatement ();
 std::shared_ptr<Statement> parseBlock ();
 std::shared_ptr<Statement> parseIf ();
 std::shared_ptr<Statement> parseFor ();
@@ -150,9 +152,12 @@ std::shared_ptr<Expression> parseImportExpression ();
 std::shared_ptr<Statement> parseGlobalDecl ();
 std::shared_ptr<Statement> parseClassDecl (int flags);
 std::shared_ptr<Statement> parseClassDecl ();
+std::shared_ptr<Statement> parseFunctionDecl (int flags);
+std::shared_ptr<Statement> parseFunctionDecl ();
 
 void parseMethodDecl (struct ClassDeclaration&, bool);
 void parseSimpleAccessor (struct ClassDeclaration&, bool);
+void parseDecoratedDecl (struct ClassDeclaration&, bool);
 };
 
 struct QCompiler {

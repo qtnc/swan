@@ -1551,7 +1551,7 @@ classClass = QClass::create(*this, nullptr, objectClass, "Class");
 fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass");
 listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass");
 mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass");
-numMetaClass = QClass::create(*this, classClass, classClass, "NumMetaClass");
+numMetaClass = QClass::create(*this, classClass, classClass, "NumberMetaClass");
 rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass");
 setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass");
 stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass");
@@ -1564,7 +1564,7 @@ fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber");
 listClass = QClass::create(*this, listMetaClass, sequenceClass, "List");
 mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map");
 nullClass = QClass::create(*this, classClass, objectClass, "Null");
-numClass = QClass::create(*this, numMetaClass, objectClass, "Num");
+numClass = QClass::create(*this, numMetaClass, objectClass, "Number");
 rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range");
 setClass = QClass::create(*this, setMetaClass, sequenceClass, "Set");
 stringClass = QClass::create(*this, stringMetaClass, sequenceClass, "String");
@@ -1741,6 +1741,8 @@ BIND_L(iterate, { f.returnValue(f.getObject<QRange>(0) .iterate(f.at(1))); })
 BIND_F(toString, rangeToString)
 BIND_F(in, rangeIn)
 BIND_F([], rangeSubscript)
+BIND_L(start, { f.returnValue(f.getObject<QRange>(0).start); })
+BIND_L(end, { f.returnValue(f.getObject<QRange>(0).end); })
 ;
 
 tupleClass
@@ -1761,7 +1763,8 @@ BIND_F(startsWith, stringStartsWith)
 BIND_F(endsWith, stringEndsWith)
 BIND_F(upper, stringUpper)
 BIND_F(lower, stringLower)
-BIND_F(toNum, stringToNum)
+BIND_F(toNumber, stringToNum)
+BIND_F(unp, stringToNum)
 BIND_F(codePointAt, stringCodePointAt)
 BIND_F(*, stringTimes)
 #ifndef NO_REGEX

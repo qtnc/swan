@@ -85,6 +85,7 @@ inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
 virtual string print() = 0;
 virtual const QToken& nearestToken () = 0;
 virtual bool isExpression () { return false; }
+virtual bool isDecorable () { return false; }
 virtual shared_ptr<Statement> optimizeStatement () { return shared_this(); }
 virtual void compile (QCompiler& compiler) {}
 };
@@ -99,6 +100,11 @@ shared_ptr<Statement> optimizeStatement () { return optimize(); }
 struct Assignable {
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) = 0;
 virtual bool isAssignable () { return true; }
+};
+
+struct Decorable {
+vector<shared_ptr<Expression>> decorations;
+virtual bool isDecorable () { return true; }
 };
 
 struct ConstantExpression: Expression {
@@ -764,12 +770,13 @@ s += ("}\r\n");
 return s;
 }};
 
-struct VariableDeclaration: Statement {
+struct VariableDeclaration: Statement, Decorable {
 vector<pair<QToken,shared_ptr<Expression>>> vars;
 int flags;
 VariableDeclaration (const vector<pair<QToken,shared_ptr<Expression>>>& vd, int flgs): vars(vd), flags(flgs)   {}
 const QToken& nearestToken () { return vars[0].first; }
 shared_ptr<Statement> optimizeStatement () { for (auto& v: vars) v.second=v.second->optimize(); return shared_this(); }
+virtual bool isDecorable () { return true; }
 void compile (QCompiler& compiler);
 string print () {
 string s;
@@ -820,7 +827,7 @@ compiler.findLocalVariable(p.second, LV_NEW | LV_CONST);
 }
 }};
 
-struct FunctionParameter: Expression  {
+struct FunctionParameter: Expression, Decorable {
 QToken arg;
 shared_ptr<Expression> defaultValue;
 shared_ptr<Expression> typeCheck;
@@ -828,6 +835,7 @@ int flags;
 FunctionParameter (const QToken& a, shared_ptr<Expression> dv = nullptr, shared_ptr<Expression> tc = nullptr, int fl=0): arg(a), defaultValue(dv), typeCheck(tc), flags(fl) {}
 const QToken& nearestToken () { return arg; }
 void compile (QCompiler& fc);
+virtual bool isDecorable () { return true; }
 shared_ptr<Expression> optimize () { if (defaultValue) defaultValue=defaultValue->optimize(); if (typeCheck) typeCheck=typeCheck->optimize(); return shared_this(); }
 string print () {
 string s = "";
@@ -840,7 +848,7 @@ if (defaultValue) s += (" = ") + defaultValue->print();
 return s;
 }};
 
-struct FunctionDeclaration: Expression {
+struct FunctionDeclaration: Expression, Decorable {
 QToken name;
 vector<shared_ptr<FunctionParameter>> params;
 shared_ptr<Statement> body;
@@ -850,6 +858,7 @@ const QToken& nearestToken () { return name; }
 QFunction* compileFunction (QCompiler& compiler);
 void compile (QCompiler& compiler) { compileFunction(compiler); }
 shared_ptr<Statement> optimizeStatement () { body=body->optimizeStatement(); for (auto& fp: params) fp=static_pointer_cast<FunctionParameter>(fp->optimize()); return shared_this(); }
+virtual bool isDecorable () { return true; }
 string print () {
 string s = string(name.start, name.length) + (" (");
 for (int i=0, n=params.size(); i<n; i++) {
@@ -861,7 +870,7 @@ s += body->print();
 return s;
 }};
 
-struct ClassDeclaration: Expression {
+struct ClassDeclaration: Expression, Decorable  {
 QToken name;
 int flags;
 vector<string> fields, staticFields;
@@ -873,6 +882,7 @@ int findStaticField (const string& name) { return findName(staticFields, name, t
 const QToken& nearestToken () { return name; }
 shared_ptr<Expression> optimize () { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
 void compile (QCompiler&);
+virtual bool isDecorable () { return true; }
 string print () {
 string s = ("class ") + (name.start? string(name.start, name.length) : string(("<anonymous>"))) + (" {\r\n");
 for (auto method: methods) s += method->print() + ("\r\n");
@@ -938,7 +948,6 @@ INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
 INFIX_OP(BAR, InfixOp, |, BITWISE),
 INFIX_OP(AMP, InfixOp, &, BITWISE),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE),
-INFIX_OP(AT, InfixOp, @, EXPONENT),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE),
 INFIX_OP(DOTDOT, InfixOp, .., RANGE),
@@ -977,15 +986,17 @@ INFIX_OP(IN, InfixOp, in, COMPARISON),
 OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL),
 PREFIX_OP(EXCL, PrefixOp, !),
 PREFIX_OP(TILDE, PrefixOp, ~),
+PREFIX(DOLLAR, Lambda, $),
 
 { T_LEFT_PAREN, { &QParser::parseGroupOrTuple, &QParser::parseMethodCall, nullptr, &QParser::parseMethodDecl, nullptr, ("()"), P_CALL }},
 { T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT }},
 { T_LEFT_BRACE, { &QParser::parseLiteralMap, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX }},
+{ T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT }},
+{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, nullptr, "function", "function", P_PREFIX }},
 { T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX }},
 INFIX(DOT, InfixOp, ., MEMBER),
 INFIX(DOTQUEST, InfixOp, .?, MEMBER),
 MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER),
-PREFIX(DOLLAR, Lambda, $),
 PREFIX(UND, Field, _),
 PREFIX(UNDUND, StaticField, __),
 PREFIX(SUPER, Super, super),
@@ -1039,6 +1050,7 @@ TOKEN(EXPORT, export),
 TOKEN(FALSE, false),
 TOKEN(FINALLY, finally),
 TOKEN(FOR, for),
+TOKEN(FUNCTION, function),
 TOKEN(GLOBAL, global),
 TOKEN(IF, if),
 TOKEN(IMPORT, import),
@@ -1548,11 +1560,33 @@ vector<shared_ptr<Statement>> statements = { varDecl, trySta };
 return make_shared<BlockStatement>(statements);
 }
 
+shared_ptr<Expression> QParser::parseDecoratedExpression () {
+auto decoration = parseExpression(P_PREFIX);
+auto expr = parseExpression();
+if (expr->isDecorable()) {
+auto decorable = dynamic_pointer_cast<Decorable>(expr);
+decorable->decorations.insert(decorable->decorations.begin(), decoration);
+}
+else parseError("%s can't be decorated", typeid(*expr).name());
+return expr;
+}
+
+shared_ptr<Statement> QParser::parseDecoratedStatement () {
+auto decoration = parseExpression(P_PREFIX);
+auto expr = parseStatement();
+if (expr->isDecorable()) {
+auto decorable = dynamic_pointer_cast<Decorable>(expr);
+decorable->decorations.insert(decorable->decorations.begin(), decoration);
+}
+else parseError("%s can't be decorated", typeid(*expr).name() );
+return expr;
+}
+
 shared_ptr<Statement> QParser::parseVarDecl () {
 vector<pair<QToken,shared_ptr<Expression>>> vars;
 bool isConst = cur.type==T_CONST;
 QTokenType destructuring = T_END;
-if (matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET, T_LT)) destructuring = static_cast<QTokenType>(cur.type +1);
+if (matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring = static_cast<QTokenType>(cur.type +1);
 do {
 skipNewlines();
 consume(T_NAME, ("Expected variable name after 'var'"));
@@ -1597,6 +1631,7 @@ vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index
 auto subscript = make_shared<SubscriptExpression>(source, indices);
 if (param->defaultValue) param->defaultValue = createBinaryOperation(subscript, T_QUESTQUESTEQ, param->defaultValue);
 else param->defaultValue =  subscript;
+for (auto it = param->decorations.rbegin(), end=param->decorations.rend(); it!=end; ++it) param->defaultValue = make_shared<CallExpression>(*it, vector<shared_ptr<Expression>>({ param->defaultValue }) );
 vars.push_back(make_pair(param->arg, param->defaultValue));
 flags &= param->flags;
 }
@@ -1634,6 +1669,7 @@ return make_shared<BlockStatement>(v);
 
 vector<shared_ptr<FunctionParameter>> QParser::parseFunctionParameters (bool implicitThis) {
 vector<shared_ptr<FunctionParameter>> params;
+vector<shared_ptr<Expression>> decorations;
 int  destructuring = 0;
 if (implicitThis) {
 QToken thisToken = { T_NAME, THIS, 4, QV() };
@@ -1644,7 +1680,8 @@ do {
 int flags = 0;
 skipNewlines();
 if (!destructuring && match(T_LEFT_BRACE)) destructuring=FP_MAP_DESTRUCTURING;
-else if (!destructuring && matchOneOf(T_LEFT_PAREN, T_LEFT_BRACKET, T_LT)) destructuring =  FP_ARRAY_DESTRUCTURING; 
+else if (!destructuring && matchOneOf(T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring =  FP_ARRAY_DESTRUCTURING; 
+while(match(T_AT)) decorations.push_back(parseExpression(P_PREFIX));
 if (match(T_CONST)) flags |= FP_CONST;
 else if (match(T_VAR)) flags &= ~FP_CONST;
 if (!destructuring) {
@@ -1655,35 +1692,57 @@ else if (match(T_UNDUND)) flags |= FP_STATIC_FIELD_ASSIGN;
 consume(T_NAME, ("Expected parameter name"));
 QToken arg = cur;
 shared_ptr<Expression> defaultValue = nullptr, typeCheck = nullptr;
+if (!destructuring && !(flags&FP_VARARG) && match(T_DOTDOTDOT)) flags |= FP_VARARG;
+if (!(flags&FP_VARARG)) {
 if (match(T_EQ)) defaultValue = parseExpression();
 if (!destructuring && match(T_AS)) typeCheck = parseExpression();
+}
 params.push_back(make_shared<FunctionParameter>(arg, defaultValue, typeCheck, flags | destructuring));
+params.back()->decorations = decorations;
+decorations.clear();
 if (flags&FP_VARARG) break;
 if (destructuring && matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN, T_GT)) destructuring=0;
 } while(match(T_COMMA));
 skipNewlines();
-if (destructuring && !matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN, T_GT)) parseError("Expected '}', ']', ')' or '>' to close parameter destructuration");
+if (destructuring && !matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN)) parseError("Expected '}', ']' or ')' to close parameter destructuration");
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
 else if (match(T_NAME)) params.push_back(make_shared<FunctionParameter>(cur));
 return params;
 }
 
-void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
+void QParser::parseDecoratedDecl (ClassDeclaration& cls, bool isStatic) {
+vector<shared_ptr<Expression>> decorations;
+int idxFrom = cls.methods.size();
+bool parsed = false;
 prevToken();
 while (match(T_AT)) {
 const char* c = in;
 while(isSpace(*c) || isLine(*c)) c++;
 if (*c=='(') {
-prevToken();
+parseMethodDecl(cls, isStatic);
+parsed=true;
 break;
 }
 skipNewlines();
-auto annotExpr = parseExpression(P_PREFIX);
+auto decoration = parseExpression(P_PREFIX);
 skipNewlines();
-println("annotExpr=%s", annotExpr->print());
-//##todo
+decorations.push_back(decoration);
 }
+if (!parsed) {
+skipNewlines();
+bool isStatic2 = nextToken().type==T_STATIC;
+if (isStatic2) nextToken();
+if (cur.type==T_FUNCTION) nextToken();
+const ParserRule& rule = rules[cur.type];
+if (rule.member) (this->*rule.member)(cls, isStatic||isStatic2);
+else { prevToken(); parseError("Expected declaration to decorate"); }
+}
+for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++it) (*it)->decorations = decorations;
+}
+
+void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
+prevToken();
 QToken name = nextNameToken(true);
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(true);
 shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
@@ -1735,7 +1794,7 @@ cls.methods.push_back(setter);
 shared_ptr<Expression> QParser::parseLambda  () {
 QToken name = cur;
 int flags = 0;
-if (match(T_DOLLAR)) flags |= FD_METHOD;
+if (matchOneOf(T_DOLLAR, T_UND)) flags |= FD_METHOD;
 if (match(T_STAR)) flags |= FD_FIBER;
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(flags&FD_METHOD);
 shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
@@ -1744,6 +1803,18 @@ shared_ptr<Statement> body = parseStatement();
 body = concatStatements(prebody, body);
 if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
 return make_shared<FunctionDeclaration>(name, params, body, flags);
+}
+
+shared_ptr<Statement> QParser::parseFunctionDecl () {
+return parseFunctionDecl(VD_CONST);
+}
+
+shared_ptr<Statement> QParser::parseFunctionDecl (int flags) {
+consume(T_NAME, "Expected function name after 'function'");
+QToken name = cur;
+auto fnDecl = parseLambda();
+vector<pair<QToken,shared_ptr<Expression>>> vd = {{ name, fnDecl }};
+return make_shared<VariableDeclaration>(vd, flags);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl () {
@@ -1765,6 +1836,7 @@ while(true) {
 skipNewlines();
 bool isStatic = nextToken().type==T_STATIC;
 if (isStatic) nextToken();
+if (cur.type==T_FUNCTION) nextToken();
 const ParserRule& rule = rules[cur.type];
 if (rule.member) (this->*rule.member)(*classDecl, isStatic);
 else { prevToken(); break; }
@@ -1784,7 +1856,10 @@ return vd;
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_GLOBAL);
 }
-parseError(("Expected 'var' or 'class' after 'global'"));
+else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
+return parseFunctionDecl(VD_CONST | VD_GLOBAL);
+}
+parseError(("Expected 'function', 'var' or 'class' after 'global'"));
 return nullptr;
 }
 
@@ -1797,7 +1872,10 @@ return vd;
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_EXPORT);
 }
-parseError(("Expected 'var' or 'class' after 'export'"));
+else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
+return parseFunctionDecl(VD_CONST | VD_EXPORT);
+}
+parseError(("Expected 'function', 'var' or 'class' after 'export'"));
 return nullptr;
 }
 
@@ -2419,6 +2497,7 @@ if (exporting) compiler.compileError(nearestToken(), ("Cannot declare export in 
 for (auto& p: vars) {
 int slot = compiler.findLocalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
 compiler.writeDebugLine(p.first);
+for (auto decoration: decorations) decoration->compile(compiler);
 auto vd = p.second;
 auto fd = dynamic_pointer_cast<FunctionDeclaration>(vd);
 if (fd) {
@@ -2426,6 +2505,7 @@ auto func = fd->compileFunction(compiler);
 func->name = string(p.first.start, p.first.length);
 }
 else vd->compile(compiler);
+for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (isGlobal) {
 int globalSlot = compiler.findGlobalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
 writeOpLoadLocal(compiler, slot);
@@ -2443,6 +2523,7 @@ compiler.writeOp(OP_POP);
 }}}
 
 void ClassDeclaration::compile (QCompiler& compiler) {
+for (auto decoration: decorations) decoration->compile(compiler);
 struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
 ClassDeclaration* oldClassDecl = compiler.curClass;
 compiler.curClass = this;
@@ -2460,6 +2541,7 @@ compiler.writeDebugLine(method->name);
 compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
 compiler.writeOp(OP_POP);
 }
+for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 fieldInfo.nFields = fields.size();
 fieldInfo.nStaticFields = staticFields.size();
 compiler.patch<FieldInfo>(fieldInfoPos, fieldInfo);
@@ -2473,6 +2555,12 @@ fc.localVariables.push_back(lv);
 if (defaultValue) {
 fc.writeDebugLine(defaultValue->nearestToken());
 make_shared<AssignmentOperation>(make_shared<NameExpression>(arg), T_QUESTQUESTEQ, defaultValue) ->optimize() ->compile(fc);
+fc.writeOp(OP_POP);
+}
+if (decorations.size()) {
+shared_ptr<Expression> nameExpr = make_shared<NameExpression>(arg), argExpr = nameExpr;
+for (auto it=decorations.rbegin(); it!=decorations.rend(); ++it) argExpr = make_shared<CallExpression>(*it, vector<shared_ptr<Expression>>({ argExpr }) );
+make_shared<AssignmentOperation>(nameExpr, T_EQ, argExpr) ->optimize() ->compile(fc);
 fc.writeOp(OP_POP);
 }
 if (typeCheck) {
@@ -2508,7 +2596,9 @@ func->name = string(name.start, name.length);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 bool fiber = flags&FD_FIBER;
 if (fiber) compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", false));
+for (auto decoration: decorations) decoration->compile(compiler);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
+for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (fiber) compiler.writeOp(OP_CALL_FUNCTION_1);
 return func;
 }

@@ -4,7 +4,7 @@ Here is a description of the language's syntax.
 ## Reserved keywords
 Some people take the number of keywords to grade the complexity of a language.
 
-28 actual keywords currently in use (synonyms aren't counted):
+29 actual keywords currently in use (synonyms aren't counted):
 
 * and (as a synonym for `&&`)
 * as
@@ -16,6 +16,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * export
 * false
 * for
+* function
 * global
 * if
 * import
@@ -63,7 +64,7 @@ Numbers are all 64-bit floating point values (C double). Valid number forms incl
 * Octal: 0o777 or 0777
 * Binary: 0b111
 
-Strings can be quoted using double quotes `"`, single quotes `'` or backtick `\``. 
+Strings can be quoted using double quotes `"`, single quotes `'` or backtick `\``.
 
 Regular expressions can be literaly written as /pattern/options.
 
@@ -162,12 +163,21 @@ You can create your own hashable types by implementing the *hashCode* method, wh
 Similarly to Java, when you implement *hashCode*, you should also implement the `==` operator, as well as make sure that the hashCode remains immutable after the object has been created, otherwise you may not find back your item in a map or set.
 
 ## Functions and closures
-Functions are always declared as lambdas, and they can capture variables to form closures.
+Functions can capture variables to form closures.
+The `$` sign is a shorter synonym for the keyword `function`.
 
 ```
+# Declaring a function
+function half (x) {
+return x/2
+}
+var five = half(10) # five is 5
+
+# Declaring a function like a lambda
 var double = $(x): return x*2
 var twenty = double(10) # twenty is 20
 
+# Declaring a function as a lambda with implicit `this` argument
 var triple = $${ return this*3 }
 var thirty = triple(10) # thirty is 30
 ```
@@ -176,10 +186,10 @@ var thirty = triple(10) # thirty is 30
 * Parentesis are optional if the lambda takes no explicit parameter or just a single one.
 * If the last instruction of the function is an expression, it is taken as the return value
 
-IF the last parameter is prefixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
+IF the last parameter is prefixed or suffixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
 
 ```
-var printItems = $(...items) {
+function printItems (...items) {
 for item in items: print(item)
 }
 
@@ -279,8 +289,8 @@ print(v2>v1) # true
 
 ```
 # We can take a method from a class and use it as a standalone function:
-# Num::+ is a kind of shortcut for $(a,b): a+b
-var plus = Num::+, multiply = Num::*
+# Number::+ is a kind of shortcut for $(a,b): a+b
+var plus = Number::+, multiply = Number::*
 print(plus(4, 3)) #7
 print(multiply(3, 4)) #12
 
@@ -291,7 +301,7 @@ print(triple(9)) #27
 
 # We can even assign a new method to a class already constructed
 # The following is totally useless, but it's fun
-Num::* = Num::/
+Number::* = Number::/
 print(4*5) #0.8 (!)
 ```
 
@@ -389,6 +399,45 @@ if condition: yield expression
 }
 ```
 
+## Decorators
+Here's another construction inspired by python:
+
+```
+function logged (value) {
+print('' + value + ' has been decorated')
+return $(...args) {
+print('Calling ' + value + ' with arguments ' + args)
+let returnValue = value(...args)
+print('Called ' + value + ' with arguments ' + args + ' returned ' + returnValue)
+return returnValue
+}
+}
+
+
+
+# This will print:
+# Function@... has been decorated
+@logged function test (a, b) {
+print('Function called with ' + a + ' and ' + b)
+return a+b
+}
+
+# The following call will print:
+# Calling Function@.... with arguments (12, 34)
+# Function called with 12 and 34
+# Called Function@.... with arguments (12, 34) returned 46
+test(12, 34)
+```
+
+The following elements can be decorated:
+
+- Function declarations (as above)
+- Class declarations
+- Variable declarations (the decoration applies once for each variables declared)
+- Function/method parameters
+- Lambda expressions
+
+If there are multiple decorators specified for the same element, they are processed in their reverse order, i.e. the original element is passed to the last decorator, then the transformed element to the decorator before the last, etc. up to the first which makes the final transformation.
 
 ## Error handling: try, catch, finally and with
 The familiar *try, catch, finally* construct is available, as well as the *throw* keyword.
@@ -435,7 +484,7 @@ is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
 You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
-Note that, unlike JavaScript, *recursive destructuration* is impossible; in QScript it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read.
+Note that, unlike JavaScript, *recursive destructuration* is impossible; in QScript it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read, so it is anyway better avoided.
 
 ```
 let map = {a: 1, b: 2, c: 3}

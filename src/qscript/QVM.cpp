@@ -730,8 +730,8 @@ BREAK
 CASE(OP_CALL_FUNCTION_VARARG)
 arg2 = countArgsToMark(stack) -1;
 callFrames.back() = frame;
+stack.erase(stack.end() -arg2 -2);
 callCallable(arg2);
-stack.erase(stack.end() -2);
 frame = callFrames.back();
 BREAK
 
