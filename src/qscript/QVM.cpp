@@ -76,7 +76,7 @@ QClass* parent = parents[0].asObject<QClass>();
 QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStaticFields);
 QClass* cls = foreign?
 new QForeignClass(*this, meta, parent, name, nFields):
-QClass::create(*this, meta, parent, name, nStaticFields, nFields+parent->nFields);
+QClass::create(*this, meta, parent, name, nStaticFields, nFields+std::max(0, parent->nFields));
 for (auto& p: parents) cls->mergeMixinMethods( p.asObject<QClass>() );
 meta->bind("()", instantiate);
 return cls;
@@ -288,8 +288,17 @@ upvalue->value.i += (static_cast<int64_t>(reinterpret_cast<uintptr_t>(newPtr)) -
 void QFiber::pushNewClass (int nParents, int nStaticFields, int nFields) {
 string name = at(-nParents -1).asString();
 vector<QV> parents(stack.end() -nParents, stack.end());
-QClass* cls = vm.createNewClass(name, parents, nStaticFields, nFields, false);
 stack.erase(stack.end() -nParents -1, stack.end());
+QClass* parent = parents[0].asObject<QClass>();
+if (parent->nFields<0) {
+runtimeError("Unable to inherit from built-in class %s", parent->name);
+return;
+}
+if (dynamic_cast<QForeignClass*>(parent)) {
+runtimeError("Unable to inherit from foreign class %s", parent->name);
+return;
+}
+QClass* cls = vm.createNewClass(name, parents, nStaticFields, nFields, false);
 push(cls);
 }
 

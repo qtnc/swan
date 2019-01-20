@@ -428,11 +428,16 @@ f.returnValue(QV(f.vm, s));
 }
 
 static void objectInstantiate (QFiber& f) {
+int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
+if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNull()) {
+f.runtimeError(("This class isn't instantiable"));
+return;
+}
 QObject* instance = cls.instantiate();
 f.setObject(0, instance);
 f.pushCppCallFrame();
-f.callSymbol(f.vm.findMethodSymbol("constructor"), f.getArgCount());
+f.callSymbol(ctorSymbol, f.getArgCount());
 f.popCppCallFrame();
 f.returnValue(instance);
 }
@@ -1546,52 +1551,53 @@ pathResolver(defaultPathResolver),
 fileLoader(defaultFileLoader),
 messageReceiver(defaultMessageReceiver)
 {
-objectClass = QClass::create(*this, nullptr, nullptr, "Object");
-classClass = QClass::create(*this, nullptr, objectClass, "Class");
-fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass");
-listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass");
-mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass");
-numMetaClass = QClass::create(*this, classClass, classClass, "NumberMetaClass");
-rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass");
-setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass");
-stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass");
-systemMetaClass = QClass::create(*this, classClass, classClass, "SystemMetaClass");
-tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass");
-boolClass = QClass::create(*this, classClass, objectClass, "Bool");
-functionClass = QClass::create(*this, classClass, objectClass, "Function");
-sequenceClass = QClass::create(*this, classClass, objectClass, "Sequence");
-fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber");
-listClass = QClass::create(*this, listMetaClass, sequenceClass, "List");
-mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map");
-nullClass = QClass::create(*this, classClass, objectClass, "Null");
-numClass = QClass::create(*this, numMetaClass, objectClass, "Number");
-rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range");
-setClass = QClass::create(*this, setMetaClass, sequenceClass, "Set");
-stringClass = QClass::create(*this, stringMetaClass, sequenceClass, "String");
-systemClass = QClass::create(*this, systemMetaClass, objectClass, "System");
-tupleClass = QClass::create(*this, tupleMetaClass, sequenceClass, "Tuple");
+objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);
+classClass = QClass::create(*this, nullptr, objectClass, "Class", 0, -1);
+fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass", 0, -1);
+listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass", 0, -1);
+mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass", 0, -1);
+numMetaClass = QClass::create(*this, classClass, classClass, "NumberMetaClass", 0, -1);
+rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass", 0, -1);
+setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass", 0, -1);
+stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass", 0, -1);
+systemMetaClass = QClass::create(*this, classClass, classClass, "SystemMetaClass", 0, -1);
+tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass", 0, -1);
+boolClass = QClass::create(*this, classClass, objectClass, "Bool", 0, -1);
+functionClass = QClass::create(*this, classClass, objectClass, "Function", 0, -1);
+sequenceClass = QClass::create(*this, classClass, objectClass, "Sequence", 0, 0);
+fiberClass = QClass::create(*this, fiberMetaClass, sequenceClass, "Fiber", 0, -1);
+listClass = QClass::create(*this, listMetaClass, sequenceClass, "List", 0, -1);
+mapClass = QClass::create(*this, mapMetaClass, sequenceClass, "Map", 0, -1);
+nullClass = QClass::create(*this, classClass, objectClass, "Null", 0, -1);
+numClass = QClass::create(*this, numMetaClass, objectClass, "Number", 0, -1);
+rangeClass = QClass::create(*this, rangeMetaClass, sequenceClass, "Range", 0, -1);
+setClass = QClass::create(*this, setMetaClass, sequenceClass, "Set", 0, -1);
+stringClass = QClass::create(*this, stringMetaClass, sequenceClass, "String", 0, -1);
+systemClass = QClass::create(*this, systemMetaClass, objectClass, "System", 0, -1);
+tupleClass = QClass::create(*this, tupleMetaClass, sequenceClass, "Tuple", 0, -1);
 #ifndef NO_BUFFER
-bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass");
-bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer");
+bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass", 0, -1);
+bufferClass = QClass::create(*this, bufferMetaClass, sequenceClass, "Buffer", 0, -1);
 #endif
 #ifndef NO_REGEX
-regexMetaClass = QClass::create(*this, classClass, classClass, "RegexMetaClass");
-regexClass = QClass::create(*this, regexMetaClass, objectClass, "Regex");
-regexMatchResultClass = QClass::create(*this, classClass, objectClass, "RegexMatchResult");
-regexIteratorClass = QClass::create(*this, classClass, sequenceClass, "RegexIterator");
-regexTokenIteratorClass = QClass::create(*this, classClass, sequenceClass, "RegexTokenIterator");
+regexMetaClass = QClass::create(*this, classClass, classClass, "RegexMetaClass", 0, -1);
+regexClass = QClass::create(*this, regexMetaClass, objectClass, "Regex", 0, -1);
+regexMatchResultClass = QClass::create(*this, classClass, objectClass, "RegexMatchResult", 0, -1);
+regexIteratorClass = QClass::create(*this, classClass, sequenceClass, "RegexIterator", 0, -1);
+regexTokenIteratorClass = QClass::create(*this, classClass, sequenceClass, "RegexTokenIterator", 0, -1);
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-dictionaryMetaClass = QClass::create(*this, classClass, classClass, "DictionaryMetaClass");
-dictionaryClass = QClass::create(*this, dictionaryMetaClass, sequenceClass, "Dictionary");
-linkedListMetaClass = QClass::create(*this, classClass, classClass, "LinkedListMetaClass");
-linkedListClass = QClass::create(*this, linkedListMetaClass, sequenceClass, "LinkedList");
+dictionaryMetaClass = QClass::create(*this, classClass, classClass, "DictionaryMetaClass", 0, -1);
+dictionaryClass = QClass::create(*this, dictionaryMetaClass, sequenceClass, "Dictionary", 0, -1);
+linkedListMetaClass = QClass::create(*this, classClass, classClass, "LinkedListMetaClass", 0, -1);
+linkedListClass = QClass::create(*this, linkedListMetaClass, sequenceClass, "LinkedList", 0, -1);
 #endif
 #ifndef NO_RANDOM
-randomMetaClass = QClass::create(*this, classClass, classClass, "RandomMetaClass");
-randomClass = QClass::create(*this, randomMetaClass, sequenceClass, "Random");
+randomMetaClass = QClass::create(*this, classClass, classClass, "RandomMetaClass", 0, -1);
+randomClass = QClass::create(*this, randomMetaClass, sequenceClass, "Random", 0, -1);
 #endif
-objectClass->type = classClass->type = classClass;
+objectClass->type = classClass;
+classClass->type = classClass;
 reset();
 }
 
