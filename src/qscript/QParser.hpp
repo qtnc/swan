@@ -117,6 +117,7 @@ std::shared_ptr<Expression> parseLiteral ();
 std::shared_ptr<Expression> parseLiteralList ();
 std::shared_ptr<Expression> parseLiteralSet ();
 std::shared_ptr<Expression> parseLiteralMap ();
+std::shared_ptr<Expression> parseLiteralGrid ();
 std::shared_ptr<Expression> parseLiteralRegex ();
 std::shared_ptr<Expression> parseName ();
 std::shared_ptr<Expression> parseField ();

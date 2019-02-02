@@ -292,6 +292,37 @@ s+= (")");
 return s;
 }};
 
+struct LiteralGridExpression: Expression {
+QToken token;
+vector<vector<shared_ptr<Expression>>> data;
+LiteralGridExpression (const QToken& t, const vector<vector<shared_ptr<Expression>>>& v): token(t), data(v) {}
+const QToken& nearestToken () { return token; }
+void compile (QCompiler& compiler) {
+int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), false);
+compiler.writeDebugLine(nearestToken());
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, gridSymbol);
+compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data[0].size());
+compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data.size());
+for (auto& row: data) {
+make_shared<LiteralTupleExpression>(nearestToken(), row) ->compile(compiler);
+}
+writeOpCallFunction(compiler, data.size() +2);
+}
+string print () {
+string s = "\r\n";
+for (auto& row: data) {
+s += "| ";
+bool first=true;
+for (auto& expr: row) {
+if (!first) s+=", ";
+s += expr->print();
+first=false;
+}
+s += " |\r\n";
+}
+return s;
+}};
+
 
 struct LiteralRegexExpression: Expression {
 QToken tok;
@@ -945,8 +976,8 @@ OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR),
 INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR),
 INFIX_OP(PERCENT, InfixOp, %, FACTOR),
 INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
-INFIX_OP(BAR, InfixOp, |, BITWISE),
-INFIX_OP(AMP, InfixOp, &, BITWISE),
+OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE),
+OPERATOR(AMP, Lambda, InfixOp, &, &, BITWISE),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE),
@@ -1567,7 +1598,7 @@ if (expr->isDecorable()) {
 auto decorable = dynamic_pointer_cast<Decorable>(expr);
 decorable->decorations.insert(decorable->decorations.begin(), decoration);
 }
-else parseError("%s can't be decorated", typeid(*expr).name());
+else parseError("Expression can't be decorated");
 return expr;
 }
 
@@ -1578,7 +1609,7 @@ if (expr->isDecorable()) {
 auto decorable = dynamic_pointer_cast<Decorable>(expr);
 decorable->decorations.insert(decorable->decorations.begin(), decoration);
 }
-else parseError("%s can't be decorated", typeid(*expr).name() );
+else parseError("Expression can't be decorated");
 return expr;
 }
 
@@ -1814,6 +1845,7 @@ consume(T_NAME, "Expected function name after 'function'");
 QToken name = cur;
 auto fnDecl = parseLambda();
 vector<pair<QToken,shared_ptr<Expression>>> vd = {{ name, fnDecl }};
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 return make_shared<VariableDeclaration>(vd, flags);
 }
 
@@ -1844,6 +1876,7 @@ else { prevToken(); break; }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 vector<pair<QToken,shared_ptr<Expression>>> vd = {{ classDecl->name, classDecl }};
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 return make_shared<VariableDeclaration>(vd, flags);
 }
 
@@ -2093,6 +2126,26 @@ consume(T_RIGHT_BRACE, ("Expected '}' to close map literal"));
 return map;
 }
 
+shared_ptr<Expression> QParser::parseLiteralGrid () {
+QToken token = cur;
+vector<vector<shared_ptr<Expression>>> data;
+do {
+data.emplace_back();
+auto& row = data.back();
+do {
+skipNewlines();
+auto expr = parseExpression(P_BITWISE);
+if (!expr) return nullptr;
+row.push_back(expr);
+} while(match(T_COMMA));
+skipNewlines();
+consume(T_BAR, "Expected '|' to close literal grid expression");
+if (row.size() != data[0].size()) parseError("All rows must be of the same size (%d)", data[0].size());
+skipNewlines();
+} while(match(T_BAR));
+return make_shared<LiteralGridExpression>(token, data);
+}
+
 shared_ptr<Expression> QParser::parseLiteralRegex () {
 string pattern, options;
 while(*in && *in!='/') {
@@ -2132,14 +2185,14 @@ parseError(("Expected expression"));
 result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED;
 return nullptr;
 }
-shared_ptr<Expression> left = (this->*(rule->prefix))();
+shared_ptr<Expression> right, left = (this->*(rule->prefix))();
 while(true){
 rule = &rules[nextToken().type];
-if (!rule->infix || priority>=rule->priority) {
+if (!rule->infix || priority>=rule->priority || !(right = (this->*(rule->infix))(left)) ) {
 prevToken();
 return left;
 }
-left = (this->*(rule->infix))(left);
+else left = right;
 }}
 
 string QV::print () const {
