@@ -518,6 +518,31 @@ int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
+void initBaseTypes();
+void initNumberType();
+void initSequenceType();
+void initStringType();
+void initListType();
+void initMapType();
+void initTupleType();
+void initSetType();
+void initRangeType();
+#ifndef NO_BUFFER
+void initBufferType();
+#endif
+#ifndef NO_OPTIONAL_COLLECTIONS
+void initLinkedListType();
+void initDictionaryType();
+#endif
+#ifndef NO_REGEX
+void initRegexTypes();
+#endif
+#ifndef NO_RANDOM
+void initRandomType();
+#endif
+void initGlobals();
+void initMathFunctions();
+
 virtual void garbageCollect () final override;
 virtual void reset () final override;
 
