@@ -1,6 +1,6 @@
 #ifndef ____Q_BASE_H_1___
 #define ____Q_BASE_H_1___
-#include "../include/QScript.hpp"
+#include "../include/Swan.hpp"
 #include "../include/cpprintf.hpp"
 #include<vector>
 #include<unordered_map>
@@ -227,10 +227,10 @@ bool isInstanceOf (QClass* tp) const;
 
 std::string asString () const;
 const char* asCString () const;
-const QS::Range& asRange () const;
+const Swan::Range& asRange () const;
 
 QClass& getClass (QVM& vm);
-QS::Handle asHandle ();
+Swan::Handle asHandle ();
 inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
 };
 
@@ -339,7 +339,7 @@ struct QCatchPoint {
 size_t stackSize, callFrame, catchBlock, finallyBlock;
 };
 
-struct QFiber: QS::Fiber, QSequence  {
+struct QFiber: Swan::Fiber, QSequence  {
 typedef execution_stack<QV> Stack;
 static thread_local QFiber* curFiber;
 Stack stack;
@@ -358,7 +358,7 @@ return i>=0? stack.at(callFrames.back().stackBase+i) : *(stack.end() +i);
 }
 
 virtual inline int getArgCount () final override { return stack.size() - callFrames.back().stackBase; }
-virtual inline QS::VM& getVM () final override;
+virtual inline Swan::VM& getVM () final override;
 
 virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
@@ -373,10 +373,10 @@ virtual inline double getNum (int i) final override {  return at(i).asNum(); }
 virtual inline bool getBool (int i) final override { return at(i).asBool(); }
 virtual inline std::string getString (int i) final override { return at(i).asString(); }
 virtual inline const char* getCString (int i) final override { return at(i).asCString(); }
-virtual inline const QS::Range& getRange (int i) final override { return at(i).asRange(); }
+virtual inline const Swan::Range& getRange (int i) final override { return at(i).asRange(); }
 virtual const void* getBufferV (int i, int* length = nullptr) final override;
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
-virtual inline QS::Handle getHandle (int i) final override { return at(i).asHandle(); }
+virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHandle(); }
 
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
@@ -387,10 +387,10 @@ virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
 virtual inline void setString  (int i, const std::string& s) final override;
 virtual inline void setCString  (int i, const char* s) final override;
 virtual inline void setBuffer  (int i, const void* data, int length) final override;
-virtual void setRange  (int i, const QS::Range& r) final override;
+virtual void setRange  (int i, const Swan::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV(); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
-virtual void setHandle (int i, const QS::Handle& h) final override { at(i) = QV(h.value); }
+virtual void setHandle (int i, const Swan::Handle& h) final override { at(i) = QV(h.value); }
 inline void setObject (int i, QObject* obj) { at(i)=QV(obj); }
 inline void setObject (int i, QObject& obj) { setObject(i, &obj); }
 
@@ -399,12 +399,12 @@ virtual inline void pushBool  (bool b) final override { stack.push_back(b); }
 virtual inline void pushString (const std::string& s) final override;
 virtual inline void pushCString (const char* s) final override;
 virtual inline void pushBuffer  (const void* data, int length) final override;
-virtual void pushRange (const QS::Range& r) final override;
+virtual void pushRange (const Swan::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV()); }
-virtual inline void pushNativeFunction (QS::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
+virtual inline void pushNativeFunction (Swan::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;
-virtual inline void pushHandle (const QS::Handle& h) final override { push(QV(h.value)); }
+virtual inline void pushHandle (const Swan::Handle& h) final override { push(QV(h.value)); }
 virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return at(-1); }
@@ -477,7 +477,7 @@ BoundFunction (QVM& vm, const QV& o, const QV& m);
 virtual ~BoundFunction () = default;
 };
 
-struct QVM: QS::VM  {
+struct QVM: Swan::VM  {
 static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters;
 static std::unordered_map<std::string, DecodingConversionFn> bufferToStringConverters;
 
@@ -553,7 +553,7 @@ virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
 };
 
-inline QS::VM& QFiber::getVM () { return vm; }
+inline Swan::VM& QFiber::getVM () { return vm; }
 
 inline void QFiber::setString  (int i, const std::string& s)  { at(i) = QV(vm,s); }
 inline void QFiber::pushString (const std::string& s) { stack.push_back(QV(vm,s)); }

@@ -149,7 +149,7 @@ out << c;
 }}
 #endif
 
-unordered_map<string, QS::VM::EncodingConversionFn> QVM::stringToBufferConverters = {
+unordered_map<string, Swan::VM::EncodingConversionFn> QVM::stringToBufferConverters = {
 { "utf8", identity },
 { "utf16", u8to16 },
 { "utf32", u8to32 },
@@ -163,7 +163,7 @@ unordered_map<string, QS::VM::EncodingConversionFn> QVM::stringToBufferConverter
 #endif
 };
 
-unordered_map<string, QS::VM::DecodingConversionFn>  QVM::bufferToStringConverters = {
+unordered_map<string, Swan::VM::DecodingConversionFn>  QVM::bufferToStringConverters = {
 { "utf8", u8to8 },
 { "utf16", u16to8 },
 { "utf32", u32to8 },

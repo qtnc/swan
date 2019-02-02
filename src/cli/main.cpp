@@ -1,4 +1,4 @@
-#include "../include/QScript.hpp"
+#include "../include/Swan.hpp"
 #include "../include/cpprintf.hpp"
 #include<iostream>
 #include<sstream>
@@ -8,12 +8,13 @@
 #include<cstring>
 using namespace std;
 
-void registerIO  (QS::Fiber& f);
-void registerDate (QS::Fiber& f);
+void registerIO  (Swan::Fiber& f);
+void registerDate (Swan::Fiber& f);
 
 void printIntro () {
-println("QScript v0");
-println("Copyright (c) 2018, QuentinC ");
+println("_____2>>___________<<&__?>>_____________&>>_____________<<2___");
+println("Swan version 0.1.2019.2");
+println("Copyright (c) 2019, QuentinC ");
 println("For more info, go to http://github.com/qtnc/qscript");
 }
 
@@ -30,17 +31,17 @@ println("-m: import the following given module");
 println("-o: output compiled bytecode to specified file");
 }
 
-void printStackTrace (QS::RuntimeException& e) {
+void printStackTrace (Swan::RuntimeException& e) {
 println(std::cerr, "ERROR: %s", e.what());
 println(std::cerr, "%s", e.getStackTraceAsString());
 }
 
-void repl (QS::VM& vm, QS::Fiber& fiber) {
-vm.setOption(QS::VM::Option::VAR_DECL_MODE, QS::VM::Option::VAR_IMPLICIT_GLOBAL);
+void repl (Swan::VM& vm, Swan::Fiber& fiber) {
+vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
 string code, line;
 printIntro();
 println("Type 'exit', 'quit' or press Ctrl+Z to quit");
-print(">>>");
+print("?>>");
 while(getline(cin, line)) {
 if (line=="exit" || line=="quit") break;
 code.append(line);
@@ -56,14 +57,14 @@ fiber.pop();
 vm.garbageCollect();
 code.clear();
 } 
-catch (QS::CompilationException& ce) {
+catch (Swan::CompilationException& ce) {
 if (!ce.isIncomplete()) code.clear();
 }
-catch (QS::RuntimeException& e) {
+catch (Swan::RuntimeException& e) {
 printStackTrace(e);
 code.clear();
 }
-print(code.empty()? ">>>" : " ...");
+print(code.empty()? "?>>" : " ?..");
 line.clear();
 }}
 
@@ -96,8 +97,8 @@ outFile.clear();
 }
 
 try {
-QS::VM& vm = QS::VM::getVM();
-QS::Fiber& fiber = vm.getActiveFiber();
+Swan::VM& vm = Swan::VM::getVM();
+Swan::Fiber& fiber = vm.getActiveFiber();
 
 registerIO(fiber);
 registerDate(fiber);
@@ -144,7 +145,7 @@ out.write(bytecode.data(), bytecode.size());
 if (runREPL) repl(vm, fiber);
 
 } 
-catch (QS::RuntimeException& e) {
+catch (Swan::RuntimeException& e) {
 printStackTrace(e);
 exitCode = 3;
 }

@@ -1402,7 +1402,7 @@ return { line, column };
 template<class... A> void QParser::parseError (const char* fmt, const A&... args) {
 auto p = getPositionOf(cur.start);
 int line = p.first, column = p.second;
-QS::CompilationMessage z = { QS::CompilationMessage::Kind::ERROR, format(fmt, args...), string(cur.start, cur.length), displayName, line, column };
+Swan::CompilationMessage z = { Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), string(cur.start, cur.length), displayName, line, column };
 vm.messageReceiver(z);
 result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED;
 }
@@ -2846,7 +2846,7 @@ for (const uint8_t *bc = reinterpret_cast<const uint8_t*>( bcs.data() ), *end = 
 template<class... A> void QCompiler::compileError (const QToken& token, const char* fmt, const A&... args) {
 auto p = parser.getPositionOf(token.start);
 int line = p.first, column = p.second;
-parser.vm.messageReceiver({ QS::CompilationMessage::Kind::ERROR, format(fmt, args...), string(token.start, token.length), parser.displayName, line, column });
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), string(token.start, token.length), parser.displayName, line, column });
 result = CR_FAILED;
 }
 
@@ -2923,7 +2923,7 @@ source = out.str();
 QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);
 QFunction* func = compiler.getFunction();
-if (!func || CR_SUCCESS!=compiler.result) throw QS::CompilationException(CR_INCOMPLETE==compiler.result);
+if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
 QClosure* closure = new QClosure(vm, *func);
 stack.push_back(QV(closure, QV_TAG_CLOSURE));
 }

@@ -116,19 +116,19 @@ enc.erase(it, enc.end());
 return enc;
 }
 
-QS::VM::EncodingConversionFn export QS::VM::getEncoder (const std::string& name) {
+Swan::VM::EncodingConversionFn export Swan::VM::getEncoder (const std::string& name) {
 return QVM::stringToBufferConverters[normalizeEncodingName(name)];
 }
 
-QS::VM::DecodingConversionFn export QS::VM::getDecoder (const std::string& name) {
+Swan::VM::DecodingConversionFn export Swan::VM::getDecoder (const std::string& name) {
 return QVM::bufferToStringConverters[normalizeEncodingName(name)];
 }
 
-void export QS::VM::registerEncoder (const std::string& name, const QS::VM::EncodingConversionFn& func) {
+void export Swan::VM::registerEncoder (const std::string& name, const Swan::VM::EncodingConversionFn& func) {
 QVM::stringToBufferConverters[normalizeEncodingName(name)] = func;
 }
 
-void export QS::VM::registerDecoder (const std::string& name, const QS::VM::DecodingConversionFn& func) {
+void export Swan::VM::registerDecoder (const std::string& name, const Swan::VM::DecodingConversionFn& func) {
 QVM::bufferToStringConverters[normalizeEncodingName(name)] = func;
 }
 

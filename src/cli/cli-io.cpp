@@ -1,6 +1,6 @@
 #include<optional>
-#include "../include/QScript.hpp"
-#include "../include/QScriptBinding.hpp"
+#include "../include/Swan.hpp"
+#include "../include/SwanBinding.hpp"
 #include "../include/cpprintf.hpp"
 #include<iostream>
 #include<sstream>
@@ -12,13 +12,13 @@
 using namespace std;
 
 struct IO {
-QS::VM::EncodingConversionFn encoder;
-QS::VM::DecodingConversionFn decoder;
+Swan::VM::EncodingConversionFn encoder;
+Swan::VM::DecodingConversionFn decoder;
 shared_ptr<istream> in;
 shared_ptr<ostream> out;
 IO (): in(nullptr), out(nullptr), encoder(nullptr), decoder(nullptr) {}
-IO (shared_ptr<istream> i, const QS::VM::DecodingConversionFn& c = nullptr): in(i), out(nullptr), encoder(nullptr), decoder(c) {}
-IO (shared_ptr<ostream> o, const QS::VM::EncodingConversionFn& c = nullptr): in(nullptr), out(o), encoder(c), decoder(nullptr)  {}
+IO (shared_ptr<istream> i, const Swan::VM::DecodingConversionFn& c = nullptr): in(i), out(nullptr), encoder(nullptr), decoder(c) {}
+IO (shared_ptr<ostream> o, const Swan::VM::EncodingConversionFn& c = nullptr): in(nullptr), out(o), encoder(c), decoder(nullptr)  {}
 void flush () {
 if (out && *out) *out << std::flush;
 }
@@ -43,7 +43,7 @@ IO cstdin, cstdout, cstderr;
 static IO& ioGetStdout () {
 if (!cstdout.out) {
 cstdout.out = make_shared<ostream>(cout.rdbuf());
-cstdout.encoder = QS::VM::getEncoder(("native"));
+cstdout.encoder = Swan::VM::getEncoder(("native"));
 }
 return cstdout;
 }
@@ -51,7 +51,7 @@ return cstdout;
 static IO& ioGetStderr () {
 if (!cstderr.out) {
 cstderr.out = make_shared<ostream>(cerr.rdbuf());
-cstderr.encoder = QS::VM::getEncoder(("native"));
+cstderr.encoder = Swan::VM::getEncoder(("native"));
 }
 return cstderr;
 }
@@ -59,7 +59,7 @@ return cstderr;
 static IO& ioGetStdin () {
 if (!cstdin.in) {
 cstdin.in = make_shared<istream>(cin.rdbuf());
-cstdin.decoder = QS::VM::getDecoder(("native"));
+cstdin.decoder = Swan::VM::getDecoder(("native"));
 }
 return cstdin;
 }
@@ -68,7 +68,7 @@ static IO& ioSetStdout (IO& x) { return cstdout = x; }
 static IO& ioSetStderr (IO& x) { return cstderr = x; }
 static IO& ioSetStdin (IO& x) { return cstdin = x; }
 
-static void print (QS::Fiber& f) {
+static void print (Swan::Fiber& f) {
 auto& io = ioGetStdout();
 ostringstream p;
 for (int i=0, n=f.getArgCount(); i<n; i++) {
@@ -89,27 +89,27 @@ else *io.out << p.str();
 f.setNull(0);
 }
 
-static void ioWrite (QS::Fiber& f) {
+static void ioWrite (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 if (io.encoder) {
 istringstream in(f.getString(1));
-QS::ScopeUnlocker<QS::Fiber> unlocker(f);
+Swan::ScopeUnlocker<Swan::Fiber> unlocker(f);
 io.encoder(in, *io.out);
 }
 else {
 int length;
 const char* buffer = f.getBuffer<char>(1, &length);
-QS::ScopeUnlocker<QS::Fiber> unlocker(f);
+Swan::ScopeUnlocker<Swan::Fiber> unlocker(f);
 io.out->write(buffer, length);
 }}
 
-static void ioIterate (QS::Fiber& f) {
+static void ioIterate (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 if (io.in && *io.in) f.setBool(0, true);
 else f.setNull(0);
 }
 
-static void ioRead (QS::Fiber& f) {
+static void ioRead (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 int num = f.getOptionalNum(1, -1);
 ostringstream out;
@@ -136,7 +136,7 @@ f.lock();
 f.setBuffer(0, &buf[0], io.in->gcount());
 }}
 
-static void ioReadLine (QS::Fiber& f) {
+static void ioReadLine (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 if (!io.in || !*io.in) { f.setNull(0); return; }
 if (io.decoder) {
@@ -154,8 +154,8 @@ f.lock();
 f.setBuffer(0, s.data(), s.size());
 }}
 
-static IO ioOpen (const string& target, optional<string> omode, optional<string> encoding, QS::Fiber& f) {
-QS::ScopeUnlocker<QS::Fiber> unlocker(f);
+static IO ioOpen (const string& target, optional<string> omode, optional<string> encoding, Swan::Fiber& f) {
+Swan::ScopeUnlocker<Swan::Fiber> unlocker(f);
 string mode = omode.value_or("r");
 string enc = encoding.value_or("utf8");
 if (mode.size()>3) { enc=mode; mode=""; }
@@ -165,25 +165,25 @@ bool appending = mode.find("a")!=string::npos;
 bool binary = mode.find("b")!=string::npos;
 if (reading) {
 if (binary) IO(make_shared<ifstream>(target, ios::binary));
-else return IO(make_shared<ifstream>(target), QS::VM::getDecoder(enc));
+else return IO(make_shared<ifstream>(target), Swan::VM::getDecoder(enc));
 }
 else if (writing) {
 if (binary) IO(make_shared<ofstream>(target, ios::binary));
-else return IO(make_shared<ofstream>(target), QS::VM::getEncoder(enc));
+else return IO(make_shared<ofstream>(target), Swan::VM::getEncoder(enc));
 }
 else if (appending) {
 if (binary) IO(make_shared<ofstream>(target, ios::binary | ios::app));
-else return IO(make_shared<ofstream>(target, ios::app), QS::VM::getEncoder(enc));
+else return IO(make_shared<ofstream>(target, ios::app), Swan::VM::getEncoder(enc));
 }
 throw std::logic_error(format("Unknown open mode: %s", mode));
 }
 
 static IO ioCreate (optional<string> encoding) {
-if (encoding) return IO(make_shared<ostringstream>(), QS::VM::getEncoder(encoding.value_or("utf8")));
+if (encoding) return IO(make_shared<ostringstream>(), Swan::VM::getEncoder(encoding.value_or("utf8")));
 else return IO(make_shared<ostringstream>());
 }
 
-static void ioOf (QS::Fiber& f) {
+static void ioOf (Swan::Fiber& f) {
 string enc = f.getOptionalString(2, "");
 if (f.isBuffer(1)) {
 int length;
@@ -191,18 +191,18 @@ const void* buf = f.getBufferV(1, &length);
 string s(reinterpret_cast<const char*>(buf), length);
 auto st = make_shared<istringstream>(s);
 if (enc.empty()) f.emplaceUserObject<IO>(0, st);
-else f.emplaceUserObject<IO>(0, st, QS::VM::getDecoder(enc));
+else f.emplaceUserObject<IO>(0, st, Swan::VM::getDecoder(enc));
 }
 else if (f.isString(1)) {
 string s = f.getString(1);
 auto st = make_shared<istringstream>(s);
 if (enc.empty()) f.emplaceUserObject<IO>(0, st);
-else f.emplaceUserObject<IO>(0, st, QS::VM::getDecoder(enc));
+else f.emplaceUserObject<IO>(0, st, Swan::VM::getDecoder(enc));
 }
 else throw std::logic_error("Expecting a buffer or a string");
 }
 
-static void ioToBuffer (QS::Fiber& f) {
+static void ioToBuffer (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 auto out = dynamic_pointer_cast<ostringstream>(io.out);
 if (!out) throw std::logic_error("Couldn't convert to buffer");
@@ -210,7 +210,7 @@ string s = out->str();
 f.setBuffer(0, s.data(), s.size());
 }
 
-void registerIO (QS::Fiber& f) {
+void registerIO (Swan::Fiber& f) {
 f.loadGlobal("Sequence");
 f.registerClass<IO>("IO", 1);
 f.registerDestructor<IO>();

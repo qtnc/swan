@@ -43,7 +43,7 @@ QFiber::curFiber=f;
 return *QFiber::curFiber;
 }
 
-QS::VM& export QS::VM::getVM  () {
+Swan::VM& export Swan::VM::getVM  () {
 static QVM* vm = nullptr;
 if (!vm) {
 #ifdef NO_MUTEX
@@ -82,7 +82,7 @@ meta->bind("()", instantiate);
 return cls;
 }
 
-static void buildStackTraceLine (QCallFrame& frame, std::vector<QS::StackTraceElement>& stackTrace) {
+static void buildStackTraceLine (QCallFrame& frame, std::vector<Swan::StackTraceElement>& stackTrace) {
 if (!frame.closure) return;
 const QFunction& func = frame.closure->func;
 int line = -1;
@@ -439,7 +439,7 @@ println(out, "");
 static void throwRuntimeException (QFiber& f, int frameIdx, const std::exception& e) {
 boost::core::scoped_demangled_name demangled(typeid(e).name());
 string eType = demangled.get()? demangled.get() : "unknown_exception";
-QS::RuntimeException rt(eType, e.what(), 0);
+Swan::RuntimeException rt(eType, e.what(), 0);
 for (auto it=f.callFrames.begin() + frameIdx, end=f.callFrames.end(); it!=end; ++it) buildStackTraceLine(*it, rt.stackTrace);
 f.stack.erase(f.stack.begin() + f.callFrames[frameIdx].stackBase, f.stack.end());
 f.callFrames.erase(f.callFrames.begin() + frameIdx, f.callFrames.end());
@@ -816,7 +816,7 @@ state = FiberState::FAILED;
 throw std::runtime_error(format("Invalid opcode: %#0$2X", static_cast<int>(op)));
 END_SWITCH
 } //end try
-catch (QS::RuntimeException& e) {
+catch (Swan::RuntimeException& e) {
 state = FiberState::FAILED;
 throw;
 }

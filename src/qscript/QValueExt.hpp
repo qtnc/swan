@@ -177,9 +177,9 @@ virtual bool gcVisit () override;
 virtual ~QMapIterator() = default;
 };
 
-struct QRange: QSequence, QS::Range  {
-QRange (QVM& vm, double s, double e, double p, bool i): QSequence(vm.rangeClass), QS::Range(s, e, p, i) {}
-QRange (QVM& vm, const QS::Range& r): QSequence(vm.rangeClass), QS::Range(r) {}
+struct QRange: QSequence, Swan::Range  {
+QRange (QVM& vm, double s, double e, double p, bool i): QSequence(vm.rangeClass), Swan::Range(s, e, p, i) {}
+QRange (QVM& vm, const Swan::Range& r): QSequence(vm.rangeClass), Swan::Range(r) {}
 QV iterate (const QV& x) {
 if (x.isNull()) return start;
 double val = x.asNum() + step;

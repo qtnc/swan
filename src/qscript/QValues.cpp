@@ -31,7 +31,7 @@ QV::QV (QVM& vm, const char* s, int length): QV(QString::create(vm, s, length), 
 
 std::string QV::asString () const { return asObject<QString>()->asString(); }
 const char* QV::asCString () const { return asObject<QString>()->begin(); }
-const QS::Range& QV::asRange () const { return *asObject<QRange>(); }
+const Swan::Range& QV::asRange () const { return *asObject<QRange>(); }
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
 
 bool QV::isInstanceOf (QClass* tp) const {
@@ -43,22 +43,22 @@ if (type==tp) return true;
 return false;
 }
 
-export QS::Handle::Handle (): value(QV_NULL) {}
-export QS::Handle::Handle (QS::Handle&& h): value(h.value) { h.value=QV_NULL; }
-QS::Handle& export QS::Handle::operator= (Handle&& h) { value=h.value; h.value=QV_NULL; return *this; }
+export Swan::Handle::Handle (): value(QV_NULL) {}
+export Swan::Handle::Handle (Swan::Handle&& h): value(h.value) { h.value=QV_NULL; }
+Swan::Handle& export Swan::Handle::operator= (Handle&& h) { value=h.value; h.value=QV_NULL; return *this; }
 
-QS::Handle QV::asHandle () {
+Swan::Handle QV::asHandle () {
 if (isObject()) {
 QObject* obj = asObject<QObject>();
 LOCK_SCOPE(obj->type->vm.globalMutex)
 obj->type->vm.keptHandles.push_back(*this);
 }
-QS::Handle h;
+Swan::Handle h;
 h.value = i;
 return h;
 }
 
-export QS::Handle::~Handle () {
+export Swan::Handle::~Handle () {
 QV qv(value);
 if (qv.isObject()) {
 QObject* obj = qv.asObject<QObject>();
@@ -90,11 +90,11 @@ const void* QFiber::getBufferV (int i, int* length) { return nullptr; }
 void QFiber::setBuffer  (int i, const void* data, int length) { }
 #endif
 
-void QFiber::pushRange (const QS::Range& r) {
+void QFiber::pushRange (const Swan::Range& r) {
 push(new QRange(vm, r));
 }
 
-void QFiber::setRange (int i, const QS::Range& r) {
+void QFiber::setRange (int i, const Swan::Range& r) {
 at(i) = new QRange(vm, r);
 }
 
@@ -382,7 +382,7 @@ it(s.begin(), s.end(), r.regex, g, options | r.matchOptions)
 {}
 #endif
 
-string QS::RuntimeException::getStackTraceAsString () {
+string Swan::RuntimeException::getStackTraceAsString () {
 ostringstream out;
 for (auto& e: stackTrace) {
 if (e.line>=0 && !e.function.empty() && !e.file.empty()) println(out, "at %s in %s:%d", e.function, e.file, e.line);

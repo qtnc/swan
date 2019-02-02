@@ -1,5 +1,5 @@
-	#include "../include/QScript.hpp"
-#include "../include/QScriptBinding.hpp"
+	#include "../include/Swan.hpp"
+#include "../include/SwanBinding.hpp"
 #include "../include/cpprintf.hpp"
 #include<boost/algorithm/string.hpp>
 #include<ctime>
@@ -71,7 +71,7 @@ strftime(buf, 4, "%W", &t);
 return strtoul(buf, nullptr, 10);
 }
 
-static void tmConstruct (QS::Fiber& f) {
+static void tmConstruct (Swan::Fiber& f) {
 int nArgs = f.getArgCount();
 if (nArgs==1) {
 __time64_t t = _time64(nullptr);
@@ -98,7 +98,7 @@ _mktime64(&t);
 f.setUserObject(0, t);
 }}
 
-void registerDate (QS::Fiber& f) {
+void registerDate (Swan::Fiber& f) {
 f.registerClass<tm>("Date");
 f.registerDestructor<tm>();
 f.registerStaticMethod("()", tmConstruct);

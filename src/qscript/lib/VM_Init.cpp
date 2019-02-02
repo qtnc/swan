@@ -7,7 +7,7 @@ using namespace std;
 
 void initPlatformEncodings ();
 
-static void defaultMessageReceiver (const QS::CompilationMessage& m) {
+static void defaultMessageReceiver (const Swan::CompilationMessage& m) {
 const char* kinds[] = { "ERROR", "WARNING", "INFO" };
 println(std::cerr, "%s: %s:%d:%d near '%s': %s", kinds[m.kind], m.file, m.line, m.column, m.token, m.message);
 }
