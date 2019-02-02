@@ -1,5 +1,5 @@
-#ifndef ___QCRIPT_HPP___
-#define ___QCRIPT_HPP___
+#ifndef _____SWAN_HPP_____
+#define _____SWAN_HPP_____
 
 #ifndef __cplusplus
 #error C++ is required
@@ -17,7 +17,7 @@
 #include<exception>
 #include<typeinfo>
 
-namespace QS {
+namespace Swan {
 
 struct VM;
 struct Fiber;
@@ -292,5 +292,5 @@ inline ScopeUnlocker (T& x): ref(x) { ref.unlock(); }
 inline ~ScopeUnlocker () { ref.lock(); }
 };
 
-} // namespace QS
+} // namespace Swan
 #endif
