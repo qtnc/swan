@@ -9,3 +9,4 @@
 *.zip
 *.7z
 obj/
+objd/

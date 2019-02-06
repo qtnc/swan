@@ -1,0 +1,31 @@
+#ifndef _____SWAN_CLASS_HPP_____
+#define _____SWAN_CLASS_HPP_____
+#include "Object.hpp"
+#include "Value.hpp"
+#include "VLS.hpp"
+
+struct QClass: QObject {
+QVM& vm;
+QClass* parent;
+std::string name;
+std::vector<QV> methods;
+int nFields;
+QV staticFields[0];
+QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nFields=0);
+QClass* copyParentMethods ();
+QClass* mergeMixinMethods (QClass* mixin);
+QClass* bind (const std::string& methodName, QNativeFunction func);
+QClass* bind (int symbol, const QV& value);
+inline bool isSubclassOf (QClass* cls) { return this==cls || (parent && parent->isSubclassOf(cls)); }
+inline QV findMethod (int symbol) {
+QV re = symbol>=methods.size()? QV() : methods[symbol];
+if (re.isNull() && parent) return parent->findMethod(symbol);
+else return re;
+}
+static QClass* create (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nStaticFields=0, int nFields=0) { return newVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields); }
+virtual QObject* instantiate ();
+virtual ~QClass () = default;
+virtual bool gcVisit () final override;
+};
+
+#endif
