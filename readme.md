@@ -1,6 +1,6 @@
-# QScript
+# Swan
 
-QScript is a small scripting language designed to be embedded into C++ applications such as games.
+Swan is a small scripting language designed to be embedded into C++ applications such as games.
 
 # Language syntax 
 ```
@@ -79,14 +79,14 @@ Other characteristics of my little programming language include:
 
 The default standard library of the language don't provide any access to screen, keyboard, files, network or any other input/output device. 
 The host C++ application is responsible for giving its own controlled API to the outside world if it wants to.
-This makes QScript ideal for embedding into games or other applications wanting to provide user scripting capabilities.
+This makes Swan ideal for embedding into games or other applications wanting to provide user scripting capabilities.
 
 Embedding has been carefully made to be as easy as it can be.
 
 [>> More  details about embedding API](docs/embedding.md)
 
-# Running QScript standalone
-You can also write standalone programs in QScript and run them with the CLI.
+# Running Swan standalone
+You can also write standalone programs in Swan  and run them with the CLI.
 The CLI provides some common usage libraries such as file and console I/O access.
 
 [>> More about the CLI](docs/cli.md)
@@ -94,19 +94,19 @@ The CLI provides some common usage libraries such as file and console I/O access
 [>> Standard library provided by the CLI](docs/cli-stdlib.md)
 
 # Performances
-QScript seem to be about 17% faster than python 3.6 and 48% slower than lua 5.1.4.
+Swan seem to be about 15-17% faster than python 3.6 and 48% slower than lua 5.1.4.
 This isn't so bad. This places QScript #19 out of 50 in [scriptorium](https://github.com/r-lyeh-archived/scriptorium).
 Be careful though, benchmarks never represent the reality.
 
 [>> More on performances](docs/performances.md)
 
 # Building
-I have compiled QScript with GCC 8.1 on windows 10 (MinGW), both in 32 and 64 bits.
+I have compiled Swan with GCC 8.1 on windows 10 (MinGW), both in 32 and 64 bits.
 Let me know if you have issues with other compilers.
 
 [>> More on building](docs/building.md)
 
-# Why QScript ?
+# Why QSwan ?
 
 I were looking for a language to add scripting capabilities in a game.
 After months and even years of trials with different available libraries, none exactly were providing everything I needed, and therefore I decided to start my own scripting language project.

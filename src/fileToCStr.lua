@@ -1,9 +1,21 @@
 local sep = false
+local varname = arg[1]
+
+local function readall (l)
+local r, t = {}, {}
+for i = 2, #l do table.insert(t, l[i]) end
+table.sort(t)
+for _,f in pairs(t) do 
+table.insert(r, io.open(f):read('*a'))
+end
+return table.concat(r, '\n')
+end
+
 print(
 'static const char '
-.. arg[2]
+.. varname
 .. '[] = "'
-.. io.open(arg[1]):read('*a')
+.. readall(arg)
 :gsub('.', function(c) 
 local b = string.byte(c)
 if sep and c:find('[a-fA-F]') then c = '" "' ..c end

@@ -10,3 +10,4 @@
 *.7z
 obj/
 objd/
+src/swan/lib/builtin-code.h

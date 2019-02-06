@@ -26,9 +26,11 @@ CXXFLAGS=-std=gnu++17 -Wextra
 DLL_LDFLAGS=-shared -Wl,--out-implib,$(IMP_LIB) -lboost_regex_1_61_0
 CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX)
 
+HEADERS=$(wildcard swan/vm/*.hpp) $(wildcard swan/lib/*.hpp) $(wildcard swan/misc/*.hpp) $(wildcard swan/parser/*.hpp) $(wildcard cpprintf/*.hpp) $(wildcard include/*.hpp) swan/lib/builtin-code.h
 SRCS=$(wildcard swan/vm/*.cpp) $(wildcard swan/lib/*.cpp) $(wildcard swan/misc/*.cpp) $(wildcard swan/parser/*.cpp)
 CPPRINTF_SRCS=$(wildcard cpprintf/*.cpp)
 CLI_SRCS=$(wildcard cli/*.cpp)
+SWANS=$(wildcard swan/lib/*.swan)
 OBJS=$(addprefix $(OBJDIR),$(SRCS:.cpp=.o))
 CPPRINTF_OBJS=$(addprefix $(OBJDIR),$(CPPRINTF_SRCS:.cpp=.o))
 CLI_OBJS=$(addprefix $(OBJDIR),$(CLI_SRCS:.cpp=.o))
@@ -46,11 +48,14 @@ cli: $(CLI_EXEC)
 dll: $(DLL_LIB)
 
 $(CLI_EXEC): $(CLI_OBJS) $(CPPRINTF_OBJS)
-	@$(CXX) $(CXXFLAGS) -o $@ $^ $(CLI_LDFLAGS)
+	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -o $@ $^ $(CLI_LDFLAGS)
 
 $(DLL_LIB): $(OBJS) $(CPPRINTF_OBJS)
-	@$(CXX) $(CXXFLAGS) -o $@ $^ $(DLL_LDFLAGS)
+	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -o $@ $^ $(DLL_LDFLAGS)
 
-$(OBJDIR)%.o: %.cpp
+swan/lib/builtin-code.h: $(SWANS)
+	@luajit fileToCStr.lua BUILTIN_CODE $^ >$@
+
+$(OBJDIR)%.o: %.cpp $(HEADERS)
 	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $<
+	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -c -o $@ $<
