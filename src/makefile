@@ -26,7 +26,6 @@ CXXFLAGS=-std=gnu++17 -Wextra
 DLL_LDFLAGS=-shared -Wl,--out-implib,$(IMP_LIB) -lboost_regex_1_61_0
 CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX)
 
-HEADERS=$(wildcard swan/vm/*.hpp) $(wildcard swan/lib/*.hpp) $(wildcard swan/misc/*.hpp) $(wildcard swan/parser/*.hpp) $(wildcard cpprintf/*.hpp) $(wildcard include/*.hpp) swan/lib/builtin-code.h
 SRCS=$(wildcard swan/vm/*.cpp) $(wildcard swan/lib/*.cpp) $(wildcard swan/misc/*.cpp) $(wildcard swan/parser/*.cpp)
 CPPRINTF_SRCS=$(wildcard cpprintf/*.cpp)
 CLI_SRCS=$(wildcard cli/*.cpp)
@@ -56,6 +55,9 @@ $(DLL_LIB): $(OBJS) $(CPPRINTF_OBJS)
 swan/lib/builtin-code.h: $(SWANS)
 	@luajit fileToCStr.lua BUILTIN_CODE $^ >$@
 
-$(OBJDIR)%.o: %.cpp $(HEADERS)
+$(OBJDIR)swan/vm/VM_Init.o: swan/lib/builtin-code.h
+
+$(OBJDIR)%.o: %.cpp $(wildcard %.hpp)
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -c -o $@ $<
+
