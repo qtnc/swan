@@ -9,7 +9,7 @@ QObject(type0), vm(vm0), parent(parent0), nFields(nf), name(name0)
 { copyParentMethods(); }
 
 QClass* QClass::copyParentMethods () {
-if (parent) methods = parent->methods;
+if (parent && parent->methods.size()) methods = parent->methods;
 else methods.clear();
 return this;
 }

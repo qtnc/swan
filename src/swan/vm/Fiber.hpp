@@ -111,6 +111,7 @@ QFiber (QVM& vm0, QClosure& closure): QFiber(vm0) { callFrames.push_back({ &clos
 void adjustArguments (int& nArgs, int nClosureArgs, bool vararg);
 void storeMethod (int symbol);
 void storeStaticMethod (int symbol);
+QV loadMethod (QV& obj, int symbol);
 void pushNewClass (int nParents, int nStaticFields, int nFields);
 void callSymbol (int symbol, int nArgs);
 void callSuperSymbol (int symbol, int nArgs);

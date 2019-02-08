@@ -1447,6 +1447,7 @@ if (sta) statements.push_back(sta);
 else { result=CR_INCOMPLETE; break; }
 skipNewlines();
 }
+if (!statements.size()) statements.push_back(make_shared<SimpleStatement>(cur));
 return make_shared<BlockStatement>(statements);
 }
 
@@ -1800,6 +1801,7 @@ match(T_COLON);
 if (match(T_SEMICOLON)) body = make_shared<SimpleStatement>(cur);
 else body = parseStatement();
 body = concatStatements(prebody, body);
+if (!body) body = make_shared<SimpleStatement>(cur);
 shared_ptr<FunctionDeclaration> funcdecl = make_shared<FunctionDeclaration>(name, params, body, flags);
 cls.methods.push_back(funcdecl);
 }
@@ -1836,6 +1838,7 @@ shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
 match(T_COLON);
 shared_ptr<Statement> body = parseStatement();
 body = concatStatements(prebody, body);
+if (!body) body = make_shared<SimpleStatement>(cur);
 if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
 return make_shared<FunctionDeclaration>(name, params, body, flags);
 }

@@ -52,16 +52,89 @@ f.returnValue(cls3.isSubclassOf(&cls1));
 else f.returnValue(cls2.isSubclassOf(&cls1));
 }
 
+static void objectEquals (QFiber& f) {
+f.returnValue(f.at(0).i == f.at(1).i);
+}
 
+static void objectNotEquals (QFiber& f) {
+// Call == so that users don't have do define != explicitly to implement full equality comparisons
+QV x1 = f.at(0), x2 = f.at(1);
+f.pushCppCallFrame();
+f.push(x1);
+f.push(x2);
+f.callSymbol(f.vm.findMethodSymbol("=="), 2);
+bool re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+f.returnValue(!re);
+}
+
+static void objectLess (QFiber& f) {
+// Implement < in termes of compare so that users only have to implement three way comparison
+QV x1 = f.at(0), x2 = f.at(1);
+f.pushCppCallFrame();
+f.push(x1);
+f.push(x2);
+f.callSymbol(f.vm.findMethodSymbol("compare"), 2);
+double re = f.at(-1).asNum();
+f.pop();
+f.popCppCallFrame();
+f.returnValue(re<0);
+}
+
+
+static void objectGreater (QFiber& f) {
+// Implement >, >= and <= in termes of < so that users only have to implement < for full comparison
+QV x1 = f.at(0), x2 = f.at(1);
+f.pushCppCallFrame();
+f.push(x2);
+f.push(x1);
+f.callSymbol(f.vm.findMethodSymbol("<"), 2);
+bool re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+f.returnValue(re);
+}
+
+static void objectLessEquals (QFiber& f) {
+// Implement >, >= and <= in termes of < so that users only have to implement < for full comparison
+QV x1 = f.at(0), x2 = f.at(1);
+f.pushCppCallFrame();
+f.push(x2);
+f.push(x1);
+f.callSymbol(f.vm.findMethodSymbol("<"), 2);
+bool re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+f.returnValue(!re);
+}
+
+static void objectGreaterEquals (QFiber& f) {
+// Implement >, >= and <= in termes of < so that users only have to implement < for full comparison
+QV x1 = f.at(0), x2 = f.at(1);
+f.pushCppCallFrame();
+f.push(x1);
+f.push(x2);
+f.callSymbol(f.vm.findMethodSymbol("<"), 2);
+bool re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+f.returnValue(!re);
+}
 
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
 BIND_L(type, { f.returnValue(&f.at(0).getClass(f.vm)); })
 BIND_F(toString, objectToString)
-BIND_L(is, { f.returnValue(f.at(0).i == f.at(1).i); })
-BIND_L(==, { f.returnValue(f.at(0).i == f.at(1).i); })
-BIND_L(!=, { f.returnValue(f.at(0).i != f.at(1).i); })
+BIND_F(is, objectEquals)
+BIND_F(==, objectEquals)
+BIND_F(!=, objectNotEquals)
+->bind(findMethodSymbol("compare"), QV())
+BIND_F(<, objectLess)
+BIND_F(>, objectGreater)
+BIND_F(<=, objectLessEquals)
+BIND_F(>=, objectGreaterEquals)
 BIND_L(!, { f.returnValue(QV(false)); })
 BIND_L(?, { f.returnValue(QV(true)); })
 ;

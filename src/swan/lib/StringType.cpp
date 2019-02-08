@@ -249,6 +249,7 @@ BIND_F(length, stringLength)
 BIND_F( [], stringSubscript)
 BIND_F(iterate, stringIterate)
 BIND_F(iteratorValue, stringSubscript)
+BIND_L(compare, { f.returnValue(static_cast<double>(stringCompare(f))); })
 OP(==) OP(!=)
 OP(<) OP(>) OP(<=) OP(>=)
 #undef OP

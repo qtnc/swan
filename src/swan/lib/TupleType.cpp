@@ -64,6 +64,40 @@ re = (re^h) * FNV_PRIME;
 f.returnValue(static_cast<double>(re));
 }
 
+static void tupleEquals (QFiber& f) {
+QTuple &t1 = f.getObject<QTuple>(0), &t2 = f.getObject<QTuple>(1);
+if (t1.length != t2.length) { f.returnValue(false); return; }
+int eqSymbol = f.vm.findMethodSymbol("==");
+bool re = true;
+for (uint32_t i=0, n=t1.length; re && i<n; i++) {
+f.pushCppCallFrame();
+f.push(t1.data[i]);
+f.push(t2.data[i]);
+f.callSymbol(eqSymbol, 2);
+re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+}
+f.returnValue(re);
+}
+
+static void tupleCompare (QFiber& f) {
+QTuple &t1 = f.getObject<QTuple>(0), &t2 = f.getObject<QTuple>(1);
+if (t1.length != t2.length) { f.returnValue(static_cast<double>(t1.length-t2.length)); return; }
+int compareSymbol = f.vm.findMethodSymbol("compare");
+double re = 0;
+for (uint32_t i=0, n=t1.length; !re && i<n; i++) {
+f.pushCppCallFrame();
+f.push(t1.data[i]);
+f.push(t2.data[i]);
+f.callSymbol(compareSymbol, 2);
+re = f.at(-1).asNum();
+f.pop();
+f.popCppCallFrame();
+}
+f.returnValue(re);
+}
+
 void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
@@ -73,6 +107,8 @@ BIND_F(iterate, tupleIterate)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QTuple>(0).length)); })
 BIND_F(toString, tupleToString)
 BIND_F(hashCode, tupleHashCode)
+BIND_F(==, tupleEquals)
+BIND_F(compare, tupleCompare)
 ;
 
 tupleMetaClass

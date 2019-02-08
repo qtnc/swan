@@ -32,7 +32,7 @@ print(out, "%s", stack.at(i).print());
 println(out, "");
 }
 
-static QV loadMethodSymbol (QVM& vm, QV& obj, int symbol) {
+QV QFiber::loadMethod (QV& obj, int symbol) {
 QClass& cls = obj.getClass(vm);
 if (cls.isSubclassOf(vm.classClass)) {
 QClass& c = *obj.asObject<QClass>();
@@ -44,7 +44,6 @@ return QV(new BoundFunction(vm, obj, cls.methods[symbol]), QV_TAG_BOUND_FUNCTION
 }
 return QV();
 }
-
 
 
 FiberState QFiber::run ()  {
@@ -140,7 +139,7 @@ push( at(0).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
 BREAK
 
 CASE(OP_LOAD_METHOD)
-top() = loadMethodSymbol(vm, top(), frame.read<uint_method_symbol_t>());
+top() = loadMethod(top(), frame.read<uint_method_symbol_t>());
 BREAK
 
 CASE(OP_STORE_LOCAL)

@@ -4,7 +4,7 @@ Here's a very quick reference of the standard library included with the language
 The following classes, objects, methods, functions, form the core part of the language.
 
 Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList.
-Unless so disabled, they are always available in the CLI as well as when embedding QScript into your own C++ application.
+Unless so disabled, they are always available in the CLI as well as when embedding Swan into your own C++ application.
 
 ## Bool: is Object
 A bool can take only two values: true or false.
@@ -16,8 +16,8 @@ A bool can take only two values: true or false.
 
 Methdos: 
 
-- hashCode
-- toString
+- hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
+- toString: return 'true' or 'false'
 
 ## Buffer: is Sequence
 A Buffer is an immutable sequence of octets or 8-bit characters, i.e. a file or memory block, or a non-UTF-8 string.
@@ -35,7 +35,7 @@ Methods:
 - length: return the length of the buffer in bytes
 - indexOf(needle, start=0): return the position where needle is found within this buffer, or -1 if not found
 - startsWith(needle): return true if this buffer starts with the data present in needle
-- toString
+- toString: return a string representation of this object
 
 ## Class: is Object
 An object of type Class represents a class, e.g. Object, Num, Bool, etc.
@@ -44,13 +44,13 @@ Methods:
 
 - is: the is operator overload of class provide for instance check, i.e. `4 is Num` returns true.
 - name: name of the class, e.g. Num, Bool, etc.
-- toString: this overload returns the same as name
+- toString: return a string representation of this object. For classes, this is equivalent to its name.
 
 ## Dictionary: is Sequence
 A Dictionary is an associative container where keys are sorted.
 
 Constructor: Dictionary(sorter=::<, items...), where sorter is any kind of callable taking two arguments and returning true if the first argument goes before the second.
-- Operators: [], []=, in
+- Operators: [], []=, +, in
 
 Methods:
 
@@ -78,7 +78,7 @@ A linked list is a collection of items connected together via linked nodes. IN p
 When items are frequently added or removed at the beginning or at the end but never in the middle of the list, its performances are better than List. LinkedList fits well when used as a queue or stack.
 
 - Constructor: LinkedList(items...): construct a linked list from a serie of given items
-- Operators: [], []=, in
+- Operators: [], []=, +, in
 
 Methods:
 
@@ -96,7 +96,7 @@ A list is a collection of items, in principe all of the same type (even if it is
 
 - Constructor: List(items...): create a list from the given items
 - Implicit construction when using [...] notation
-- Operators: [], []=, in
+- Operators: [], []=, +, in
 
 Methods:
 
@@ -126,7 +126,7 @@ IN order to be held in a Map, keys must all be hashable, i.e. implement the hash
 
 - Constructor: Map(items...): where items can be a Dictionary, another Map, or any sequence of key/value pair tuples.
 - Implicit construction when using {...} notation
-- Operators: [], []=, in
+- Operators: [], []=, +, in
 
 Methods: 
 
@@ -156,21 +156,13 @@ Class of all numbers.
 
 Methods:
 
+- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other. For numbers, this is the same a this-other.
 - format(precision=2, decimalSeparator=".", groupSeparator="", padding=0, groupLength=3): format the number into a string with the specified parameters: precision is the number of digits after the decimal separator. Example: `12345.6789.format(2, ",", "'")` results in `12'345.68`. Giving a precision <0 requests for exponential notation. IF padding!=0, the appropriate number of 0s are prepended to make a string of the given length.
 - frac: return the fractional part of the number, e.g. 1.23 and -67.89 resp. return  0.23 and -0.89
-- hashCode
+- hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - int: return the integer part of the number, e.g. 1.23 and -67.89 resp. return 1 and -67.
 - sign: return the sign of the number, 1 for positive, -1 for negative or 0 for 0 (a.k.a signum)
-- toString(base=10): where base can be between 2 and 36 inclusive
-
-Math functions: can be indifferently called as Num methods or as traditional gobal functions, e.g. `(-10).abs` or `abs(-10)`.
-
-- abs(n): absolute value
-- acos(n), asin(n), atan(n), cos(n), sin(n), tan(n): trigonometric functions
-- acosh(n), asinh(n), atanh(n), cosh(n), sinh(n), tanh(n): hyperbolic trigonometric functions
-- cbrt(n), sqrt(n): cubic and square root
-- ceil(n), floor(n), round(n), trunc(n): rounding functions
-- exp(n), log(n, [base]): exponential and logarithm
+- toString(base=10): return a string representation of the number in the given numeral base, where base can be between 2 and 36 inclusive. If base is given, only the integral part is taken.
 
 ## Object
 Object is the base class for all objects.
@@ -180,7 +172,7 @@ Object is the base class for all objects.
 
 Methods: 
 
-- toString: if there is no more specific overload, the default toString of all objects return the type and the memory location where the object is, e.g. "Object@0xFFFD000012345678"
+- toString: return a string representation of this object. If there is no more specific overload, the default toString of all objects return the type and the memory location where the object is, e.g. "Object@0xFFFD000012345678"
 - type: return the type of the object as Class object
 
 ## Range: is Sequence
@@ -307,16 +299,18 @@ A String holds an immutable sequence of UTF-8 characters.
 - Constructor: String(bufffer, encoding), will convert the data in the given buffer into a string, decoding characters of the specified encoding.
 - Constructor: String(any), any will be converted to string using toString method.
 - Operators: [], +, in
+- Comparison operators: >`<, <=, ==, >=, >, !=` via compare
 
 Methods: 
 
 - static String.of(...sequences): construct a string by concatenating one or more other strings or objects
 - codePointAt(index): return the code point at given character position 0..0x1FFFFF
+- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other.
 - endsWith(needle): return true if needle is found at the end of the string
 - findAll(regex, group=0): find all matches of the regular expression against this string. For each match, take the group number given as result, or return a list of RegexMatchResult objects if group=true.
 - findFirstOf(needles, start=0): search for the first occurence of one of the characters inside needle; return -1 if nothing is found.
 - format(...items): take this string as a format string and format accordingly; see the format global function for more info.
-- hashCode: return the hash code of the object, especially used as hashing key for maps, sets and similar structures.
+- hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - indexOf(needle, start=0): search for needle in the string, returning the position where it has been found, or -1 if not found.
 - lastIndexOf(needle, start=length): search for needle in the string from its end, returning the position where it has been found, or -1 if not found.
 - length: return the length of the string, its number of characters / code points.
@@ -336,20 +330,15 @@ The other big difference with lists is that tuples are immutable.
 
 - Constructor: Tuple(...items): construct a tuple from one or more individual items
 - Implicitly constructed when using (...,) notation
-- Operators: []
+- Operators: [], +
+- Comparison operators: >`<, <=, ==, >=, >, !=` via compare
 
 Methods:
 
-- hashCode
+- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other.
+- hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - length: return the number of elements in this tuple
 - toString: return a string like "(1, 2, 3, 4, 5)"
-
-## System class
-The System class isn't instantiable. It provies general System information and features.
-
-Static methods:
-
-- gc: run the garbage collector
 
 ## Global functions
 - format(fmt, ...items): create a string where %1, %2, %3, etc. are replaced by the 1st, 2nd, 3rd, etc. parameters after fmt.
@@ -357,5 +346,13 @@ Static methods:
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
 
-Additionally, math functions (sin, cos, log, etc.) as well as rounding functions (floor, round, ceil, etc.) may or not be available as global functions. See Number class for a list of math functions.
+## Math functions
+Math functions can be indifferently used as methods of the Number class, i.e. `10.abs` like in ruby, or as traditional global functions, i.e. `abs(10)`.
+By default, both are allowed, but depending on the configuration, only one of the two alternatives may be  given.
 
+- abs(n): absolute value
+- acos(n), asin(n), atan(n), cos(n), sin(n), tan(n): trigonometric functions
+- acosh(n), asinh(n), atanh(n), cosh(n), sinh(n), tanh(n): hyperbolic trigonometric functions
+- cbrt(n), sqrt(n): cubic and square root
+- ceil(n), floor(n), round(n), trunc(n): rounding functions
+- exp(n), log(n, [base]): exponential and logarithm
