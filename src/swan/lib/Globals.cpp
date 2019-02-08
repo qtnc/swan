@@ -107,6 +107,7 @@ for (auto cls: globalClasses) bindGlobal(cls->name, cls);
 bindGlobal("import", import_);
 bindGlobal("format", stringFormat);
 
+#ifndef NO_REFLECT
 bindGlobal("loadMethod", loadMethod);
 bindGlobal("storeMethod", storeMethod);
 bindGlobal("storeStaticMethod", storeStaticMethod);
@@ -115,4 +116,5 @@ bindGlobal("storeGlobal", storeGlobal);
 bindGlobal("loadField", loadField);
 bindGlobal("storeField", storeField);
 bindGlobal("createClass", createClass);
+#endif
 }

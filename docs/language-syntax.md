@@ -484,7 +484,7 @@ is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
 You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
-Note that, unlike JavaScript, *recursive destructuration* is impossible; in QScript it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read, so it is anyway better avoided.
+Note that, unlike JavaScript, *recursive destructuration* is impossible; in Swan it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read, so it is anyway better avoided.
 
 ```
 let map = {a: 1, b: 2, c: 3}

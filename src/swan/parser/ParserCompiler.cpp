@@ -976,11 +976,9 @@ static std::unordered_map<int,ParserRule> rules = {
 OPERATOR(PLUS, PrefixOp, InfixOp, unp, +, TERM),
 OPERATOR(MINUS, PrefixOp, InfixOp, unm, -, TERM),
 INFIX_OP(STAR, InfixOp, *, FACTOR),
-OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR),
 INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR),
 INFIX_OP(PERCENT, InfixOp, %, FACTOR),
 INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
-OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE),
 OPERATOR(AMP, Lambda, InfixOp, &, &, BITWISE),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
@@ -1022,6 +1020,17 @@ OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL),
 PREFIX_OP(EXCL, PrefixOp, !),
 PREFIX_OP(TILDE, PrefixOp, ~),
 PREFIX(DOLLAR, Lambda, $),
+
+#ifndef NO_REGEX
+OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR),
+#else
+INFIX_OP(SLASH, InfixOp, /, FACTOR),
+#endif
+#ifndef NO_GRID
+OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE),
+#else
+INFIX_OP(BAR, InfixOp, |, BITWISE),
+#endif
 
 { T_LEFT_PAREN, { &QParser::parseGroupOrTuple, &QParser::parseMethodCall, nullptr, &QParser::parseMethodDecl, nullptr, ("()"), P_CALL }},
 { T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT }},

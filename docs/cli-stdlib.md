@@ -2,7 +2,7 @@
 Here's a very quick reference of the standard library provided with the CLI.
 
 The following classes, objects, methods, functions, are only available when running the CLI. They aren't part of the core language.
-You may include one or more of these components when embedding QScript, but it isn't done by default. IF not otherwise specified, libraries are independant from eachother.
+You may include one or more of these components when embedding Swan in your own program, but it isn't done by default. IF not otherwise specified, libraries are independant from eachother.
 
 ## Input/output library
 This library provides access to files, console, and I/O memory buffers.
@@ -26,7 +26,7 @@ Other methods:
 - static IO.of(source, encoding=""): create a read stream from a buffer or string
 - close: close the stream; for output streams, flush before closing.
 - flush: flushes the output stream to disk/network/etc.
-- read(count=-1): read up to count bytes or characters, or all the data to the end of the stream if count<0. REturns a string or buffer depending on context.
+- read(count=-1): read up to count bytes or characters, or all the data to the end of the stream if count<0. Returns a string or buffer depending on context.
 - readLine: read up to the next line or end of the stream and returns the line read.
 - seek(position, absolute=false): seek forward or backward in the stream. If absolute=false, then the cursor is moved relatively to current position; if absolute=true, cursor is moved to the absolute position specified, from the beginning if position>=0, from the end if position<0.
 - tell: gives the current cursor position in the stream

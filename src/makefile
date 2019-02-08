@@ -1,4 +1,5 @@
 LIBNAME=swan
+DEFINES=$(options)
 
 ifeq ($(OS),Windows_NT)
 EXT_EXE=.exe
@@ -10,10 +11,23 @@ endif
 
 ifeq ($(mode),release)
 NAME_SUFFIX=
+DEFINES += RELEASE
 CXXOPTFLAGS=-s -O3
 else
 NAME_SUFFIX=d
+DEFINES += DEBUG
 CXXOPTFLAGS=-g
+endif
+
+ifeq ($(regex),boost)
+OPT_BOOST_REGEX_LIB=-lboost_regex_1_61_0
+DEFINES += USE_BOOST_REGEX
+else
+OPT_BOOST_REGEX_LIB=
+endif
+
+ifeq ($(regex),none)
+DEFINES += NO_REGEX
 endif
 
 CLI_EXEC=swan$(NAME_SUFFIX)$(EXT_EXE)
@@ -22,8 +36,8 @@ DLL_LIB=$(LIBNAME)$(NAME_SUFFIX)$(EXT_DLL)
 OBJDIR=obj$(NAME_SUFFIX)/
 
 CXX=g++
-CXXFLAGS=-std=gnu++17 -Wextra
-DLL_LDFLAGS=-shared -Wl,--out-implib,$(IMP_LIB) -lboost_regex_1_61_0
+CXXFLAGS=-std=gnu++17 -Wextra $(addprefix -D,$(DEFINES))
+DLL_LDFLAGS=-shared -Wl,--out-implib,$(IMP_LIB) $(OPT_BOOST_REGEX_LIB)
 CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX)
 
 SRCS=$(wildcard swan/vm/*.cpp) $(wildcard swan/lib/*.cpp) $(wildcard swan/misc/*.cpp) $(wildcard swan/parser/*.cpp)

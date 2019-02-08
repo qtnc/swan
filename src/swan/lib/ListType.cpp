@@ -145,6 +145,13 @@ auto middle = offset>=0? list.data.begin()+offset : list.data.end()+offset;
 rotate(list.data.begin(), middle, list.data.end());
 }
 
+static void listTimes (QFiber& f) {
+QList *list = f.at(0).asObject<QList>(), *newList = new QList(f.vm);
+int times = f.getNum(1);
+if (times>0) for (int i=0; i<times; i++) newList->data.insert(newList->data.end(), list->data.begin(), list->data.end());
+f.returnValue(newList);
+}
+
 static void listFromSequence (QFiber& f) {
 QList* list = new QList(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
@@ -184,6 +191,7 @@ BIND_F(lastIndexOf, listLastIndexOf)
 BIND_F(sort, listSort)
 BIND_F(reverse, listReverse)
 BIND_F(rotate, listRotate)
+BIND_F(*, listTimes)
 ;
 
 listMetaClass

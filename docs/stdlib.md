@@ -96,7 +96,7 @@ A list is a collection of items, in principe all of the same type (even if it is
 
 - Constructor: List(items...): create a list from the given items
 - Implicit construction when using [...] notation
-- Operators: [], []=, +, in
+- Operators: `[], []=, +, *, in`
 
 Methods:
 
@@ -330,7 +330,7 @@ The other big difference with lists is that tuples are immutable.
 
 - Constructor: Tuple(...items): construct a tuple from one or more individual items
 - Implicitly constructed when using (...,) notation
-- Operators: [], +
+- Operators: `[], +, *, in`
 - Comparison operators: >`<, <=, ==, >=, >, !=` via compare
 
 Methods:
@@ -356,3 +356,15 @@ By default, both are allowed, but depending on the configuration, only one of th
 - cbrt(n), sqrt(n): cubic and square root
 - ceil(n), floor(n), round(n), trunc(n): rounding functions
 - exp(n), log(n, [base]): exponential and logarithm
+
+## Reflection/metaclass functions
+This family of global functions is used to dynamically create classes, or access fields and global variables with their names. They may be disabled by configuration.
+
+- createClass(name, [parents...], fieldCount=0, staticFieldCount=0): create a new class with the given name, parents, number of fields and static fields. If no parents are given, automatically inherit at least from Object. 
+- loadField(object, index): access the nth field of the given object
+- storeField(object, index, newValue): set the nth field of the object to a new value
+- loadGlobal(name): access the global variable with the given name
+- storeGlobal(name, value): set a global variable to a new value
+- loadMethod(object, name): access the named method of the object. Equivalent to `object::name` with a dynamic name.
+storeMethod(class, name, method): Store the given method to the class under its name. Equivalent to `class::name = method` where name would be dynamic.
+storeStaticMethod(class, name, method): Store a static method of the class under its name. Equivalent to `class.type::name = method` where name would be dynamic.

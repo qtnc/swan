@@ -81,7 +81,38 @@ The default standard library of the language don't provide any access to screen,
 The host C++ application is responsible for giving its own controlled API to the outside world if it wants to.
 This makes Swan ideal for embedding into games or other applications wanting to provide user scripting capabilities.
 
-Embedding has been carefully made to be as easy as it can be.
+Embedding has been carefully made to be as easy as it can be:
+
+```
+// Our Point C++ class
+class Point {
+public:
+double x, y;
+Point (double x1, double y1): x(x1), y(y1) {}
+double length () { return sqrt(x*x+y*y); }
+Point operator+ (const Point& p) { return Point(x+p.x, y+p.y); }
+};
+
+// Register the class
+fiber.registerClass<Point>("Point");
+
+// Register the constructor
+fiber.registerConstructor<Point, double, double>();
+
+// Register the destructor. Quite useless here as our type is a POD, but still, it's better to declare it anyway.
+fiber.registerDestructor();
+
+// Register two properties x and y
+fiber.registerProperty("x", PROPERTY(Point, x));
+fiber.registerProperty("y", PROPERTY(Point, y));
+
+// Register the length method
+fiber.registerMethod("length", METHOD(Point, length));
+
+// Register the + operator
+fiber.registerMethod("+", METHOD(Point, operator+));
+```
+
 
 [>> More  details about embedding API](docs/embedding.md)
 
@@ -89,13 +120,30 @@ Embedding has been carefully made to be as easy as it can be.
 You can also write standalone programs in Swan  and run them with the CLI.
 The CLI provides some common usage libraries such as file and console I/O access.
 
+The CLI also comes with an interactive REPL that let you have a quick code trial session:
+
+```
+?>> 1+1
+2
+?>> s = 'I have 5 apples and 3 oranges'
+I have 5 apples and 3 oranges
+?>> s.replace(/\d+/, $m: m[0].toNumber+5)
+I have 10 apples and 8 oranges
+?>> file = IO.open('test.txt', 'w')
+?>> file.write('It works!')
+?>> file.close
+?>> file = IO.open('test.txt', 'r')
+?>> file.read
+It works!
+```
+
 [>> More about the CLI](docs/cli.md)
 
 [>> Standard library provided by the CLI](docs/cli-stdlib.md)
 
 # Performances
 Swan seem to be about 15-17% faster than python 3.6 and 48% slower than lua 5.1.4.
-This isn't so bad. This places QScript #19 out of 50 in [scriptorium](https://github.com/r-lyeh-archived/scriptorium).
+This isn't so bad. This places Swan #19 out of 50 in [scriptorium](https://github.com/r-lyeh-archived/scriptorium).
 Be careful though, benchmarks never represent the reality.
 
 [>> More on performances](docs/performances.md)
@@ -106,15 +154,15 @@ Let me know if you have issues with other compilers.
 
 [>> More on building](docs/building.md)
 
-# Why QSwan ?
+# Why Swan ?
 
 I were looking for a language to add scripting capabilities in a game.
 After months and even years of trials with different available libraries, none exactly were providing everything I needed, and therefore I decided to start my own scripting language project.
 
 - [Lua](http://lua.org/) is ultra small, hyper fast, quite powerful, but has sometimes complicated and unusual object-oriented code due to its prototype-based implementation, as well as totally useless array indices starting at 1.
-- Ruby is reasonably small, fast, has interesting ideas and philosophy, but has sometimes a weird syntax. I'm used to brace-like languages.
-- JavaScript, especially since ES6 and ES2015, is really becoming a great language; but it is too bloated, too hard to build in a embeddable way, and too much linked to web development, even node.js. The base V8 engine from Google is just impossible to build because you need python 2, perl, and 10GB of useless tools I will never use. Google, please, I just want to do `g++ *.cpp` and then have fun, not pass days to download, install and configure things.
-- [Python](http://python.org/) is simple, powerful and has a nice syntax, but has the problem to be almost unembeddable safely into a C++ application because system functions such as open are too deeply integrated in the core of the language. There exist smaller distributions but they are dedicated to devices for IoT, what isn't my case.
+- Ruby is reasonably small, fast, has interesting ideas and philosophy, but has sometimes a weird syntax. I'm used to brace-like languages and I'm not a big fan of their block concept.
+- JavaScript, especially since ES6 and ES2015, is really becoming a great language; but it is too bloated, too hard to build in a embeddable way, and too much linked to web development, even node.js. The base V8 engine from Google is just impossible to build because you need python 2, perl, and 10GB of useless tools I will never use. Google, please, I just want to do `make` or `g++ *.cpp` and then have fun, not spend days to download, install and configure things.
+- [Python](http://python.org/) is simple, powerful and has a nice syntax, but has the problem to be almost unembeddable safely into a C++ application because system functions such as open are too deeply integrated in the core of the language. There exist smaller distributions but they are dedicated to devices for IoT (micropython), what isn't my case.
 - [AngelScript](http://angelcode.com/) is a good project, in relatively modern C++, but really difficult to embed very well; and finally I need something more flexible than a statically-typed language.
 - [Wren](https://github.com/wren-lang/wren) is really a nice language: quite small, simple, fast, ideal for embedding, nice syntax... but it leaks some important features like call reentrancy, compilation in a single pass make it difficult to customize what I feel missing, and... we are in 2019, why most of the people making scripting languages are always implementing them in C ?
 

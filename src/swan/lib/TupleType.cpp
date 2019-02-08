@@ -98,6 +98,14 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
+static void tupleTimes (QFiber& f) {
+QTuple& t = f.getObject<QTuple>(0);
+int times = f.getNum(1);
+vector<QV> items;
+if (times>0) for (int i=0; i<times; i++) items.insert(items.end(), &t.data[0], &t.data[t.length]);
+f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
+}
+
 void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
@@ -107,6 +115,7 @@ BIND_F(iterate, tupleIterate)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QTuple>(0).length)); })
 BIND_F(toString, tupleToString)
 BIND_F(hashCode, tupleHashCode)
+BIND_F(*, tupleTimes)
 BIND_F(==, tupleEquals)
 BIND_F(compare, tupleCompare)
 ;
