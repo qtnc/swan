@@ -303,14 +303,18 @@ LiteralGridExpression (const QToken& t, const vector<vector<shared_ptr<Expressio
 const QToken& nearestToken () { return token; }
 void compile (QCompiler& compiler) {
 int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), false);
+int size = data.size() * data[0].size();
 compiler.writeDebugLine(nearestToken());
+if (size>120) compiler.writeOp(OP_PUSH_VARARG_MARK);
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, gridSymbol);
 compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data[0].size());
 compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data.size());
 for (auto& row: data) {
-make_shared<LiteralTupleExpression>(nearestToken(), row) ->compile(compiler);
-}
-writeOpCallFunction(compiler, data.size() +2);
+for (auto& value: row) {
+value->compile(compiler);
+}}
+if (size>120) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
+else writeOpCallFunction(compiler, size+2);
 }
 string print () {
 string s = "\r\n";
@@ -2145,7 +2149,7 @@ return map;
 shared_ptr<Expression> QParser::parseLiteralGrid () {
 QToken token = cur;
 vector<vector<shared_ptr<Expression>>> data;
-do {
+begin: do {
 data.emplace_back();
 auto& row = data.back();
 do {
@@ -2154,9 +2158,10 @@ auto expr = parseExpression(P_BITWISE);
 if (!expr) return nullptr;
 row.push_back(expr);
 } while(match(T_COMMA));
+if (row.size() != data[0].size()) parseError("All rows must be of the same size (%d)", data[0].size());
+if (match(T_SEMICOLON)) goto begin;
 skipNewlines();
 consume(T_BAR, "Expected '|' to close literal grid expression");
-if (row.size() != data[0].size()) parseError("All rows must be of the same size (%d)", data[0].size());
 skipNewlines();
 } while(match(T_BAR));
 return make_shared<LiteralGridExpression>(token, data);

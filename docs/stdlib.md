@@ -3,7 +3,7 @@ Here's a very quick reference of the standard library included with the language
 
 The following classes, objects, methods, functions, form the core part of the language.
 
-Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList.
+Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList, Grid.
 Unless so disabled, they are always available in the CLI as well as when embedding Swan into your own C++ application.
 
 ## Bool: is Object
@@ -38,12 +38,12 @@ Methods:
 - toString: return a string representation of this object
 
 ## Class: is Object
-An object of type Class represents a class, e.g. Object, Num, Bool, etc.
+An object of type Class represents a class, e.g. Object, Number, Bool, etc.
+The is operator overload of class provide for instance check, i.e. `4 is Number` returns true.
 
 Methods:
 
-- is: the is operator overload of class provide for instance check, i.e. `4 is Num` returns true.
-- name: name of the class, e.g. Num, Bool, etc.
+- name: name of the class, e.g. Number, Bool, etc.
 - toString: return a string representation of this object. For classes, this is equivalent to its name.
 
 ## Dictionary: is Sequence
@@ -73,6 +73,29 @@ You can iterate a fiber to fetch all yielded values in turn.
 
 NO specific methods beside () operator.
 
+## Grid: is Sequence
+A grid is a bidimensional structure. It is indexed with two indices x (representing columns) and y (representing rows).
+Grid can be used as 2D map, or as matrix in the mathmatical sense. A few useful methods covering these two topics are provided, pathfinding as well as matrix multiplication ammong others.
+
+- Constructor: Grid(width, height): construct a grid with the given size, initially filled with 0s.
+- Implicit construction when using the construction syntax `| ... |`
+- Operators: `[], []=, +, -, *, /, **`
+- Unary operators: -
+- Comparison oprators: ==, !=
+
+Methods:
+
+- draw(startX, startY, endX, endY, value): draw a line between the points (startX, startY) and (endX, endY), setting the touched cells with the value given
+- fill(startX, startY, endX, endY, value): fills a rectangular area with a given value
+- floodFill(x, y, value): fills the grid with the specified value, using the flood fill algorithm starting at the given point
+- hasDirectPath(startX, startY, endX, endY, traversaleTest): test if there exist a direct path between (startX, startY) and (endX, endY). Return a 3-tuple (result, impactX, impactY) telling if there is a direct path, and if not, where is the impact point. See below for a description of the traversalTest callback.
+- pathfind(startX, startY, endX, endY, traversalTest): try to find a path between (startX, startY) and (endX, endY) using A* pathfinding algorithm. If a path is found, return a list of 2-tuple indicating the path to follow. Null is returned if no path is found.
+
+**Pathfinding traversal test callback**  
+The traversal test callback takes 6 arguments and must return a value indicating whether or not a given way is traversable (allow traveling through it).
+Arguments: value, grid, newX, newY, previousX, previousY, where (newX, newY) is the point where the algorithm wants to go to, (previousX, previousY) is the point which it comes from, grid is a reference to the whole grid, and value is the same as `grid[newX,newY]`. For most usages, considering only the first argument alone can be sufficient.
+Return value: false or any value <1 to denote an unpassable wall, true or any value >=1 to denote an open passage with its cost. Returning a value greater than 1 indicates a passage that can be difficult or dangerous, which would be better avoided if possible.
+
 ## LinkedList: is Sequence
 A linked list is a collection of items connected together via linked nodes. IN principle, all items are of the same type, though this isn't enforeced.
 When items are frequently added or removed at the beginning or at the end but never in the middle of the list, its performances are better than List. LinkedList fits well when used as a queue or stack.
@@ -97,6 +120,7 @@ A list is a collection of items, in principe all of the same type (even if it is
 - Constructor: List(items...): create a list from the given items
 - Implicit construction when using [...] notation
 - Operators: `[], []=, +, *, in`
+- Comparison operators: ==, !=
 
 Methods:
 
@@ -109,6 +133,7 @@ Methods:
 - indexOf(needle, start=0): search for needle in the list, return its position if found, -1 if not
 - lastIndexOf(needle, start=length): search for needle in the list from the end, return its position if found, -1 if not
 - length: return the number of element in the list
+- lower(needle, comparator=::<): return the index of the greatest element less or equal than needle by doing a binary search. This suppose that the elements are sorted. 
 - pop: remove an item from the end of the list and return it
 - push(...items): add one or more items at the end of the list
 - remove(...items): remove one or more items
@@ -117,12 +142,15 @@ Methods:
 - reverse: reverse the elements in the list, so that the first becomes the last one and vice-versa.
 - rotate(distance): shift the items in the list; depending on distance, first elements become the last ones or last become the first ones.
 - shuffle(random=rand): randomly shuffles the elements in the list
+- slice(start, end): return a sublist containing elements from start inclusive to end exclusive. Equivalent to `list[start..end]`.
 - sort(comparator=::<): sort the elements in the list
+- splice(start, end, ...newItems): erase the elements from start inclusive to end exclusive, and then insert newItems at their place. Equivalent to `list[start..end] = newItems`.
 - toString: return a string like "[1, 2, 3, 4, 5]"
+- upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted. 
 
 ## Map: is Sequence
 A Map is an associative container where key/value pairs are held with no particular order. If keys need to be ordered, Dictionary must be used.
-IN order to be held in a Map, keys must all be hashable, i.e. implement the hashCode method. This is the case for Num, String and Tuple.
+IN order to be held in a Map, keys must all be hashable, i.e. implement the hashCode method. This is the case for Number, String, Bool and Tuple.
 
 - Constructor: Map(items...): where items can be a Dictionary, another Map, or any sequence of key/value pair tuples.
 - Implicit construction when using {...} notation
@@ -168,7 +196,7 @@ Methods:
 Object is the base class for all objects.
 
 - Comparison operators: `==, !=, is`
-- Unary operators: !
+- Unary operators: !, ?
 
 Methods: 
 
@@ -229,12 +257,13 @@ A random object holds the state of a pseudo-random number generator.
 
 Operator() is used to generate a random number out of the generator.
 A default global Random instance is created with the name *rand*.
+The random generator used is the standard C++11 MT19937.
 
 - rand(), without parameters: generate a number between 0 and 1
 - rand(n), for n<=1: generate a number between 0 and 1 and return true if the generated number is <n.
 - rand(n), for n>1: generates an integer between 0 and n exclusive.
 - rand(min, max): generates a number between min and max inclusive
-- rand(sequence), for any sequence of numbers: generate an integer between 0 and sequence.length with weighted probabilities. For example, `rand([1, 2, 3])` will generate 0 with a probability of 1/6, 1 with probability 2/6 and 2 with probability 3/6. To draw an element randomly from a sequence, see List.draw.
+- rand(sequence), for any sequence of numbers: generate an integer between 0 and sequence.length -1 with weighted probabilities. For example, `rand([1, 2, 3])` will generate 0 with a probability of 1/6, 1 with probability 2/6 and 2 with probability 3/6. To draw an element randomly from a sequence, see List.draw.
 
 Other methods:
 
@@ -243,13 +272,8 @@ Other methods:
 
 ## Sequence: is Object
 The sequence class is the base class for all subclasses holding a sequence of something, such as String, List, Tuple, Map, etc.
-For more info about iterator, iterate and iteratorValue methods, see iteration protocol.
 
-- iterator: return an object that can be iterated via iterate and iteratorValue methods. The default for sequences is to return itself.
-- iterate(key): given the current key, return the key of the next item. Passing key=null yield the first key; returns null if the key passed was the last one.
-- iteratorValue(key): return the value corresponding to the iteration key passed
-
-Other methods:
+Methods:
 
 - all(predicate): return true if predicate(x) returned true for all x in the sequence. Return true for empty sequence.
 - any(predicate): return true if predicate(x) returned true for at least one x in the sequence. Return false for empty sequence.
@@ -264,8 +288,8 @@ Other methods:
 - last: return the last element of the sequence. Note that the sequence may don't have a predictable orders, e.g. Set
 - limit(n): return a sequence limited to n elements, i.e. all elements after the nth are dropped
 - map(mapper): return a new sequence with elements mapped from this sequence
-- max(comparator): return the greatest element of the sequence according to the comparator given. 
-- min(comparator): return the least element of the sequence according to the comparator given. 
+- max(comparator=max): return the greatest element of the sequence according to the comparator given. If comparator is omited, the global function max is taken.
+- min(comparator=min): return the least element of the sequence according to the comparator given. If comparator is omited, the global function min is taken.
 - none(predicate): return true if predicate(x) returned true for none of the x in the sequence. Return true for empty sequence.
 - reduce(reducer, initial=null): iteratively reduce elements from this sequence using the reducer given. Return null for empty sequence, initial if the sequence has a single element.
 - skip(n): return a sequence with n first elements skipped
@@ -274,7 +298,15 @@ Other methods:
 - toMap: return a map containing the elements of this sequence
 - toSet: return a set containing the elements of this sequence
 - toTuple: return a tuple containing the elements of this sequence
-- zipWith(sequences...): produce a sequence of tuples containing paired elements. For example, `(1, 2, 3).zipWith(('a', 'b', 'c'))` whould produce `(1, 'a'), (2, 'b'), (3, 'c')`
+
+Iteration methods: 
+
+- iterator: return an object that can be iterated via iterate and iteratorValue methods. The default for sequences is to return itself.
+- iterate(key): given the current key, return the key of the next item. Passing key=null yield the first key; returns null if the key passed was the last one.
+- iteratorValue(key): return the value corresponding to the iteration key passed
+
+For more info about iterator, iterate and iteratorValue methods, see iteration protocol.
+
 
 ## Set: is Sequence
 A Set is a collection of items, in principle all of the same type (although nothing is enforced), where order has no importance and where any item may only be present once.
@@ -283,6 +315,7 @@ Another characteristic of sets beside the uniqueness of held objects is their ab
 - Constructor: Set(...items): construct a set from individual elements
 - Implicitly constructed when using `<...>` notation
 - Operators: `-, &, |, ^, in`
+- Comparison operators: ==, !=
 
 Methods: 
 
@@ -305,7 +338,7 @@ Methods:
 
 - static String.of(...sequences): construct a string by concatenating one or more other strings or objects
 - codePointAt(index): return the code point at given character position 0..0x1FFFFF
-- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other.
+- compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - endsWith(needle): return true if needle is found at the end of the string
 - findAll(regex, group=0): find all matches of the regular expression against this string. For each match, take the group number given as result, or return a list of RegexMatchResult objects if group=true.
 - findFirstOf(needles, start=0): search for the first occurence of one of the characters inside needle; return -1 if nothing is found.
@@ -319,25 +352,26 @@ Methods:
 - search(regex, start=0, returnFullMatchResult=false): search for a match of the Regex against the string. Return a position or -1 if returnFullMatchResult=false, a RegexMatchResult object or null if returnFullMatchResult=true.
 - split(separator): split the string into a sequence of elements using a given separator. The separator can be a string or a regex.
 - startsWith(needle): return true if needle is found at the start of the string
-- toNumber(base=10): convert the string to a number; base can be between 2 and 36.
+- toNumber(base=10): convert the string to a number, written in the given numeral base; base can be between 2 and 36.
 - toString: return itself
 - upper: transform the string to uppercase
 
 ## Tuple: is Sequence
 A tuple is a sequence of items, generally of etherogeneous types, as opposed to lists where all elements are supposed to be of the same type.
 The order of the elements in a tuple are also often significant, i.e. `(1, 2)` means something else than `(2, 1)`, while it is often unsignificant for lists.
-The other big difference with lists is that tuples are immutable.
+The other big difference with lists is that tuples are immutable and override the hashCode method. They can thus be used as keys in unsorted sequences like Map and Set.
 
 - Constructor: Tuple(...items): construct a tuple from one or more individual items
 - Implicitly constructed when using (...,) notation
 - Operators: `[], +, *, in`
-- Comparison operators: >`<, <=, ==, >=, >, !=` via compare
+- Comparison operators: `<, <=, ==, >=, >, !=` via compare
 
 Methods:
 
-- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other.
+- compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - length: return the number of elements in this tuple
+- slice(start, end): return a subtuple containing elements from start inclusive to end exclusive. Equivalent to `tuple[start..end]`.
 - toString: return a string like "(1, 2, 3, 4, 5)"
 
 ## Global functions
@@ -345,6 +379,7 @@ Methods:
 - format(fmt, map): create a string where expression $([a-z]+) are replaced by the corresponding value in the map.
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
+- zip(sequences..., grouping=Tuple): take two or more sequences and map them together using the grouping function provided. For example, `zip([1,2,3], [4,5,6])` would yield a sequence `[(1,4), (2,5), (3,6)]`. Giving another grouping function allows to produce something else than just tuples; for example `zip([1,2,3], [4,5,6], ::+)` would yield `[5, 7, 9]` (1+4, 2+5, 3+6). Stops with the shortest of the sequences given.
 
 ## Math functions
 Math functions can be indifferently used as methods of the Number class, i.e. `10.abs` like in ruby, or as traditional global functions, i.e. `abs(10)`.

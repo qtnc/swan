@@ -80,6 +80,14 @@ uniform_int_distribution<size_t> dist(0, l.data.size() -1);
 f.returnValue( l.data[ dist(r.rand) ]);
 }}
 
+static void listPermute (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+bool re;
+if (f.getArgCount()>=2) re = next_permutation(list.data.begin(), list.data.end(), QVBinaryPredicate(f.at(1)));
+else re = next_permutation(list.data.begin(), list.data.end(), QVLess());
+f.returnValue(re);
+}
+
 void QVM::initRandomType () {
 randomClass
 ->copyParentMethods()
@@ -95,6 +103,7 @@ BIND_F( (), randomInstantiate)
 listClass
 BIND_F(shuffle, listShuffle)
 BIND_F(draw, listDraw)
+BIND_F(permute, listPermute)
 ;
 
 bindGlobal("rand", QV(new QRandom(*this)));

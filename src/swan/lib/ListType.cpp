@@ -129,8 +129,8 @@ f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
 
 static void listSort (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-if (f.getArgCount()>=2) sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.at(1)));
-else sort(list.data.begin(), list.data.end(), QVLess());
+if (f.getArgCount()>=2) stable_sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.at(1)));
+else stable_sort(list.data.begin(), list.data.end(), QVLess());
 }
 
 static void listReverse (QFiber& f) {
@@ -150,6 +150,41 @@ QList *list = f.at(0).asObject<QList>(), *newList = new QList(f.vm);
 int times = f.getNum(1);
 if (times>0) for (int i=0; i<times; i++) newList->data.insert(newList->data.end(), list->data.begin(), list->data.end());
 f.returnValue(newList);
+}
+
+static void listLowerBound (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+QV value = f.at(1);
+auto it = list.data.end();
+if (f.getArgCount()>2) it = lower_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.at(2)));
+else it = lower_bound(list.data.begin(), list.data.end(), value, QVLess());
+f.returnValue(static_cast<double>(it - list.data.begin() ));
+}
+
+static void listUpperBound (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+QV value = f.at(1);
+auto it = list.data.end();
+if (f.getArgCount()>2) it = upper_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.at(2)));
+else it = upper_bound(list.data.begin(), list.data.end(), value, QVLess());
+f.returnValue(static_cast<double>(it - list.data.begin() ));
+}
+
+static void listEquals (QFiber& f) {
+QList &l1 = f.getObject<QList>(0), &l2 = f.getObject<QList>(1);
+if (l1.data.size() != l2.data.size() ) { f.returnValue(false); return; }
+int eqSymbol = f.vm.findMethodSymbol("==");
+bool re = true;
+for (size_t i=0, n=l1.data.size(); re && i<n; i++) {
+f.pushCppCallFrame();
+f.push(l1.data[i]);
+f.push(l2.data[i]);
+f.callSymbol(eqSymbol, 2);
+re = f.at(-1).asBool();
+f.pop();
+f.popCppCallFrame();
+}
+f.returnValue(re);
 }
 
 static void listFromSequence (QFiber& f) {
@@ -191,6 +226,9 @@ BIND_F(lastIndexOf, listLastIndexOf)
 BIND_F(sort, listSort)
 BIND_F(reverse, listReverse)
 BIND_F(rotate, listRotate)
+BIND_F(lower, listLowerBound)
+BIND_F(upper, listUpperBound)
+BIND_F(==, listEquals)
 BIND_F(*, listTimes)
 ;
 

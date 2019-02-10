@@ -97,6 +97,10 @@ linkedListClass = QClass::create(*this, linkedListMetaClass, sequenceClass, "Lin
 randomMetaClass = QClass::create(*this, classClass, classClass, "RandomMetaClass", 0, -1);
 randomClass = QClass::create(*this, randomMetaClass, sequenceClass, "Random", 0, -1);
 #endif
+#ifndef NO_GRID
+gridMetaClass = QClass::create(*this, classClass, classClass, "GridMetaClass", 0, -1);
+gridClass = QClass::create(*this, gridMetaClass, sequenceClass, "Grid", 0, -1);
+#endif
 objectClass->type = classClass;
 classClass->type = classClass;
 reset();
@@ -144,6 +148,10 @@ initRegexTypes();
 
 #ifndef NO_RANDOM
 initRandomType();
+#endif
+
+#ifndef NO_GRID
+initGridType();
 #endif
 
 initGlobals();

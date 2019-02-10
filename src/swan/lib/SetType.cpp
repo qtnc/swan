@@ -88,6 +88,16 @@ f.returnValue(*it);
 set.set.erase(it);
 }}}
 
+static void setEquals (QFiber& f) {
+QSet &s1 = f.getObject<QSet>(0), &s2 = f.getObject<QSet>(1);
+if (s1.set.size() != s2.set.size() ) { f.returnValue(false); return; }
+bool re = true;
+for (auto& x: s1.set) {
+if (s2.set.end() == s2.set.find(x)) { re=false; break; }
+}
+f.returnValue(re);
+}
+
 static void setIterate (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
 if (f.isNull(1)) {
@@ -130,6 +140,7 @@ BIND_L(clear, { f.getObject<QSet>(0).set.clear(); })
 BIND_F(add, setAdd)
 BIND_F(remove, setRemove)
 BIND_F(in, setIn)
+BIND_F(==, setEquals)
 ;
 
 

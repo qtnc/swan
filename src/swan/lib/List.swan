@@ -1,0 +1,5 @@
+List::slice = $$(start, end): this[Range(start, end, end<0)]
+
+List::splice = $$(start, end, items...): this[Range(start, end, end<0)] = items
+
+Tuple::slice = $$(start, end): this[Range(start, end, end<0)]

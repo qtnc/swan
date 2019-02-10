@@ -38,6 +38,9 @@ QClass *dictionaryClass, *dictionaryMetaClass, *linkedListClass, *linkedListMeta
 #ifndef NO_RANDOM
 QClass *randomClass, *randomMetaClass;
 #endif
+#ifndef NO_GRID
+QClass *gridClass, *gridMetaClass;
+#endif
 uint8_t varDeclMode = Option::VAR_STRICT;
 
 QVM ();
@@ -70,6 +73,9 @@ void initRegexTypes();
 #endif
 #ifndef NO_RANDOM
 void initRandomType();
+#endif
+#ifndef NO_GRID
+void initGridType ();
 #endif
 void initGlobals();
 void initMathFunctions();

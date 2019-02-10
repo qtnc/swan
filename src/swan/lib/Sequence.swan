@@ -54,8 +54,8 @@ for x in this: a = a==null ? x : f(a,x)
 return a
 }
 
-Sequence::min = $$(f = $(a,b): a<b?a:b): this.reduce(f)
-Sequence::max = $$(f = $(a,b): a>b?a:b): this.reduce(f)
+Sequence::min = $$(f=min): this.reduce(f)
+Sequence::max = $$(f=max): this.reduce(f)
 
 Sequence::dropWhile = $$f: $*{
 for x in this {

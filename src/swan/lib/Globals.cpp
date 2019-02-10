@@ -98,6 +98,9 @@ boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass
 #ifndef NO_OPTIONAL_COLLECTIONS
 , dictionaryClass, linkedListClass
 #endif
+#ifndef NO_GRID
+, gridClass
+#endif
 #ifndef NO_RANDOM
 , randomClass
 #endif

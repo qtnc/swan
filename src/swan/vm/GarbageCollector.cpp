@@ -166,6 +166,16 @@ return false;
 }
 #endif
 
+#ifndef NO_GRID
+#include "Grid.hpp"
+
+bool QGrid::gcVisit () {
+if (QObject::gcVisit()) return true;
+for (uint32_t i=0, length=width*height; i<length; i++) data[i].gcVisit();
+return false;
+}
+#endif
+
 #ifndef NO_REGEX
 #include "Regex.hpp"
 
@@ -210,6 +220,9 @@ regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
 dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass,
+#endif
+#ifndef NO_GRID
+gridClass, gridMetaClass,
 #endif
 #ifndef NO_RANDOM
 randomClass, randomMetaClass,
