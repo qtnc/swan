@@ -38,7 +38,7 @@ return boost::join(cur, "/");
 
 static string defaultFileLoader (const string& filename) {
 ifstream in(filename, ios::binary);
-if (!in) return "";
+if (!in) throw std::runtime_error(format("File not found: %s", filename));
 ostringstream out(ios::binary);
 out << in.rdbuf();
 string s = out.str();

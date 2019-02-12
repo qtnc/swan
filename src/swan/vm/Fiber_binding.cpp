@@ -1,6 +1,7 @@
 #include "Fiber.hpp"
 #include "VM.hpp"
 #include "BoundFunction.hpp"
+#include "Map.hpp"
 #include "ExtraAlgorithms.hpp"
 #include "OpCodeInfo.hpp"
 #include "Fiber_inlines.hpp"
@@ -69,6 +70,38 @@ push(cls);
 vm.foreignClassIds[id] = cls;
 }
 
+QV getItemFromLastArgMap (QFiber& f, const string& key) {
+if (f.at(-1).isInstanceOf(f.vm.mapClass)) {
+QMap& map = f.getObject<QMap>(-1);
+return map.get(QV(f.vm, key));
+}
+return QV();
+}
+
+double QFiber::getOptionalNum (int stackIndex, const std::string& key, double defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (value.isNum()) return value.asNum();
+else return getOptionalNum(stackIndex, defaultValue);
+}
+
+bool QFiber::getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (value.isBool()) return value.asBool();
+else return getOptionalBool(stackIndex, defaultValue);
+}
+
+string QFiber::getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (value.isString()) return value.asString();
+else return getOptionalString(stackIndex, defaultValue);
+}
+
+Swan::Handle QFiber::getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (!value.isNull()) return value.asHandle();
+else return getOptionalHandle(stackIndex, defaultValue);
+}
+
 void QFiber::loadGlobal (const string& name) {
 int symbol = vm.findGlobalSymbol(name, false);
 if (symbol<0) pushNull();
@@ -116,6 +149,11 @@ QForeignClass& cls = *vm.foreignClassIds[id];
 QForeignInstance* instance = static_cast<QForeignInstance*>(cls.instantiate());
 at(idx) = instance;
 return &instance->userData[0];
+}
+
+void QFiber::storeImport (const string& name) {
+LOCK_SCOPE(vm.globalMutex)
+vm.imports[name] = at(-1);
 }
 
 void QFiber::import (const std::string& baseFile, const std::string& requestedFile) {

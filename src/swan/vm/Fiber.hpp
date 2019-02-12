@@ -1,5 +1,6 @@
 #ifndef _____SWAN_FIBER_HPP_____
 #define _____SWAN_FIBER_HPP_____
+#include "Core.hpp"
 #include "Value.hpp"
 #include "Sequence.hpp"
 #include "String.hpp"
@@ -55,6 +56,12 @@ virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHa
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
 virtual inline std::string getOptionalString  (int i, const std::string& defaultValue) { return getArgCount()>i && isString(i)? getString(i) : defaultValue; }
+virtual inline Swan::Handle getOptionalHandle  (int i, const Swan::Handle& defaultValue) { return getArgCount()>i && !isNull(i)? at(i).asHandle() : defaultValue; }
+
+virtual double getOptionalNum (int stackIndex, const std::string& key, double defaultValue) final override;
+virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) final override;
+virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) final override;
+virtual Swan::Handle getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) final override;
 
 virtual inline void setNum (int i, double d) final override { at(i).d = d; }
 virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
@@ -92,11 +99,12 @@ inline QString* ensureString (int i) { return ensureString(at(i)); }
 virtual void lock () final override { mutex.lock(); }
 virtual void unlock () final override { mutex.unlock(); }
 virtual void import (const std::string& baseFile, const std::string& requestedFile) final override;
-virtual void loadString  (const std::string& source, const std::string& name="") final override;
-virtual void loadFile (const std::string& filename) final override;
-virtual std::string dumpBytecode () final override;
-void loadBytecode (std::istream& in);
-void saveBytecode (std::ostream& out);
+virtual void storeImport (const std::string& name) final override;
+virtual int loadString  (const std::string& source, const std::string& name="") final override;
+virtual int loadFile (const std::string& filename) final override;
+virtual void dumpBytecode (std::ostream& out, int count = 1) final override;
+int loadBytecode (std::istream& in);
+void saveBytecode (std::ostream& out, int count = 1);
 
 virtual void storeGlobal (const std::string& name) final override;
 virtual void loadGlobal (const std::string& name) final override;

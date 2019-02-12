@@ -135,11 +135,10 @@ vm.garbageCollect();
 }
 
 if (compileOnly) for (auto& file: args) {
-string bytecode = fiber.dumpBytecode();
 if (!outFile.empty())  file=outFile;
 else file += ".qb";
 ofstream out(file, ios::binary);
-out.write(bytecode.data(), bytecode.size());
+fiber.dumpBytecode(out);
 }
 
 if (runREPL) repl(vm, fiber);

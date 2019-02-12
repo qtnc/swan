@@ -41,7 +41,7 @@ f.returnValue(static_cast<double>( dist(r.rand) ));
 
 static void randomNormal (QFiber& f) {
 QRandom& r = f.getObject<QRandom>(0);
-normal_distribution<double> dist( f.getOptionalNum(1, 0), f.getOptionalNum(2, 1) );
+normal_distribution<double> dist( f.getOptionalNum(1, "mu", 0), f.getOptionalNum(2, "sigma", 1) );
 f.returnValue( dist(r.rand) );
 }
 

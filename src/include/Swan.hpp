@@ -16,6 +16,7 @@
 #include<functional>
 #include<exception>
 #include<typeinfo>
+#include<iosfwd>
 
 namespace Swan {
 
@@ -119,10 +120,20 @@ virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
 virtual void* getUserPointer (int stackIndex) = 0;
 virtual Handle getHandle (int stackIndex) = 0;
 
-double getOptionalNum (int stackIndex, double defaultValue) { return getArgCount()>stackIndex && isNum(stackIndex)? getNum(stackIndex) : defaultValue; }
-bool getOptionalBool (int stackIndex, bool defaultValue) { return getArgCount()>stackIndex && isBool(stackIndex)? getBool(stackIndex) : defaultValue; }
-std::string getOptionalString (int stackIndex, const std::string& defaultValue) { return getArgCount()>stackIndex && isString(stackIndex)? getString(stackIndex) : defaultValue; }
-Handle getOptionalHandle  (int stackIndex, const Handle& defaultValue) { return getArgCount()>stackIndex? getHandle(stackIndex) : defaultValue; }
+inline double getOptionalNum (int stackIndex, double defaultValue) { return getArgCount()>stackIndex && isNum(stackIndex)? getNum(stackIndex) : defaultValue; }
+inline bool getOptionalBool (int stackIndex, bool defaultValue) { return getArgCount()>stackIndex && isBool(stackIndex)? getBool(stackIndex) : defaultValue; }
+inline std::string getOptionalString (int stackIndex, const std::string& defaultValue) { return getArgCount()>stackIndex && isString(stackIndex)? getString(stackIndex) : defaultValue; }
+inline Handle getOptionalHandle  (int stackIndex, const Handle& defaultValue) { return getArgCount()>stackIndex? getHandle(stackIndex) : defaultValue; }
+
+virtual double getOptionalNum (int stackIndex, const std::string& key, double defaultValue) = 0;
+virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) = 0;
+virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) = 0;
+virtual Handle getOptionalHandle  (int stackIndex, const std::string& key, const Handle& defaultValue) = 0;
+
+inline double getOptionalNum (const std::string& key, double defaultValue) { return getOptionalNum(-1, key, defaultValue); }
+inline bool getOptionalBool  (const std::string& key, bool defaultValue) { return getOptionalBool(-1, key, defaultValue); }
+inline std::string getOptionalString (const std::string& key, const std::string& defaultValue) { return getOptionalString(-1, key, defaultValue); }
+inline Handle getOptionalHandle (const std::string& key, const Handle& defaultValue) { return getOptionalHandle(-1, key, defaultValue); }
 
 virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
@@ -149,10 +160,11 @@ virtual void pushHandle (const Handle& handle) = 0;
 virtual void pushCopy (int stackIndex = -1) = 0;
 virtual void pop () = 0;
 
-virtual void loadString (const std::string& source, const std::string& name="") = 0;
-virtual void loadFile (const std::string& filename) = 0;
-virtual std::string dumpBytecode () = 0;
+virtual int loadString (const std::string& source, const std::string& name="") = 0;
+virtual int loadFile (const std::string& filename) = 0;
+virtual void dumpBytecode (std::ostream& out, int count = 1) = 0;
 virtual void import (const std::string& baseFile, const std::string& toImport) = 0;
+virtual void storeImport (const std::string& name) = 0;
 
 virtual void call (int nArgs) = 0;
 virtual void callMethod (const std::string& name, int nArgs) = 0;
