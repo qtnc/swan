@@ -18,7 +18,7 @@ if (range.first==range.second) return map.end();
 QVEqualler eq;
 auto it = find_if(range.first, range.second, [&](const auto& i){ return eq(i.first, key); });
 if (it!=range.second) return it;
-else return range.second;
+else return map.end();
 }
 
 QDictionary::iterator QDictionary::getr (const QV& key) {

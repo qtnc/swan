@@ -96,7 +96,7 @@ boolClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass
 , regexClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-, dictionaryClass, linkedListClass
+, dictionaryClass, linkedListClass, sortedSetClass
 #endif
 #ifndef NO_GRID
 , gridClass

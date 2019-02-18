@@ -136,6 +136,7 @@ return false;
 #ifndef NO_OPTIONAL_COLLECTIONS
 #include "LinkedList.hpp"
 #include "Dictionary.hpp"
+#include "SortedSet.hpp"
 
 bool QLinkedList::gcVisit () {
 if (QObject::gcVisit()) return true;
@@ -153,9 +154,22 @@ p.second.gcVisit();
 return false;
 }
 
+bool QSortedSet::gcVisit () {
+if (QObject::gcVisit()) return true;
+sorter.gcVisit();
+for (const QV& item: set) const_cast<QV&>(item).gcVisit();
+return false;
+}
+
 bool QDictionaryIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
 map.gcVisit();
+return false;
+}
+
+bool QSortedSetIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+set.gcVisit();
 return false;
 }
 
@@ -219,7 +233,7 @@ boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapCla
 regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass,
+dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass, sortedSetClass, sortedSetMetaClass,
 #endif
 #ifndef NO_GRID
 gridClass, gridMetaClass,
