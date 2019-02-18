@@ -19,7 +19,7 @@ vector<QV> tuple;
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
 f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
-map->map[tuple[0]] = tuple.back();
+map->set(tuple[0], tuple.back());
 }
 f.returnValue(map);
 }
@@ -35,7 +35,7 @@ f.getObject<QSequence>(i).insertIntoVector(f, pairs, 0);
 for (QV& pair: pairs) {
 tuple.clear();
 pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
-map->map[tuple[0]] = tuple.back();
+map->set(tuple[0], tuple.back());
 }}
 f.returnValue(map);
 }
@@ -75,15 +75,32 @@ out += '}';
 f.returnValue(out);
 }
 
+static void dictionarySubscript (QFiber& f) {
+QDictionary& d = f.getObject<QDictionary>(0);
+auto it = d.get(f.at(1));
+f.returnValue(it==d.map.end()? QV() : it->second);
+}
+
+static void dictionarySubscriptSetter (QFiber& f) {
+f.getObject<QDictionary>(0) .set(f.at(1), f.at(2));
+f.returnValue(f.at(2));
+}
+
 static void dictionaryRemove (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
-auto it = map.map.find(f.at(i));
+auto it = map.get(f.at(i));
 if (it==map.map.end()) f.returnValue(QV());
 else {
 f.returnValue(it->second);
 map.map.erase(it);
 }}}
+
+static void dictionaryPut (QFiber& f) {
+QDictionary& map = f.getObject<QDictionary>(0);
+map.map.insert(make_pair(f.at(1), f.at(2)));
+f.returnValue(f.at(2));
+}
 
 static void dictionaryLowerBound (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
@@ -100,8 +117,8 @@ f.returnValue(it==map.map.end()? QV() : it->first);
 void QVM::initDictionaryType () {
 dictionaryClass
 ->copyParentMethods()
-BIND_L( [], { f.returnValue(f.getObject<QDictionary>(0) .get(f.at(1))); })
-BIND_L( []=, { f.returnValue(f.getObject<QDictionary>(0) .set(f.at(1), f.at(2))); })
+BIND_F( [], dictionarySubscript)
+BIND_F( []=, dictionarySubscriptSetter)
 BIND_F(in, dictionaryIn)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDictionary>(0).map.size())); })
 BIND_F(toString, dictionaryToString)
@@ -111,6 +128,7 @@ BIND_L(clear, { f.getObject<QDictionary>(0).map.clear(); })
 BIND_F(remove, dictionaryRemove)
 BIND_F(lower, dictionaryLowerBound)
 BIND_F(upper, dictionaryUpperBound)
+BIND_F(put, dictionaryPut)
 ;
 
 dictionaryMetaClass

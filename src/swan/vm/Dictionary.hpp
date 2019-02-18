@@ -7,17 +7,14 @@
 #include <map>
 
 struct QDictionary: QSequence {
-typedef std::map<QV, QV, QVBinaryPredicate> map_type; 
+typedef std::multimap<QV, QV, QVBinaryPredicate> map_type; 
 typedef map_type::iterator iterator;
 map_type map;
 QV sorter;
-QDictionary (QVM& vm, QV& sorter0): QSequence(vm.dictionaryClass), map(sorter0), sorter(sorter0) {}
-inline QV get (const QV& key) {
-auto it = map.find(key);
-if (it==map.end()) return QV();
-else return it->second;
-}
-inline QV& set (const QV& key, const QV& value) { return map[key] = value; }
+QDictionary (struct QVM& vm, QV& sorter0);
+iterator get (const QV& key);
+iterator getr (const QV& key);
+void set (const QV& key, const QV& value);
 virtual ~QDictionary () = default;
 virtual bool gcVisit () override;
 };
@@ -25,7 +22,7 @@ virtual bool gcVisit () override;
 struct QDictionaryIterator: QObject {
 QDictionary& map;
 QDictionary::iterator iterator;
-QDictionaryIterator (QVM& vm, QDictionary& m): QObject(vm.objectClass), map(m), iterator(m.map.begin()) {}
+QDictionaryIterator (QVM& vm, QDictionary& m);
 virtual bool gcVisit () override;
 virtual ~QDictionaryIterator() = default;
 };

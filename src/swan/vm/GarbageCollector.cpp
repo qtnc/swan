@@ -145,6 +145,7 @@ return false;
 
 bool QDictionary::gcVisit () {
 if (QObject::gcVisit()) return true;
+sorter.gcVisit();
 for (auto& p: map) {
 const_cast<QV&>(p.first) .gcVisit();
 p.second.gcVisit();
@@ -154,7 +155,6 @@ return false;
 
 bool QDictionaryIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
-map.sorter.gcVisit();
 map.gcVisit();
 return false;
 }
