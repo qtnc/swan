@@ -3,7 +3,7 @@ Here's a very quick reference of the standard library included with the language
 
 The following classes, objects, methods, functions, form the core part of the language.
 
-Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList, Grid.
+Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList/PriorityQueue/SortedSet, and Grid.
 Unless so disabled, they are always available in the CLI as well as when embedding Swan into your own C++ application.
 
 ## Bool: is Object
@@ -58,6 +58,7 @@ Methods:
 - clear: remove all entries from the dictionary
 - length: return the number of entries present in the dictionary
 - lower(key): returns the nearest key present in the dictionary that come after the key given, or return the argument given itself if it is present
+- put(key, value): inserts the given key/value pair in the dictionary regardless of if the key already exists; this breaks the uniqueness rule of the keys, it can be useful sometimes but do it with caution
 - remove(...keys): remove one or more keys from the dictionary
 - toString: return a string like "{a: 1, b: 2, c: 3}"
 - upper(key): returns the nearest key present in the dictionary that come after the key given
@@ -203,6 +204,24 @@ Methods:
 - toString: return a string representation of this object. If there is no more specific overload, the default toString of all objects return the type and the memory location where the object is, e.g. "Object@0xFFFD000012345678"
 - type: return the type of the object as Class object
 
+## PriorityQueu: is Sequence
+A priority queue stores items in heap order, allowing to quickly fetch the element with the highest priority (the greatest one according to the sorter), as well as to insert new elements while maintaining the heap order.
+It is generally faster than a sorted set, if you only need to access the greatest element, and don't care about the order of other items after the first one.
+Its downsides are that, removing elements other than the first greatest one may be slow, and elements aren't returned in their natural order when iterating through the queue.
+
+- Constructor: PriorityQueue(sorter=::<, ...items): construct a priority queue from a serie of items, sorting them by the sorter given
+- Operators: none
+
+Methods:
+
+- static PriorityQueue.of(sorter, ...sequences): create a priority queue from a serie of concatenated sequences
+- clear: remove all elements from the queue
+- first: return the first item  of the priority queue (the one with the greatest priority)
+- length: return the number of items present in the queue
+- pop: remove and return the first item (the one with the greatest priority)
+- push(...items): insert one or more items in the priority queue
+- remove(...items): remove one or more items from the priority queue. Be careful, this operation may be slow.
+
 ## Range: is Sequence
 A range, as its name says, denotes a range of numbers.
 Each range has a *start*, *end* and *step*. Ranges can be viewed as collections that efficiently contain any value `start + step*N` for any integral N N as long as the result is between *start* and *end*.
@@ -325,6 +344,30 @@ Methods:
 - length: return the number of elements present in the set
 - remove(...items): remove one or more items from the set
 - toString: return a string like "<1, 2, 3, 4, 5>"
+
+## SortedSet: is Sequence
+A sorted Set is a collection of items, in principle all of the same type (although nothing is enforced), where items are always kept in order.
+Normally, as with sets, items in a sorted set may only be present once, but the rule may be circumvented (do it with caution).
+Another characteristic of sets beside the uniqueness of held objects is their ability to make set opations: union, intersection, difference and symetric difference
+
+- Constructor: SortedSet(sorter=::<, ...items): construct a set from individual elements and sort them using the sorter given
+- Operators: `-, &, |, ^, in`
+- Comparison operators: ==, !=
+
+Methods: 
+
+- static SortedSet.of(sorter, sequences...): construct a sorted set from one or more concatenated sequences, sorting the items by the sorter given
+- add(...items, allowDuplicate=false): add one or more items. If allowDuplicate=true, then items are addded to the set regardless of they were already present; this breaks the uniqueness rule, it can be useful sometimes but do it with caution.
+- clear: empty the whole set
+- first: return the first (smallest) element of the set
+- lower(key): returns the nearest element present in the set that come after the key given, or return the argument given itself if it is present
+- last: return the last (largest) element of the set
+- length: return the number of elements present in the set
+- pop: remove and return the last (largest) element of the set
+- remove(...items): remove one or more items from the set
+- shift: remove and return the first (smallest) element of the set
+- toString: return a string like "<1, 2, 3, 4, 5>"
+- upper(key): returns the nearest element present in the set that come after the key given
 
 ## String: is Sequence
 A String holds an immutable sequence of UTF-8 characters.

@@ -92,6 +92,8 @@ dictionaryMetaClass = QClass::create(*this, classClass, classClass, "DictionaryM
 dictionaryClass = QClass::create(*this, dictionaryMetaClass, sequenceClass, "Dictionary", 0, -1);
 linkedListMetaClass = QClass::create(*this, classClass, classClass, "LinkedListMetaClass", 0, -1);
 linkedListClass = QClass::create(*this, linkedListMetaClass, sequenceClass, "LinkedList", 0, -1);
+priorityQueueMetaClass = QClass::create(*this, classClass, classClass, "PriorityQueueMetaClass", 0, -1);
+priorityQueueClass = QClass::create(*this, priorityQueueMetaClass, sequenceClass, "PriorityQueue", 0, -1);
 sortedSetMetaClass = QClass::create(*this, classClass, classClass, "SortedSetMetaClass", 0, -1);
 sortedSetClass = QClass::create(*this, sortedSetMetaClass, sequenceClass, "SortedSet", 0, -1);
 #endif
@@ -143,6 +145,7 @@ initBufferType();
 initLinkedListType();
 initDictionaryType();
 initSortedSetType();
+initPriorityQueueType();
 #endif
 
 #ifndef NO_REGEX

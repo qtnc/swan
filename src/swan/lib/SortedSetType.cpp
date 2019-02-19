@@ -112,6 +112,36 @@ auto it = set.set.upper_bound(f.at(1));
 f.returnValue(it==set.set.end()? QV() : *it);
 }
 
+static void setFirst (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+auto it = set.set.begin();
+f.returnValue(it!=set.set.end()? *it : QV());
+}
+
+static void setLast (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+auto it = set.set.end();
+f.returnValue(set.set.size()? *--it : QV());
+}
+
+static void setShift (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+auto it = set.set.begin();
+if (it==set.set.end()) f.returnValue(QV());
+else {
+f.returnValue(*it);
+set.set.erase(it);
+}}
+
+static void setPop (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+if (set.set.size()) {
+auto it = set.set.end();
+f.returnValue(*--it);
+set.set.erase(it);
+}
+else f.returnValue(QV());
+}
 
 static void setToString (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
@@ -139,6 +169,10 @@ BIND_F(add, setAdd)
 BIND_F(remove, setRemove)
 BIND_F(lower, setLowerBound)
 BIND_F(upper, setUpperBound)
+BIND_F(pop, setPop)
+BIND_F(shift, setShift)
+BIND_F(first, setFirst)
+BIND_F(last, setLast)
 BIND_F(in, setIn)
 BIND_F(==, setEquals)
 ;

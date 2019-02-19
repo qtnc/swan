@@ -136,6 +136,7 @@ return false;
 #ifndef NO_OPTIONAL_COLLECTIONS
 #include "LinkedList.hpp"
 #include "Dictionary.hpp"
+#include "PriorityQueue.hpp"
 #include "SortedSet.hpp"
 
 bool QLinkedList::gcVisit () {
@@ -158,6 +159,13 @@ bool QSortedSet::gcVisit () {
 if (QObject::gcVisit()) return true;
 sorter.gcVisit();
 for (const QV& item: set) const_cast<QV&>(item).gcVisit();
+return false;
+}
+
+bool QPriorityQueue::gcVisit () {
+if (QObject::gcVisit()) return true;
+sorter.gcVisit();
+for (const QV& item: data) const_cast<QV&>(item).gcVisit();
 return false;
 }
 
@@ -233,7 +241,7 @@ boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapCla
 regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass, sortedSetClass, sortedSetMetaClass,
+dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass, priorityQueueClass, priorityQueueMetaClass, sortedSetClass, sortedSetMetaClass,
 #endif
 #ifndef NO_GRID
 gridClass, gridMetaClass,
