@@ -12,7 +12,6 @@ void registerIO  (Swan::Fiber& f);
 void registerDate (Swan::Fiber& f);
 
 void printIntro () {
-println("_____2>>___________<<&__?>>_____________&>>_____________<<2___");
 println("Swan version 0.1.2019.2");
 println("Copyright (c) 2019, QuentinC ");
 println("For more info, go to http://github.com/qtnc/qscript");
@@ -54,7 +53,7 @@ fiber.callMethod("toString", 1);
 cout << fiber.getCString(-1) << endl;
 }
 fiber.pop();
-vm.garbageCollect();
+//vm.garbageCollect();
 code.clear();
 } 
 catch (Swan::CompilationException& ce) {
@@ -118,7 +117,7 @@ fiber.storeGlobal("argv");
 if (!expression.empty()) {
 fiber.loadString(expression, "<inline>");
 fiber.call(0);
-vm.garbageCollect();
+//vm.garbageCollect();
 }
 
 if (!inFile.empty()) {
@@ -131,7 +130,7 @@ else fiber.loadFile(inFile);
 fiber.call(0);
 exitCode = fiber.getOptionalNum(-1, 0);
 fiber.pop();
-vm.garbageCollect();
+//vm.garbageCollect();
 }
 
 if (compileOnly) for (auto& file: args) {

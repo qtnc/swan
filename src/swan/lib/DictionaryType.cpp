@@ -14,20 +14,23 @@ f.returnValue(it!=map.map.end());
 
 static void dictionaryInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
 QDictionary* map = new QDictionary(f.vm, sorter);
 vector<QV> tuple;
+f.returnValue(map);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
 f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
 map->set(tuple[0], tuple.back());
 }
-f.returnValue(map);
 }
 
 static void dictionaryFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV();
 if (sorter.isNull()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
 QDictionary* map = new QDictionary(f.vm, sorter);
+f.returnValue(map);
 vector<QV> pairs, tuple;
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 pairs.clear();
@@ -37,7 +40,6 @@ tuple.clear();
 pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
 map->set(tuple[0], tuple.back());
 }}
-f.returnValue(map);
 }
 
 static void dictionaryIterate (QFiber& f) {

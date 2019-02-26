@@ -22,6 +22,7 @@ std::vector<QCallFrame> callFrames;
 std::vector<QCatchPoint> catchPoints;
 std::vector<struct Upvalue*> openUpvalues;
 QVM& vm;
+QFiber* parentFiber;
 Mutex mutex;
 FiberState state;
 

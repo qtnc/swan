@@ -163,7 +163,9 @@ auto it = vm.imports.find(finalFile);
 if (it!=vm.imports.end()) push(it->second);
 else {
 vm.imports[finalFile] = true;
+try {
 loadFile(finalFile);
 call(0);
 vm.imports[finalFile] = at(-1);
+} catch (...) { vm.imports.erase(finalFile); throw; }
 }}

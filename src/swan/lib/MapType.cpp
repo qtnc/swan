@@ -11,17 +11,18 @@ f.returnValue(it!=map.map.end());
 
 static void mapInstantiate (QFiber& f) {
 QMap* map = new QMap(f.vm);
+f.returnValue(map);
 vector<QV> tuple;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
 f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
 map->map[tuple[0]] = tuple.back();
 }
-f.returnValue(map);
 }
 
 static void mapFromSequence (QFiber& f) {
 QMap* map = new QMap(f.vm);
+f.returnValue(map);
 vector<QV> pairs, tuple;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 pairs.clear();
@@ -31,7 +32,6 @@ tuple.clear();
 pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
 map->map[tuple[0]] = tuple.back();
 }}
-f.returnValue(map);
 }
 
 static void mapIterate (QFiber& f) {

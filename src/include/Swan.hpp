@@ -35,6 +35,7 @@ struct CompilationException: ScriptException {
 bool incomplete;
 inline bool isIncomplete () { return incomplete; }
 inline CompilationException (bool ic): ScriptException("Compilation failed"), incomplete(ic) {}
+inline CompilationException (const std::string& msg, bool ic): ScriptException(msg), incomplete(ic) {}
 ~CompilationException () = default;
 };
 
@@ -276,8 +277,11 @@ VM& operator= (VM&&) = delete;
 
 virtual Fiber& getActiveFiber () = 0;
 
+virtual const PathResolverFn& getPathResolver () = 0;
 virtual void setPathResolver (const PathResolverFn& fn) = 0;
+virtual const FileLoaderFn& getFileLoader () = 0;
 virtual void setFileLoader (const FileLoaderFn& fn) = 0;
+virtual const CompilationMessageFn& getCompilationMessageReceiver () = 0;
 virtual void setCompilationMessageReceiver (const CompilationMessageFn& fn) = 0;
 virtual int getOption (Option opt) = 0;
 virtual void setOption (Option opt, int value = 1) = 0;

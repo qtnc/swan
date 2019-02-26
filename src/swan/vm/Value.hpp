@@ -40,6 +40,7 @@ inline bool isNativeFunction () const { return hasTag(QV_TAG_NATIVE_FUNCTION); }
 inline bool isBoundFunction () const { return hasTag(QV_TAG_BOUND_FUNCTION); }
 inline bool isGenericSymbolFunction () { return hasTag(QV_TAG_GENERIC_SYMBOL_FUNCTION); }
 inline bool isFiber () const { return hasTag(QV_TAG_FIBER); }
+inline bool isCallable () { return isClosure() || isNativeFunction() || isFiber() || isGenericSymbolFunction() || isBoundFunction() || isNormalFunction(); }
 inline bool isString () const { return hasTag(QV_TAG_STRING); }
 inline bool isOpenUpvalue () const { return hasTag(QV_TAG_OPEN_UPVALUE); }
 

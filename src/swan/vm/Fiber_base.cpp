@@ -3,9 +3,10 @@
 
 thread_local QFiber* QFiber::curFiber = nullptr;
 
-QFiber::QFiber (QVM& vm0): QSequence(vm0.fiberClass), vm(vm0), state(FiberState::INITIAL)
-, stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8) 
-{
+QFiber::QFiber (QVM& vm0): QSequence(vm0.fiberClass), 
+vm(vm0), state(FiberState::INITIAL), parentFiber(nullptr)
+, stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8)
+ {
 stack.reserve(8);
 callFrames.reserve(4);
 }

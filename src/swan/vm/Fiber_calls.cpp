@@ -142,6 +142,7 @@ QClosure& closure = *f.callFrames.back().closure;
 f.stack.insert(f.stack.end(), stack.end() -nArgs, stack.end());
 stack.erase(stack.end() -nArgs, stack.end());
 f.adjustArguments(nArgs, closure.func.nArgs, closure.func.vararg);
+f.parentFiber = curFiber;
 curFiber = &f;
 f.run();
 curFiber = this;
@@ -152,6 +153,7 @@ f.push(top());
 stack.erase(stack.end() -nArgs, stack.end());
 }
 else f.push(QV());
+f.parentFiber = curFiber;
 curFiber = &f;
 f.run();
 curFiber = this;

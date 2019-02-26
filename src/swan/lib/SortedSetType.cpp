@@ -5,20 +5,22 @@ using namespace std;
 
 static void setInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
 QSortedSet* set = new QSortedSet(f.vm, sorter);
-for (int i=2, n=f.getArgCount(); i<n; i++) set->add(f.at(i));
 f.returnValue(set);
+for (int i=2, n=f.getArgCount(); i<n; i++) set->add(f.at(i));
 }
 
 static void setFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
 QSortedSet* set = new QSortedSet(f.vm, sorter);
+f.returnValue(set);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 vector<QV> v;
 f.getObject<QSequence>(i).insertIntoVector(f, v, 0);
 for (auto& x: v) set->add(x);
 }
-f.returnValue(set);
 }
 
 static void setAdd (QFiber& f) {
@@ -38,29 +40,29 @@ f.returnValue(it!=set.set.end());
 static void setUnion (QFiber& f) {
 QSortedSet &set1 = f.getObject<QSortedSet>(0), &set2 = f.getObject<QSortedSet>(1);
 QSortedSet* result = new QSortedSet(f.vm, set1.sorter);
-set_union(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 f.returnValue(result);
+set_union(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 }
 
 static void setIntersection (QFiber& f) {
 QSortedSet &set1 = f.getObject<QSortedSet>(0), &set2 = f.getObject<QSortedSet>(1);
 QSortedSet* result = new QSortedSet(f.vm, set1.sorter);
-set_intersection(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 f.returnValue(result);
+set_intersection(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 }
 
 static void setDifference (QFiber& f) {
 QSortedSet &set1 = f.getObject<QSortedSet>(0), &set2 = f.getObject<QSortedSet>(1);
 QSortedSet* result = new QSortedSet(f.vm, set1.sorter);
-set_difference(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 f.returnValue(result);
+set_difference(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 }
 
 static void setSymetricDifference (QFiber& f) {
 QSortedSet &set1 = f.getObject<QSortedSet>(0), &set2 = f.getObject<QSortedSet>(1);
 QSortedSet* result = new QSortedSet(f.vm, set1.sorter);
-set_symmetric_difference(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 f.returnValue(result);
+set_symmetric_difference(set1.set.begin(), set1.set.end(), set2.set.begin(), set2.set.end(), inserter(result->set, result->set.begin()), set1.set.key_comp());
 }
 
 static void setRemove (QFiber& f) {

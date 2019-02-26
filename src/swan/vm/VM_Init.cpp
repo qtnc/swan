@@ -38,7 +38,7 @@ return boost::join(cur, "/");
 
 static string defaultFileLoader (const string& filename) {
 ifstream in(filename, ios::binary);
-if (!in) throw std::runtime_error(format("File not found: %s", filename));
+if (!in) QFiber::curFiber ->runtimeError("Couldn't open file: %s", filename);
 ostringstream out(ios::binary);
 out << in.rdbuf();
 string s = out.str();
@@ -48,6 +48,9 @@ return s;
 
 QVM::QVM ():
 firstGCObject(nullptr),
+gcAliveCount(0),
+gcTreshhold(140),
+gcTreshholdFactor(200),
 pathResolver(defaultPathResolver),
 fileLoader(defaultFileLoader),
 messageReceiver(defaultMessageReceiver)

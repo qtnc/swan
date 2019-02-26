@@ -4,7 +4,7 @@ using namespace std;
 void stringFormat (QFiber& f);
 
 static void import_  (QFiber& f) {
-string curFile = f.getString(0), requestedFile = f.getString(1);
+string curFile = f.getString(0), requestedFile = f.ensureString(1)->asString();
 f.import(curFile, requestedFile);
 f.returnValue(f.at(-1));
 }

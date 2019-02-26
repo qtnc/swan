@@ -91,6 +91,7 @@ LOCK_SCOPE(mutex)
 for (QV& val: stack) val.gcVisit();
 for (auto& cf: callFrames) if (cf.closure) cf.closure->gcVisit();
 for (auto upv: openUpvalues) if (upv) upv->gcVisit();
+if (parentFiber) parentFiber->gcVisit();
 return false;
 }
 
@@ -225,7 +226,7 @@ for (auto& obj: toDelete) delete obj;
 
 void QVM::garbageCollect () {
 LOCK_SCOPE(globalMutex)
-//println("Starting GC !");
+//println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount, gcTreshhold);
 
 int count = 0;
 GCOIterator it(firstGCObject);
@@ -236,18 +237,21 @@ unmark(*it);
 //println("%d allocated objects found", count);
 
 vector<QObject*> roots = { 
-boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass,
+boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass
 #ifndef NO_REGEX
-regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass,
+, regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-dictionaryClass, linkedListClass, dictionaryMetaClass, linkedListMetaClass, priorityQueueClass, priorityQueueMetaClass, sortedSetClass, sortedSetMetaClass,
+, dictionaryClass, linkedListClass, priorityQueueClass, sortedSetClass
 #endif
 #ifndef NO_GRID
-gridClass, gridMetaClass,
+, gridClass
 #endif
 #ifndef NO_RANDOM
-randomClass, randomMetaClass,
+, randomClass
+#endif
+#ifndef NO_BUFFER
+, bufferClass
 #endif
 };
 for (QObject* obj: roots) obj->gcVisit();
@@ -267,7 +271,7 @@ if (m) used++;
 else collectable++;
 count++;
 QV val(&*it);
-//println("%d. %s, %s", count, val.print(), marked(*it)?"used":"collectable");
+//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*it)?"used":"collectable");
 if (!m) {
 if (prev) prev->next = (*it).next;
 toDelete.push_back(&*it);
@@ -277,6 +281,11 @@ if (!prev) firstGCObject = &*it;
 prev = &*it;
 }
 }
-for (auto obj: toDelete) delete obj;
-//println("%d used objects, %d collectable objects", used, collectable);
+for (auto obj: toDelete) {
+delete obj;
+}
+//println(std::cerr, "GC Stats: %d objects ammong which %d used (%d%%) and %d collectable (%d%%)", count, used, 100*used/count, collectable, 100*collectable/count);
+gcAliveCount = used;
+gcTreshhold = std::max(gcTreshhold, gcAliveCount * gcTreshholdFactor / 100);
+//println(std::cerr, "Next gcAliveCount=%d, gcTreshhold=%d", gcAliveCount, gcTreshhold);
 }

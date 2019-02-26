@@ -197,11 +197,11 @@ p = info[p] .parent;
 if (asDirList && count>0) path.push_back(point(count, dir));
 reverse(path.begin(), path.end());
 QList* list = new QList(f.vm);
+f.returnValue(list);
 for (auto& p: path) {
 QV t[] = { static_cast<double>(p.x), static_cast<double>(p.y) };
 list->data.push_back(QTuple::create(f.vm, 2, t));
 }
-f.returnValue(list);
 }
 
 static void gridTestDirectPath (QFiber& f) {

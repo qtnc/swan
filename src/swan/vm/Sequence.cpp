@@ -7,15 +7,11 @@
 using namespace std;
 
 void QSequence::insertIntoVector (QFiber& f, std::vector<QV>& list, int start) {
-vector<QV> toInsert;
-iterateSequence(f, QV(this), [&](const QV& x){ toInsert.push_back(x); });
-if (!toInsert.empty()) list.insert(list.begin()+start, toInsert.begin(), toInsert.end());
+iterateSequence(f, QV(this), [&](const QV& x){ list.insert(list.begin()+start++, x); });
 }
 
 void QSequence::insertIntoSet (QFiber& f, QSet& set) {
-vector<QV> toInsert;
-iterateSequence(f, QV(this), [&](const QV& x){ toInsert.push_back(x); });
-if (!toInsert.empty()) set.set.insert(toInsert.begin(), toInsert.end());
+iterateSequence(f, QV(this), [&](const QV& x){ set.set.insert(x); });
 }
 
 void QSequence::join (QFiber& f, const string& delim, string& re) {

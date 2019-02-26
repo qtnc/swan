@@ -52,6 +52,7 @@ LOCK_SCOPE(vm.globalMutex)
 vm.fiberThreads.push_back(&curFiber);
 }
 LOCK_SCOPE(mutex)
+//println(std::cerr, "Running fiber: parent=%s, cur=%s", (parentFiber? QV(parentFiber, QV_TAG_FIBER) : QV()).print(), QV(this, QV_TAG_FIBER).print() );
 curFiber = this;
 state = FiberState::RUNNING;
 auto frame = callFrames.back();

@@ -26,16 +26,16 @@ unordered_set_difference(union_, intersection, result);
 static void setInstantiate (QFiber& f) {
 int n = f.getArgCount() -1;
 QSet* set = new QSet(f.vm);
-if (n>0) set->set.insert(&f.at(1), &f.at(1) +n);
 f.returnValue(set);
+if (n>0) set->set.insert(&f.at(1), &f.at(1) +n);
 }
 
 static void setFromSequence (QFiber& f) {
 QSet* set = new QSet(f.vm);
+f.returnValue(set);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 f.getObject<QSequence>(i).insertIntoSet(f, *set);
 }
-f.returnValue(set);
 }
 
 static void setAdd (QFiber& f) {
@@ -53,29 +53,29 @@ f.returnValue(it!=set.set.end());
 static void setUnion (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
 QSet* result = new QSet(f.vm);
-unordered_set_union(set1.set, set2.set, result->set);
 f.returnValue(result);
+unordered_set_union(set1.set, set2.set, result->set);
 }
 
 static void setIntersection (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
 QSet* result = new QSet(f.vm);
-unordered_set_intersection(set1.set, set2.set, result->set);
 f.returnValue(result);
+unordered_set_intersection(set1.set, set2.set, result->set);
 }
 
 static void setDifference (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
 QSet* result = new QSet(f.vm);
-unordered_set_difference(set1.set, set2.set, result->set);
 f.returnValue(result);
+unordered_set_difference(set1.set, set2.set, result->set);
 }
 
 static void setSymetricDifference (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
 QSet* result = new QSet(f.vm);
-unordered_set_symetric_difference(set1.set, set2.set, result->set);
 f.returnValue(result);
+unordered_set_symetric_difference(set1.set, set2.set, result->set);
 }
 
 static void setRemove (QFiber& f) {

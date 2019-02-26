@@ -15,10 +15,8 @@ QObject(f.vm.objectClass), fiber(&f), value(QV(static_cast<uint64_t>(QV_TAG_OPEN
 
 QObject::QObject (QClass* tp):
 type(tp), next(nullptr) {
-if (type && &type->vm) {
-next = type->vm.firstGCObject;
-type->vm.firstGCObject = this;
-}}
+if (type && &type->vm) type->vm.addToGC(this);
+}
 
 QFunction::QFunction (QVM& vm): QObject(vm.functionClass), nArgs(0), vararg(false)  {}
 
@@ -34,5 +32,14 @@ QObject(vm.functionClass), object(o), method(m) {}
 QForeignInstance::~QForeignInstance () {
 QForeignClass* cls = static_cast<QForeignClass*>(type);
 if (cls->destructor) cls->destructor(userData);
+}
+
+void QVM::addToGC (QObject* obj) {
+LOCK_SCOPE(globalMutex)
+if (gcAliveCount++ >= gcTreshhold) {
+garbageCollect();
+}
+obj->next = firstGCObject;
+firstGCObject = obj;
 }
 

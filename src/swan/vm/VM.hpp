@@ -24,6 +24,7 @@ FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 Mutex globalMutex;
 QObject* firstGCObject;
+uint64_t gcAliveCount, gcTreshhold, gcTreshholdFactor;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
 QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
 #ifndef NO_BUFFER
@@ -51,6 +52,7 @@ int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
+void addToGC (QObject* obj);
 
 void initBaseTypes();
 void initNumberType();
@@ -85,8 +87,11 @@ void initMathFunctions();
 virtual void garbageCollect () final override;
 virtual void reset () final override;
 
+virtual inline const PathResolverFn& getPathResolver () final override { return pathResolver; }
 virtual inline void setPathResolver (const PathResolverFn& fn) final override { pathResolver=fn; }
+virtual inline const FileLoaderFn& getFileLoader () final override { return fileLoader; }
 virtual inline void setFileLoader (const FileLoaderFn& fn) final override { fileLoader=fn; }
+virtual inline const CompilationMessageFn& getCompilationMessageReceiver () final override { return messageReceiver; }
 virtual inline void setCompilationMessageReceiver (const CompilationMessageFn& fn) final override { messageReceiver = fn; }
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;

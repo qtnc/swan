@@ -19,5 +19,4 @@ template<class... A> void QFiber::runtimeError (const char* msg, const A&... arg
 throw std::runtime_error(format(msg, args...));
 }
 
-
 #endif

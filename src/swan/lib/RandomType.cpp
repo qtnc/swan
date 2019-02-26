@@ -63,8 +63,8 @@ if (count>1) {
 vector<QV> tmp = l.data;
 shuffle(tmp.begin(), tmp.end(), r.rand);
 QList* re = new QList(f.vm);
-for (int i=0, n=tmp.size(); i<count && i<n; i++) re->data.push_back(tmp[i]);
 f.returnValue(re);
+for (int i=0, n=tmp.size(); i<count && i<n; i++) re->data.push_back(tmp[i]);
 } 
 else if (f.getArgCount()>=2 && !f.at(-1).isInstanceOf(f.vm.randomClass)) {
 vector<double> weights;

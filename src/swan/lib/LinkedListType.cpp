@@ -6,8 +6,8 @@ using namespace std;
 static void linkedListInstantiate (QFiber& f) {
 int n = f.getArgCount() -1;
 QLinkedList* list = new QLinkedList(f.vm);
-if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 f.returnValue(list);
+if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 }
 
 static void linkedListIterate (QFiber& f) {
@@ -78,12 +78,12 @@ list.data.erase(it, list.data.end());
 
 static void linkedListFromSequence (QFiber& f) {
 QLinkedList* list = new QLinkedList(f.vm);
+f.returnValue(list);
 vector<QV> v;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 f.getObject<QSequence>(i).insertIntoVector(f, v, v.size());
 }
 list->data.insert(list->data.end(), v.begin(), v.end());
-f.returnValue(list);
 }
 
 static void linkedListToString (QFiber& f) {
