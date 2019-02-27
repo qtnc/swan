@@ -20,6 +20,7 @@ callSymbol(toStringSymbol, 1);
 QString* re = at(-1).asObject<QString>();
 pop();
 popCppCallFrame();
+val = re;
 return re;
 }}
 

@@ -74,7 +74,7 @@ return false;
 bool QClosure::gcVisit () {
 if (QObject::gcVisit()) return true;
 func.gcVisit();
-for (int i=0, n=func.upvalues.size(); i<n; i++) upvalues[i]->value.gcVisit();
+for (int i=0, n=func.upvalues.size(); i<n; i++) upvalues[i]->gcVisit();
 return false;
 }
 
@@ -224,6 +224,18 @@ while(it.hasNext())toDelete.push_back(&*it);
 for (auto& obj: toDelete) delete obj;
 }
 
+static QV makeqv (QObject* obj) {
+#define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
+T(QClosure, QV_TAG_CLOSURE)
+T(QFiber, QV_TAG_FIBER)
+T(BoundFunction, QV_TAG_BOUND_FUNCTION)
+T(QFunction, QV_TAG_NORMAL_FUNCTION)
+T(Upvalue, QV_TAG_OPEN_UPVALUE)
+T(QString, QV_TAG_STRING)
+#undef T
+return obj;
+}
+
 void QVM::garbageCollect () {
 LOCK_SCOPE(globalMutex)
 //println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount, gcTreshhold);
@@ -234,7 +246,7 @@ while(it.hasNext()){
 count++;
 unmark(*it);
 }
-//println("%d allocated objects found", count);
+//println(std::cerr, "%d allocated objects found", count);
 
 vector<QObject*> roots = { 
 boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass
@@ -270,7 +282,7 @@ bool m = marked(*it);
 if (m) used++;
 else collectable++;
 count++;
-QV val(&*it);
+//QV val = makeqv(&*it);
 //println(std::cerr, "%d. %s, %s", count, val.print(), marked(*it)?"used":"collectable");
 if (!m) {
 if (prev) prev->next = (*it).next;

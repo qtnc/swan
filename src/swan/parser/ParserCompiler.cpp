@@ -2,6 +2,7 @@
 #include "Compiler.hpp"
 #include "../vm/ExtraAlgorithms.hpp"
 #include "../vm/VM.hpp"
+#include "../vm/Upvalue.hpp"
 #include "../vm/NatSort.hpp"
 #include "../../include/cpprintf.hpp"
 #include<cmath>
@@ -2216,6 +2217,10 @@ return left;
 else left = right;
 }}
 
+static string printFuncInfo (const QFunction& func) {
+return format("%s (arity=%d, consts=%d, upvalues=%d, bc=%d, file=%s)", func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size(), func.file);
+}
+
 string QV::print () const {
 if (isNull()) return ("null");
 else if (isTrue()) return ("true");
@@ -2223,8 +2228,9 @@ else if (isFalse()) return ("false");
 else if (isNum()) return format("%.14G", d);
 else if (isString()) return ("\"") + asString() + ("\"");
 else if (isNativeFunction()) return format("%s@%#0$16llX", ("NativeFunction"), i);
-else if (isNormalFunction()) return format("%s@%#0$16llX", ("NormalFunction"), i);
-else if (isClosure()) return format("%s@%#0$16llX", ("Closure"), i);
+else if (isNormalFunction()) return format("%s@%#0$16llX: %s", ("NormalFunction"), i, printFuncInfo(*asObject<QFunction>()));
+else if (isClosure()) return format("%s@%#0$16llX: %s", ("Closure"), i, printFuncInfo(asObject<QClosure>()->func));
+else if (isOpenUpvalue()) return format("%s@%#0$16llX=>%s", ("Upvalue"), i, asPointer<Upvalue>()->get().print() );
 else if (i==QV_VARARG_MARK) return "<VarArgMark>"; 
 else {
 QObject* obj = asObject<QObject>();

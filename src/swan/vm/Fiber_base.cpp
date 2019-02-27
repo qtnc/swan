@@ -4,11 +4,12 @@
 thread_local QFiber* QFiber::curFiber = nullptr;
 
 QFiber::QFiber (QVM& vm0): QSequence(vm0.fiberClass), 
-vm(vm0), state(FiberState::INITIAL), parentFiber(nullptr)
-, stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8)
+vm(vm0), state(FiberState::INITIAL), 
+parentFiber(nullptr)
+, stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8000)
  {
-stack.reserve(8);
-callFrames.reserve(4);
+stack.reserve(8000);
+callFrames.reserve(40);
 }
 
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
