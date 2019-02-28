@@ -574,57 +574,12 @@ vector<QToken> loopVariables;
 shared_ptr<Expression> inExpression;
 shared_ptr<Statement> loopStatement;
 bool loopVarIsConst;
-ForStatement (const vector<QToken>& lv, shared_ptr<Expression> ine, shared_ptr<Statement> lst, bool lvc): loopVariables(lv), inExpression(ine), loopStatement(lst), loopVarIsConst(lvc)  {}
+QTokenType destructuring;
+ForStatement (): loopVariables(), inExpression(nullptr), loopStatement(nullptr), loopVarIsConst(false), destructuring(T_END) {}
 shared_ptr<Statement> optimizeStatement () { inExpression=inExpression->optimize(); if (loopStatement) loopStatement=loopStatement->optimizeStatement(); return shared_this(); }
 const QToken& nearestToken () { return loopVariables[0]; }
-void compile (QCompiler& compiler) {
-compiler.pushScope();
-int iteratorSlot = compiler.findLocalVariable({ T_NAME, ("#iterator"), 9, QV()}, LV_NEW | LV_CONST);
-int keySlot = compiler.findLocalVariable({ T_NAME, ("#key"), 4, QV() }, LV_NEW);
-int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
-int iterateSymbol = compiler.vm.findMethodSymbol(("iterate"));
-int iteratorValueSymbol = compiler.vm.findMethodSymbol(("iteratorValue"));
-int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
-compiler.writeDebugLine(inExpression->nearestToken());
-inExpression->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
-compiler.writeOp(OP_LOAD_NULL);
-compiler.pushLoop();
-compiler.pushScope();
-vector<int> valueSlots;
-compiler.writeDebugLine(loopVariables[0]);
-for (auto& loopVariable: loopVariables) valueSlots.push_back(compiler.findLocalVariable(loopVariable, LV_NEW | (loopVarIsConst? LV_CONST : 0)));
-int loopStart = compiler.writePosition();
-compiler.loops.back().condPos = compiler.writePosition();
-writeOpLoadLocal(compiler, iteratorSlot);
-writeOpLoadLocal(compiler, keySlot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iterateSymbol);
-writeOpStoreLocal(compiler, keySlot);
-compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
-writeOpLoadLocal(compiler, iteratorSlot);
-writeOpLoadLocal(compiler, keySlot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iteratorValueSymbol);
-if (valueSlots.size()>1) {
-for (int i=1; i<valueSlots.size(); i++) {
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, i);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-}
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, 0);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-writeOpStoreLocal(compiler, valueSlots[0]);
-compiler.writeOp(OP_POP);
-}
-compiler.writeDebugLine(loopStatement->nearestToken());
-loopStatement->compile(compiler);
-if (loopStatement->isExpression()) compiler.writeOp(OP_POP);
-compiler.popScope();
-compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
-compiler.loops.back().endPos = compiler.writePosition();
-compiler.popLoop();
-compiler.popScope();
-}
+void parseHead (QParser& parser);
+void compile (QCompiler& compiler);
 string print () {
 return ("for (") + string(loopVariables[0].start, loopVariables[0].length) + (" in ") + inExpression->print() + (") ") + loopStatement->print();
 }};
@@ -1480,21 +1435,26 @@ if (!elsePart) result = CR_INCOMPLETE;
 return make_shared<IfStatement>(condition, ifPart, elsePart);
 }
 
-shared_ptr<Statement> QParser::parseFor () {
-bool isConst = false;
-if (match(T_CONST)) isConst=true;
-else match(T_VAR);
-vector<QToken> names;
+void ForStatement::parseHead (QParser& parser) {
+if (parser.match(T_CONST)) loopVarIsConst = true;
+else parser.match(T_VAR);
+if (parser.matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring = static_cast<QTokenType>(parser.cur.type +1);
 do {
-consume(T_NAME, ("Expected loop variable name after 'for'"));
-names.push_back(cur);
-} while (match(T_COMMA));
-consume(T_IN, ("Expected 'in' after loop variable name"));
-shared_ptr<Expression> inExpression = parseExpression();
+parser.consume(T_NAME, ("Expected loop variable name after 'for'"));
+loopVariables.push_back(parser.cur);
+} while (parser.match(T_COMMA));
+if (destructuring!=T_END) parser.consume(destructuring, "Expecting close of destructuring variable declaration");
+parser.consume(T_IN, ("Expected 'in' after loop variable name"));
+inExpression = parser.parseExpression(P_COMPREHENSION);
+}
+
+shared_ptr<Statement> QParser::parseFor () {
+shared_ptr<ForStatement> forSta = make_shared<ForStatement>();
+forSta->parseHead(*this);
 match(T_COLON);
-shared_ptr<Statement> loopStatement = parseStatement();
-if (!loopStatement) result = CR_INCOMPLETE;
-return make_shared<ForStatement>(names, inExpression, loopStatement, isConst);
+forSta->loopStatement = parseStatement();
+if (!forSta->inExpression || !forSta->loopStatement) result = CR_INCOMPLETE;
+return forSta;
 }
 
 shared_ptr<Statement> QParser::parseWhile () {
@@ -2003,15 +1963,9 @@ skipNewlines();
 auto compr = make_shared<ComprehensionExpression>(loopExpr);
 do {
 skipNewlines();
-vector<QToken> loopVars;
-do {
-consume(T_NAME, ("Expected loop variable name after 'for'"));
-loopVars.push_back(cur);
-} while (match(T_COMMA));
-skipNewlines();
-consume(T_IN, ("Expected 'in' after loop variable name"));
-shared_ptr<Expression> inExpr = parseExpression(P_COMPREHENSION);
-compr->subCompr.push_back(make_shared<ForStatement>(loopVars, inExpr, nullptr, true));
+shared_ptr<ForStatement> forSta = make_shared<ForStatement>();
+forSta->parseHead(*this);
+compr->subCompr.push_back(forSta);
 } while(match(T_FOR));
 if (match(T_IF)) compr->filterExpression = parseExpression(P_COMPREHENSION);
 return compr;
@@ -2256,6 +2210,67 @@ loopExpression=loopExpression->optimize();
 for (auto& e: subCompr) e=static_pointer_cast<ForStatement>(e->optimizeStatement());
 if (filterExpression) filterExpression=filterExpression->optimize(); 
 return shared_this(); 
+}
+
+void ForStatement::compile (QCompiler& compiler) {
+compiler.pushScope();
+int iteratorSlot = compiler.findLocalVariable({ T_NAME, ("#iterator"), 9, QV()}, LV_NEW | LV_CONST);
+int keySlot = compiler.findLocalVariable({ T_NAME, ("#key"), 4, QV() }, LV_NEW);
+int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
+int iterateSymbol = compiler.vm.findMethodSymbol(("iterate"));
+int iteratorValueSymbol = compiler.vm.findMethodSymbol(("iteratorValue"));
+int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
+compiler.writeDebugLine(inExpression->nearestToken());
+inExpression->compile(compiler);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
+compiler.writeOp(OP_LOAD_NULL);
+compiler.pushLoop();
+compiler.pushScope();
+vector<int> valueSlots;
+compiler.writeDebugLine(loopVariables[0]);
+for (auto& loopVariable: loopVariables) valueSlots.push_back(compiler.findLocalVariable(loopVariable, LV_NEW | (loopVarIsConst? LV_CONST : 0)));
+int loopStart = compiler.writePosition();
+compiler.loops.back().condPos = compiler.writePosition();
+writeOpLoadLocal(compiler, iteratorSlot);
+writeOpLoadLocal(compiler, keySlot);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iterateSymbol);
+writeOpStoreLocal(compiler, keySlot);
+compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
+writeOpLoadLocal(compiler, iteratorSlot);
+writeOpLoadLocal(compiler, keySlot);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iteratorValueSymbol);
+if (destructuring==T_RIGHT_PAREN || destructuring==T_RIGHT_BRACKET || (destructuring==T_END && valueSlots.size()>1)) {
+for (int i=1; i<valueSlots.size(); i++) {
+writeOpLoadLocal(compiler, valueSlots[0]);
+compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, i);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
+}
+writeOpLoadLocal(compiler, valueSlots[0]);
+compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, 0);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
+writeOpStoreLocal(compiler, valueSlots[0]);
+compiler.writeOp(OP_POP);
+}
+else if (destructuring==T_RIGHT_BRACE) {
+for (int i=1; i<valueSlots.size() && i<loopVariables.size(); i++) {
+writeOpLoadLocal(compiler, valueSlots[0]);
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QString::create(compiler.parser.vm, loopVariables[i].start, loopVariables[i].length)));
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
+}
+writeOpLoadLocal(compiler, valueSlots[0]);
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QString::create(compiler.parser.vm, loopVariables[0].start, loopVariables[0].length)));
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
+writeOpStoreLocal(compiler, valueSlots[0]);
+compiler.writeOp(OP_POP);
+}
+compiler.writeDebugLine(loopStatement->nearestToken());
+loopStatement->compile(compiler);
+if (loopStatement->isExpression()) compiler.writeOp(OP_POP);
+compiler.popScope();
+compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
+compiler.loops.back().endPos = compiler.writePosition();
+compiler.popLoop();
+compiler.popScope();
 }
 
 void ComprehensionExpression::compile (QCompiler  & compiler) {
