@@ -97,8 +97,8 @@ inline void popCppCallFrame () { callFrames.pop_back(); }
 inline QString* ensureString (QV& val);
 inline QString* ensureString (int i) { return ensureString(at(i)); }
 
-virtual void lock () final override { mutex.lock(); }
-virtual void unlock () final override { mutex.unlock(); }
+virtual void lock () final override { mutex.lock(); if (parentFiber) parentFiber->lock(); }
+virtual void unlock () final override { mutex.unlock(); if (parentFiber) parentFiber->unlock(); }
 virtual void import (const std::string& baseFile, const std::string& requestedFile) final override;
 virtual void storeImport (const std::string& name) final override;
 virtual int loadString  (const std::string& source, const std::string& name="") final override;

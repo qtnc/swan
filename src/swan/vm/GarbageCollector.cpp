@@ -13,22 +13,6 @@
 #include<algorithm>
 using namespace std;
 
-struct GCOIterator {
-QObject* cur;
-bool first;
-GCOIterator (QObject* initial): cur(initial), first(true)  {}
-inline QObject& operator* () { return *cur; }
-bool hasNext () {
-auto old = cur;
-if (first) first=false;
-else cur = reinterpret_cast<QObject*>( reinterpret_cast<uintptr_t>(cur->next) &~1 );
-if (cur && reinterpret_cast<uintptr_t>(cur) <= 0x1000) {
-print("Warning: cur=%#p, old=%#p: ", cur, old);
-println("%s", QV(old).print());
-}
-return !!cur;
-}};
-
 static inline bool marked (QObject& obj) {
 return reinterpret_cast<uintptr_t>(obj.next) &1;
 }
@@ -41,6 +25,10 @@ return false;
 
 static inline void unmark (QObject& obj) {
 obj.next = reinterpret_cast<QObject*>( reinterpret_cast<uintptr_t>(obj.next) &~1);
+}
+
+static inline QObject* to_ptr (QObject* p) {
+return reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(p) &~3);
 }
 
 bool QObject::gcVisit () {
@@ -217,13 +205,6 @@ return false;
 }
 #endif
 
-QVM::~QVM () {
-GCOIterator it(firstGCObject);
-vector<QObject*> toDelete;
-while(it.hasNext())toDelete.push_back(&*it);
-for (auto& obj: toDelete) delete obj;
-}
-
 static QV makeqv (QObject* obj) {
 #define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
 T(QClosure, QV_TAG_CLOSURE)
@@ -237,16 +218,12 @@ return obj;
 }
 
 void QVM::garbageCollect () {
-LOCK_SCOPE(globalMutex)
-//println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount, gcTreshhold);
+//LOCK_SCOPE(globalMutex)
+//println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount.load(std::memory_order_relaxed), gcTreshhold);
 
-int count = 0;
-GCOIterator it(firstGCObject);
-while(it.hasNext()){
-count++;
-unmark(*it);
-}
-//println(std::cerr, "%d allocated objects found", count);
+auto count = gcAliveCount.exchange(0);
+auto initial = to_ptr(firstGCObject.exchange(nullptr));
+for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
 
 vector<QObject*> roots = { 
 boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass
@@ -272,32 +249,28 @@ for (QV& kh: keptHandles) kh.gcVisit();
 for (auto& im: imports) im.second.gcVisit();
 for (auto fib: fiberThreads) if (*fib) (*fib)->gcVisit();
 
-vector<QObject*> toDelete;
-int used=0, collectable=0;
-count = 0;
-it = GCOIterator(firstGCObject);
 QObject* prev = nullptr;
-while(it.hasNext()){
-bool m = marked(*it);
-if (m) used++;
-else collectable++;
+size_t used=0, collectable=0;
+count = 0;
+for (QObject *it=initial, *ptr=to_ptr(it); ptr; ptr=to_ptr(it)) {
+//QV val = makeqv(&*ptr);
+//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*ptr)?"used":"collectable");
 count++;
-//QV val = makeqv(&*it);
-//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*it)?"used":"collectable");
-if (!m) {
-if (prev) prev->next = (*it).next;
-toDelete.push_back(&*it);
+if (marked(*ptr)) {
+if (!prev) initial=ptr;
+prev=ptr;
+it = ptr->next;
+used++;
 }
-else { 
-if (!prev) firstGCObject = &*it;
-prev = &*it;
+else {
+if (prev) prev->next = ptr->next;
+it = ptr->next;
+delete ptr;
+collectable++;
 }
-}
-for (auto obj: toDelete) {
-delete obj;
 }
 //println(std::cerr, "GC Stats: %d objects ammong which %d used (%d%%) and %d collectable (%d%%)", count, used, 100*used/count, collectable, 100*collectable/count);
-gcAliveCount = used;
-gcTreshhold = std::max(gcTreshhold, gcAliveCount * gcTreshholdFactor / 100);
-//println(std::cerr, "Next gcAliveCount=%d, gcTreshhold=%d", gcAliveCount, gcTreshhold);
+prev->next = firstGCObject.exchange(initial);
+gcAliveCount.fetch_add(count, std::memory_order_relaxed);
+gcTreshhold = std::max(gcTreshhold, count * gcTreshholdFactor / 100);
 }

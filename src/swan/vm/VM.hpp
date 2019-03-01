@@ -23,8 +23,9 @@ PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 Mutex globalMutex;
-QObject* firstGCObject;
-uint64_t gcAliveCount, gcTreshhold, gcTreshholdFactor;
+std::atomic<QObject*> firstGCObject;
+std::atomic<std::size_t> gcAliveCount;
+size_t gcTreshhold, gcTreshholdFactor;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
 QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
 #ifndef NO_BUFFER
@@ -51,9 +52,11 @@ virtual QFiber& getActiveFiber () final override;
 int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
-QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
+QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign, QV& storeval);
+
 void addToGC (QObject* obj);
 
+void initBuiltInCode();
 void initBaseTypes();
 void initNumberType();
 void initSequenceType();
@@ -86,6 +89,8 @@ void initMathFunctions();
 
 virtual void garbageCollect () final override;
 virtual void reset () final override;
+void init ();
+void deinit ();
 
 virtual inline const PathResolverFn& getPathResolver () final override { return pathResolver; }
 virtual inline void setPathResolver (const PathResolverFn& fn) final override { pathResolver=fn; }

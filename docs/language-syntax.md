@@ -477,12 +477,17 @@ Except that the *variable* is no longer available after the closing brace. An op
 
 
 ## Miscellaneous syntax suggars
+### Implicit map 
 When the last parameter of a function is a map, you can omit the encosing braces when calling it:
 
 `func(1, 2, 3, x: 4, y: 5, z: 6)`  
 is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
+This may be used to simulates named function parameters to some extent, in combination with destructuring parameters (see below).
+
+
+### Destructuring variable declaration
 You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
 Note that, unlike JavaScript, *recursive destructuration* is impossible; in Swan it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read, so it is anyway better avoided.
 
@@ -508,4 +513,9 @@ let f = $({one=1, two=2, three=3}) {
 return one+two+three
 }
 f(three: 333, two: 222, one: 111) # 666
+
+# You can also use destructuration in for loops and with comprehension syntax
+let m1 = {one: 1, two: 2, three: 3}
+for (key, value) in m1: print(key+'='+value) # It works since a map yield (key, value) tuples when iterated
+let m2 = Map.of( (k+k, v*v) for (k, v) in m1) # This will produce { oneone: 1, twotwo: 4, threethree: 9 }
 ```

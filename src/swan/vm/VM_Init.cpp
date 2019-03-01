@@ -110,13 +110,31 @@ gridClass = QClass::create(*this, gridMetaClass, sequenceClass, "Grid", 0, -1);
 #endif
 objectClass->type = classClass;
 classClass->type = classClass;
-reset();
+init();
+initBuiltInCode();
 }
 
+QVM::~QVM () {
+deinit();
+garbageCollect();
+QObject* obj = firstGCObject.load(std::memory_order_relaxed);
+while(obj){
+QObject* next = reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(obj->next) &~3);
+delete obj;
+obj=next;
+}}
+
 void QVM::reset () {
+deinit();
+garbageCollect();
+init();
+initBuiltInCode();
+}
+
+void QVM::deinit () {
 LOCK_SCOPE(globalMutex)
 for (auto pf: fiberThreads) {
-if (*pf) { (*pf)->lock(); (*pf)->unlock(); }
+if (*pf) (*pf)->lock(); // Never unlock, since we are going to delete them all anyway
 *pf = nullptr;
 }
 globalVariables.clear();
@@ -127,7 +145,10 @@ stringCache.clear();
 foreignClassIds.clear();
 keptHandles.clear();
 fiberThreads.clear();
-garbageCollect();
+}
+
+void QVM::init () {
+LOCK_SCOPE(globalMutex)
 initPlatformEncodings();
 
 initBaseTypes();
@@ -165,11 +186,13 @@ initGridType();
 
 initGlobals();
 initMathFunctions();
+}
 
+
+void QVM::initBuiltInCode () {
 auto& f = getActiveFiber();
 f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
 f.call(0);
 f.pop();
-
 }
 
