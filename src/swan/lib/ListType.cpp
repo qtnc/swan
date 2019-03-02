@@ -90,7 +90,7 @@ list.data.erase(list.data.begin()+start, list.data.begin()+end);
 
 static void listRemove (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-QVEqualler eq;
+QVEqualler eq(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 QV& toRemove = f.at(i);
 auto it = find_if(list.data.begin(), list.data.end(), [&](const QV& v){ return eq(v, toRemove); });
@@ -104,7 +104,7 @@ else f.returnValue(QV());
 static void listRemoveIf (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-QVUnaryPredicate pred(f.at(i));
+QVUnaryPredicate pred(f.vm, f.at(i));
 auto it = remove_if(list.data.begin(), list.data.end(), pred);
 list.data.erase(it, list.data.end());
 }}
@@ -113,7 +113,7 @@ static void listIndexOf (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 QV& needle = f.at(1);
 int start = f.getOptionalNum(2, 0);
-QVEqualler eq;
+QVEqualler eq(f.vm);
 auto end = list.data.end(), begin = start>=0? list.data.begin()+start : list.data.end()+start,
 re = find_if(begin, end, [&](const QV& v){ return eq(v, needle); });
 f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
@@ -124,14 +124,14 @@ QList& list = f.getObject<QList>(0);
 QV& needle = f.at(1);
 int start = f.getOptionalNum(2, list.data.size());
 auto begin = list.data.begin(), end = start>=0? list.data.begin()+start : list.data.end()+start,
-re = find_end(begin, end, &needle, (&needle)+1, QVEqualler());
+re = find_end(begin, end, &needle, (&needle)+1, QVEqualler(f.vm));
 f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
 }
 
 static void listSort (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-if (f.getArgCount()>=2) stable_sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.at(1)));
-else stable_sort(list.data.begin(), list.data.end(), QVLess());
+if (f.getArgCount()>=2) stable_sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.vm, f.at(1)));
+else stable_sort(list.data.begin(), list.data.end(), QVLess(f.vm));
 }
 
 static void listReverse (QFiber& f) {
@@ -157,8 +157,8 @@ static void listLowerBound (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 QV value = f.at(1);
 auto it = list.data.end();
-if (f.getArgCount()>2) it = lower_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.at(2)));
-else it = lower_bound(list.data.begin(), list.data.end(), value, QVLess());
+if (f.getArgCount()>2) it = lower_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.vm, f.at(2)));
+else it = lower_bound(list.data.begin(), list.data.end(), value, QVLess(f.vm));
 f.returnValue(static_cast<double>(it - list.data.begin() ));
 }
 
@@ -166,8 +166,8 @@ static void listUpperBound (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 QV value = f.at(1);
 auto it = list.data.end();
-if (f.getArgCount()>2) it = upper_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.at(2)));
-else it = upper_bound(list.data.begin(), list.data.end(), value, QVLess());
+if (f.getArgCount()>2) it = upper_bound(list.data.begin(), list.data.end(), value, QVBinaryPredicate(f.vm, f.at(2)));
+else it = upper_bound(list.data.begin(), list.data.end(), value, QVLess(f.vm));
 f.returnValue(static_cast<double>(it - list.data.begin() ));
 }
 

@@ -10,7 +10,7 @@ return re;
 
 
 size_t QVHasher::operator() (const QV& value) const {
-QFiber& f = *QFiber::curFiber;
+QFiber& f = vm.getActiveFiber();
 static int hashCodeSymbol = f.vm.findMethodSymbol("hashCode");
 f.pushCppCallFrame();
 f.push(value);
@@ -22,7 +22,7 @@ return re;
 }
 
 bool QVEqualler::operator() (const QV& a, const QV& b) const {
-QFiber& f = *QFiber::curFiber;
+QFiber& f = vm.getActiveFiber();
 static int eqeqSymbol = f.vm.findMethodSymbol("==");
 f.pushCppCallFrame();
 f.push(a);
@@ -34,9 +34,8 @@ f.popCppCallFrame();
 return re;
 }
 
-
 bool QVLess::operator() (const QV& a, const QV& b) const {
-QFiber& f = *QFiber::curFiber;
+QFiber& f = vm.getActiveFiber();
 static int lessSymbol = f.vm.findMethodSymbol("<");
 f.pushCppCallFrame();
 f.push(a);
@@ -49,7 +48,7 @@ return re;
 }
 
 bool QVBinaryPredicate::operator() (const QV& a, const QV& b) const {
-QFiber& f = *QFiber::curFiber;
+QFiber& f = vm.getActiveFiber();
 f.pushCppCallFrame();
 f.push(func);
 f.push(a);
@@ -62,7 +61,7 @@ return re;
 }
 
 bool QVUnaryPredicate::operator() (const QV& a) const {
-QFiber& f = *QFiber::curFiber;
+QFiber& f = vm.getActiveFiber();
 f.pushCppCallFrame();
 f.push(func);
 f.push(a);

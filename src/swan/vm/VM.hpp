@@ -2,7 +2,7 @@
 #define _____SWAN_VM_HPP_____
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
-#include "Mutex.hpp"
+#include "GIL.hpp"
 #include "Fiber.hpp"
 #include <unordered_map>
 #include<vector>
@@ -17,15 +17,15 @@ std::vector<QV> globalVariables;
 std::unordered_map<std::string,QV> imports;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
-std::vector<QFiber**> fiberThreads;
 std::vector<QV> keptHandles;
+QFiber *activeFiber, *rootFiber;
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
-Mutex globalMutex;
-std::atomic<QObject*> firstGCObject;
-std::atomic<std::size_t> gcAliveCount;
-size_t gcTreshhold, gcTreshholdFactor;
+GIL gil;
+size_t gcAliveCount, gcTreshhold, gcTreshholdFactor;
+bool gcLock;
+QObject* firstGCObject;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
 QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
 #ifndef NO_BUFFER
@@ -47,7 +47,8 @@ uint8_t varDeclMode = Option::VAR_STRICT;
 
 QVM ();
 virtual ~QVM ();
-virtual QFiber& getActiveFiber () final override;
+void init ();
+virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 
 int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
@@ -56,7 +57,6 @@ QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int n
 
 void addToGC (QObject* obj);
 
-void initBuiltInCode();
 void initBaseTypes();
 void initNumberType();
 void initSequenceType();
@@ -87,10 +87,11 @@ void initGridType ();
 void initGlobals();
 void initMathFunctions();
 
+virtual inline void lock () final override { gil.lock(); }
+virtual inline void unlock () final override { gil.unlock(); }
+
 virtual void garbageCollect () final override;
-virtual void reset () final override;
-void init ();
-void deinit ();
+virtual inline void destroy () final override { delete this; }
 
 virtual inline const PathResolverFn& getPathResolver () final override { return pathResolver; }
 virtual inline void setPathResolver (const PathResolverFn& fn) final override { pathResolver=fn; }
@@ -100,6 +101,12 @@ virtual inline const CompilationMessageFn& getCompilationMessageReceiver () fina
 virtual inline void setCompilationMessageReceiver (const CompilationMessageFn& fn) final override { messageReceiver = fn; }
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
+};
+
+struct GCLocker {
+QVM& vm;
+GCLocker (QVM& vm0): vm(vm0) { vm.gcLock=true; }
+~GCLocker () { vm.gcLock=false; }
 };
 
 #include "FiberVM.hpp"

@@ -28,7 +28,7 @@ globalVariables.at(symbol) = value;
 }
 
 QClass* QVM::createNewClass (const string& name, vector<QV>& parents, int nStaticFields, int nFields, bool foreign, QV& cval) {
-LOCK_SCOPE(globalMutex)
+GCLocker gcLocker(*this);
 string metaName = name + ("MetaClass");
 QClass* parent = parents[0].asObject<QClass>();
 QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStaticFields);
@@ -155,12 +155,12 @@ return &instance->userData[0];
 }
 
 void QFiber::storeImport (const string& name) {
-LOCK_SCOPE(vm.globalMutex)
+LOCK_SCOPE(vm.gil)
 vm.imports[name] = at(-1);
 }
 
 void QFiber::import (const std::string& baseFile, const std::string& requestedFile) {
-LOCK_SCOPE(vm.globalMutex)
+LOCK_SCOPE(vm.gil)
 string finalFile = vm.pathResolver(baseFile, requestedFile);
 auto it = vm.imports.find(finalFile);
 if (it!=vm.imports.end()) push(it->second);

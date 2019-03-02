@@ -11,6 +11,8 @@ return loadString(source, filename);
 }
 
 int QFiber::loadString (const string& initialSource, const string& filename) {
+LOCK_SCOPE(vm.gil)
+GCLocker gcLocker(vm);
 string displayName = "<string>";
 if (!filename.empty()) {
 int lastSlash = filename.rfind('/');
@@ -19,7 +21,6 @@ displayName = filename.substr(lastSlash+1);
 }
 if (boost::starts_with(initialSource, "\x1B\x01")) {
 istringstream in(initialSource, ios::binary);
-LOCK_SCOPE(vm.globalMutex)
 return loadBytecode(in);
 }
 string source = initialSource;
@@ -32,7 +33,6 @@ ostringstream out(ios::binary);
 QVM::bufferToStringConverters["native"](in, out, 0);
 source = out.str();
 }
-LOCK_SCOPE(vm.globalMutex)
 QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);
 QFunction* func = compiler.getFunction();

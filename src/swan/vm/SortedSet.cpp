@@ -9,13 +9,15 @@ QObject(vm.objectClass), set(m), iterator(m.set.begin())
 {}
 
 QSortedSet::QSortedSet (QVM& vm, QV& sorter0): 
-QSequence(vm.sortedSetClass), set(sorter0), sorter(sorter0) 
+QSequence(vm.sortedSetClass), 
+set(QVBinaryPredicate(vm, sorter0)), 
+sorter(sorter0) 
 {}
 
 QSortedSet::iterator QSortedSet::find (const QV& key) {
 auto range = set.equal_range(key);
 if (range.first==range.second) return set.end();
-QVEqualler eq;
+QVEqualler eq(type->vm);
 auto it = find_if(range.first, range.second, [&](const auto& i){ return eq(i, key); });
 if (it!=range.second) return it;
 else return set.end();

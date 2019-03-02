@@ -96,7 +96,7 @@ outFile.clear();
 }
 
 try {
-Swan::VM& vm = Swan::VM::getVM();
+Swan::VM& vm = Swan::VM::create();
 Swan::Fiber& fiber = vm.getActiveFiber();
 
 registerIO(fiber);

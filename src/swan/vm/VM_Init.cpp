@@ -38,7 +38,7 @@ return boost::join(cur, "/");
 
 static string defaultFileLoader (const string& filename) {
 ifstream in(filename, ios::binary);
-if (!in) QFiber::curFiber ->runtimeError("Couldn't open file: %s", filename);
+if (!in) throw std::runtime_error(format("Couldn't open file: %s", filename));
 ostringstream out(ios::binary);
 out << in.rdbuf();
 string s = out.str();
@@ -47,14 +47,18 @@ return s;
 
 
 QVM::QVM ():
+activeFiber(nullptr),
+rootFiber(nullptr),
 firstGCObject(nullptr),
 gcAliveCount(0),
-gcTreshhold(140),
+gcTreshhold(10000),
 gcTreshholdFactor(200),
+gcLock(false),
 pathResolver(defaultPathResolver),
 fileLoader(defaultFileLoader),
 messageReceiver(defaultMessageReceiver)
 {
+GCLocker gcLocker(*this);
 objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);
 classClass = QClass::create(*this, nullptr, objectClass, "Class", 0, -1);
 fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass", 0, -1);
@@ -111,32 +115,9 @@ gridClass = QClass::create(*this, gridMetaClass, sequenceClass, "Grid", 0, -1);
 objectClass->type = classClass;
 classClass->type = classClass;
 init();
-initBuiltInCode();
 }
 
 QVM::~QVM () {
-deinit();
-garbageCollect();
-QObject* obj = firstGCObject.load(std::memory_order_relaxed);
-while(obj){
-QObject* next = reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(obj->next) &~3);
-delete obj;
-obj=next;
-}}
-
-void QVM::reset () {
-deinit();
-garbageCollect();
-init();
-initBuiltInCode();
-}
-
-void QVM::deinit () {
-LOCK_SCOPE(globalMutex)
-for (auto pf: fiberThreads) {
-if (*pf) (*pf)->lock(); // Never unlock, since we are going to delete them all anyway
-*pf = nullptr;
-}
 globalVariables.clear();
 globalSymbols.clear();
 methodSymbols.clear();
@@ -144,11 +125,18 @@ imports.clear();
 stringCache.clear();
 foreignClassIds.clear();
 keptHandles.clear();
-fiberThreads.clear();
+QObject* obj = firstGCObject;
+while(obj){
+QObject* next = reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(obj->next) &~3);
+delete obj;
+obj=next;
+}
+delete classClass;
+delete objectClass;
 }
 
 void QVM::init () {
-LOCK_SCOPE(globalMutex)
+LOCK_SCOPE(gil)
 initPlatformEncodings();
 
 initBaseTypes();
@@ -186,11 +174,9 @@ initGridType();
 
 initGlobals();
 initMathFunctions();
-}
 
-
-void QVM::initBuiltInCode () {
-auto& f = getActiveFiber();
+activeFiber = rootFiber = new QFiber(*this);
+auto& f = *rootFiber;
 f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
 f.call(0);
 f.pop();

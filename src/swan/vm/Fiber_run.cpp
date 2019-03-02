@@ -47,13 +47,8 @@ return QV();
 
 
 FiberState QFiber::run ()  {
-if (!curFiber) {
-LOCK_SCOPE(vm.globalMutex)
-vm.fiberThreads.push_back(&curFiber);
-}
-LOCK_SCOPE(mutex)
 //println(std::cerr, "Running fiber: parent=%s, cur=%s, this=%s", (parentFiber? QV(parentFiber, QV_TAG_FIBER) : QV()).print(), (curFiber? QV(curFiber, QV_TAG_FIBER) : QV()).print(), QV(this, QV_TAG_FIBER).print() );
-curFiber = this;
+vm.activeFiber = this;
 state = FiberState::RUNNING;
 auto frame = callFrames.back();
 uint8_t op;

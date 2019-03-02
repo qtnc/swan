@@ -1,5 +1,6 @@
 #include "SwanLib.hpp"
 #include "../vm/PriorityQueue.hpp"
+#include "../vm/Fiber_inlines.hpp"
 using namespace std;
 
 
@@ -19,7 +20,7 @@ f.returnValue(pq);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 f.getObject<QSequence>(i).insertIntoVector(f, pq->data, 0);
 }
-std::make_heap(pq->data.begin(), pq->data.end(), QVBinaryPredicate(pq->sorter));
+std::make_heap(pq->data.begin(), pq->data.end(), QVBinaryPredicate(f.vm, pq->sorter));
 }
 
 static void pqPush (QFiber& f) {
@@ -29,7 +30,7 @@ for (int i=1, n=f.getArgCount(); i<n; i++) pq.push(f.at(i));
 
 static void pqRemove (QFiber& f) {
 QPriorityQueue& pq = f.getObject<QPriorityQueue>(0);
-QVEqualler eq;
+QVEqualler eq(f.vm);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 QV x = f.at(i);
 auto it = find_if(pq.data.begin(), pq.data.end(), [&](const QV& y){ return eq(y, x); });

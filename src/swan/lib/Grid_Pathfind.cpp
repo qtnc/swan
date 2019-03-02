@@ -110,8 +110,8 @@ int x = f.getNum(1), y = f.getNum(2);
 QV fill = f.at(3);
 g.makeBounds(x, y);
 if (x<0 || y<0 || x>=g.width || y>=g.height) return;
-if (f.getArgCount()>=5) doFloodFill(g, x, y, QVBinaryPredicate(f.at(4)), fill, g.at(x, y));
-else doFloodFill(g, x, y, QVEqualler(), fill, g.at(x, y));
+if (f.getArgCount()>=5) doFloodFill(g, x, y, QVBinaryPredicate(f.vm, f.at(4)), fill, g.at(x, y));
+else doFloodFill(g, x, y, QVEqualler(f.vm), fill, g.at(x, y));
 }
 
 static void gridPathFind (QFiber& f) {

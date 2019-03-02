@@ -83,8 +83,8 @@ f.returnValue( l.data[ dist(r.rand) ]);
 static void listPermute (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 bool re;
-if (f.getArgCount()>=2) re = next_permutation(list.data.begin(), list.data.end(), QVBinaryPredicate(f.at(1)));
-else re = next_permutation(list.data.begin(), list.data.end(), QVLess());
+if (f.getArgCount()>=2) re = next_permutation(list.data.begin(), list.data.end(), QVBinaryPredicate(f.vm, f.at(1)));
+else re = next_permutation(list.data.begin(), list.data.end(), QVLess(f.vm));
 f.returnValue(re);
 }
 

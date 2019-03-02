@@ -175,9 +175,6 @@ virtual void storeMethod (const std::string& name) = 0;
 virtual void storeStaticMethod (const std::string& name) = 0;
 virtual void storeDestructor ( void(*)(void*) ) = 0;
 
-virtual void lock () = 0;
-virtual void unlock () = 0;
-
 template<class T> inline const T* getBuffer (int stackIndex, int* length = nullptr) {
 const T* re = reinterpret_cast<const T*>(getBufferV(stackIndex, length));
 if (length) *length /= sizeof(T);
@@ -276,6 +273,9 @@ VM& operator= (const VM&) = delete;
 VM& operator= (VM&&) = delete;
 
 virtual Fiber& getActiveFiber () = 0;
+virtual void lock () = 0;
+virtual void unlock () = 0;
+virtual void destroy () = 0;
 
 virtual const PathResolverFn& getPathResolver () = 0;
 virtual void setPathResolver (const PathResolverFn& fn) = 0;
@@ -287,9 +287,8 @@ virtual int getOption (Option opt) = 0;
 virtual void setOption (Option opt, int value = 1) = 0;
 
 virtual void garbageCollect () = 0;
-virtual void reset () = 0;
 
-static VM& export getVM ();
+static VM& export create ();
 static EncodingConversionFn export getEncoder (const std::string& name);
 static DecodingConversionFn export getDecoder (const std::string& name);
 static void export registerEncoder (const std::string& name, const EncodingConversionFn& func);

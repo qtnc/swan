@@ -10,7 +10,7 @@ struct QSet: QSequence {
 typedef std::unordered_set<QV, QVHasher, QVEqualler> set_type;
 typedef set_type::iterator iterator;
 set_type set;
-QSet (QVM& vm): QSequence(vm.setClass) {}
+QSet (QVM& vm);
 virtual void insertIntoVector (QFiber& f, std::vector<QV>& list, int start) override { list.insert(list.begin()+start, set.begin(), set.end()); }
 virtual void insertIntoSet (QFiber& f, QSet& s) override { s.set.insert(set.begin(), set.end()); }
 virtual void join (QFiber& f, const std::string& delim, std::string& out) override;

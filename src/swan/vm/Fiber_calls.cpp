@@ -10,6 +10,7 @@
 using namespace std;
 
 void QFiber::call (int nArgs) {
+LOCK_SCOPE(vm.gil)
 pushCppCallFrame();
 callCallable(nArgs);
 popCppCallFrame();
@@ -56,6 +57,7 @@ return false;
 }}
 
 void QFiber::callMethod (const string& name, int nArgs) {
+LOCK_SCOPE(vm.gil)
 int symbol = vm.findMethodSymbol(name);
 pushCppCallFrame();
 callSymbol(symbol, nArgs);
@@ -143,9 +145,9 @@ f.stack.insert(f.stack.end(), stack.end() -nArgs, stack.end());
 stack.erase(stack.end() -nArgs, stack.end());
 f.adjustArguments(nArgs, closure.func.nArgs, closure.func.vararg);
 f.parentFiber = this;
-curFiber = &f;
+vm.activeFiber = &f;
 f.run();
-curFiber = this;
+vm.activeFiber = this;
 }break;
 case FiberState::YIELDED:
 if (nArgs>=1) {
@@ -154,9 +156,9 @@ stack.erase(stack.end() -nArgs, stack.end());
 }
 else f.push(QV());
 f.parentFiber = this;
-curFiber = &f;
+vm.activeFiber = &f;
 f.run();
-curFiber = this;
+vm.activeFiber = this;
 break;
 case FiberState::RUNNING:
 case FiberState::FINISHED:

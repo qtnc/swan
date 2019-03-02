@@ -75,7 +75,6 @@ return false;
 
 bool QFiber::gcVisit () {
 if (QObject::gcVisit()) return true;
-LOCK_SCOPE(mutex)
 for (QV& val: stack) val.gcVisit();
 for (auto& cf: callFrames) if (cf.closure) cf.closure->gcVisit();
 for (auto upv: openUpvalues) if (upv) upv->gcVisit();
@@ -218,11 +217,10 @@ return obj;
 }
 
 void QVM::garbageCollect () {
-//LOCK_SCOPE(globalMutex)
+LOCK_SCOPE(gil)
 //println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount.load(std::memory_order_relaxed), gcTreshhold);
 
-auto count = gcAliveCount.exchange(0);
-auto initial = to_ptr(firstGCObject.exchange(nullptr));
+auto initial = to_ptr(firstGCObject);
 for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
 
 vector<QObject*> roots = { 
@@ -242,16 +240,15 @@ boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapCla
 #ifndef NO_BUFFER
 , bufferClass
 #endif
+, activeFiber, rootFiber
 };
 for (QObject* obj: roots) obj->gcVisit();
 for (QV& gv: globalVariables) gv.gcVisit();
 for (QV& kh: keptHandles) kh.gcVisit();
 for (auto& im: imports) im.second.gcVisit();
-for (auto fib: fiberThreads) if (*fib) (*fib)->gcVisit();
 
 QObject* prev = nullptr;
-size_t used=0, collectable=0;
-count = 0;
+size_t used=0, collectable=0, count = 0;
 for (QObject *it=initial, *ptr=to_ptr(it); ptr; ptr=to_ptr(it)) {
 //QV val = makeqv(&*ptr);
 //println(std::cerr, "%d. %s, %s", count, val.print(), marked(*ptr)?"used":"collectable");
@@ -270,7 +267,8 @@ collectable++;
 }
 }
 //println(std::cerr, "GC Stats: %d objects ammong which %d used (%d%%) and %d collectable (%d%%)", count, used, 100*used/count, collectable, 100*collectable/count);
-prev->next = firstGCObject.exchange(initial);
-gcAliveCount.fetch_add(count, std::memory_order_relaxed);
+prev->next = nullptr;
+firstGCObject = initial;
+gcAliveCount = count;
 gcTreshhold = std::max(gcTreshhold, count * gcTreshholdFactor / 100);
 }

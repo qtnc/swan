@@ -1,5 +1,6 @@
 #include "SwanLib.hpp"
 #include "../vm/SortedSet.hpp"
+#include "../vm/Fiber_inlines.hpp"
 using namespace std;
 
 

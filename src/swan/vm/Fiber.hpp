@@ -8,7 +8,6 @@
 #include "ExecutionStack.hpp"
 #include "CatchPoint.hpp"
 #include "CallFrame.hpp"
-#include "Mutex.hpp"
 #include "ForeignInstance.hpp"
 #include "Function.hpp"
 #include<string>
@@ -16,14 +15,12 @@
 
 struct QFiber: Swan::Fiber, QSequence  {
 typedef execution_stack<QV> Stack;
-static thread_local QFiber* curFiber;
 Stack stack;
 std::vector<QCallFrame> callFrames;
 std::vector<QCatchPoint> catchPoints;
 std::vector<struct Upvalue*> openUpvalues;
 QVM& vm;
 QFiber* parentFiber;
-Mutex mutex;
 FiberState state;
 
 inline void returnValue (QV value) { stack.at(callFrames.back().stackBase) = value; }
@@ -97,8 +94,6 @@ inline void popCppCallFrame () { callFrames.pop_back(); }
 inline QString* ensureString (QV& val);
 inline QString* ensureString (int i) { return ensureString(at(i)); }
 
-virtual void lock () final override { mutex.lock(); if (parentFiber) parentFiber->lock(); }
-virtual void unlock () final override { mutex.unlock(); if (parentFiber) parentFiber->unlock(); }
 virtual void import (const std::string& baseFile, const std::string& requestedFile) final override;
 virtual void storeImport (const std::string& name) final override;
 virtual int loadString  (const std::string& source, const std::string& name="") final override;

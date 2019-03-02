@@ -3,6 +3,11 @@
 #include "String.hpp"
 using namespace std;
 
+QSet::QSet (QVM& vm): 
+QSequence(vm.setClass), 
+set(4, QVHasher(vm), QVEqualler(vm))  
+{}
+
 void QSet::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (const QV& x: set) {

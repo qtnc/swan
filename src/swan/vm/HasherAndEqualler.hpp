@@ -21,27 +21,37 @@ inline bool operator() (const std::pair<const char*, const char*>& p1, const std
 return p1.second-p1.first == p2.second-p2.first && 0==memcmp(p1.first, p2.first, p1.second-p1.first);
 }};
 
+struct QVM;
+
 struct QVHasher {
+QVM& vm;
+inline QVHasher (QVM& vm0): vm(vm0) {}
 size_t operator() (const QV& qv) const;
 };
 
 struct QVEqualler {
+QVM& vm;
+inline QVEqualler  (QVM& vm0): vm(vm0) {}
 bool operator() (const QV& a, const QV& b) const;
 };
 
 struct QVBinaryPredicate  {
 QV func;
-QVBinaryPredicate (const QV& f): func(f) {}
+QVM& vm;
+inline QVBinaryPredicate (QVM& vm0, const QV& f): vm(vm0), func(f) {}
 bool operator() (const QV& a, const QV& b) const;
 };
 
 struct QVUnaryPredicate  {
 QV func;
-QVUnaryPredicate (const QV& f): func(f) {}
+QVM& vm;
+inline QVUnaryPredicate (QVM& vm0, const QV& f): vm(vm0), func(f) {}
 bool operator() (const QV& a) const;
 };
 
 struct QVLess {
+QVM& vm;
+inline QVLess (QVM& vm0): vm(vm0) {}
 bool operator() (const QV& a, const QV& b) const;
 };
 

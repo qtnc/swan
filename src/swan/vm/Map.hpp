@@ -9,7 +9,7 @@ struct QMap: QSequence {
 typedef std::unordered_map<QV, QV, QVHasher, QVEqualler> map_type;
 typedef map_type::iterator iterator;
 map_type map;
-QMap (QVM& vm): QSequence(vm.mapClass) {}
+QMap (QVM& vm): QSequence(vm.mapClass), map(4, QVHasher(vm), QVEqualler(vm)) {}
 inline QV get (const QV& key) {
 auto it = map.find(key);
 if (it==map.end()) return QV();

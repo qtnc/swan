@@ -35,11 +35,9 @@ if (cls->destructor) cls->destructor(userData);
 }
 
 void QVM::addToGC (QObject* obj) {
-if (gcAliveCount.fetch_add(1, std::memory_order_relaxed) >= gcTreshhold && globalMutex.try_lock()) {
-garbageCollect();
-globalMutex.unlock();
-}
-obj->next = firstGCObject.exchange(obj, std::memory_order_relaxed);
+if (++gcAliveCount>=gcTreshhold && !gcLock) garbageCollect();
+obj->next = firstGCObject;
+firstGCObject = obj;
 }
 
 

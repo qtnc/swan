@@ -57,7 +57,7 @@ list.data.pop_front();
 
 static void linkedListRemove (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
-QVEqualler eq;
+QVEqualler eq(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 QV& toRemove = f.at(i);
 auto it = find_if(list.data.begin(), list.data.end(), [&](const QV& v){ return eq(v, toRemove); });
@@ -71,7 +71,7 @@ else f.returnValue(QV());
 static void linkedListRemoveIf (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-QVUnaryPredicate pred(f.at(i));
+QVUnaryPredicate pred(f.vm, f.at(i));
 auto it = remove_if(list.data.begin(), list.data.end(), pred);
 list.data.erase(it, list.data.end());
 }}

@@ -350,10 +350,11 @@ template<class R, class... A> struct SwanGetSlot<std::function<R(A...)>> {
 typedef std::function<R(A...)> returnType;
 static inline returnType get (Swan::Fiber& f, int idx) { 
 if (f.isNull(idx)) return nullptr;
+Swan::VM& vm = f.getVM();
 Swan::Handle handle = f.getHandle(idx);
 return [=](A&&... args)->R{
-Swan::Fiber& fb = Swan::VM::getVM().getActiveFiber();
-Swan::ScopeLocker<Swan::Fiber> lock(fb);
+Swan::Fiber& fb = vm.getActiveFiber();
+Swan::ScopeLocker<Swan::VM> lock(vm);
 fb.pushHandle(handle);
 pushMultiple(fb, args...);
 fb.call(sizeof...(A));
@@ -368,9 +369,10 @@ typedef std::function<void(A...)> returnType;
 static inline returnType get (Swan::Fiber& f, int idx) { 
 if (f.isNull(idx)) return nullptr;
 Swan::Handle handle = f.getHandle(idx);
+Swan::VM& vm = f.getVM();
 return [=](A&&... args){
-Swan::Fiber& fb = Swan::VM::getVM().getActiveFiber();
-Swan::ScopeLocker<Swan::Fiber> lock(fb);
+Swan::Fiber& fb = vm.getActiveFiber();
+Swan::ScopeLocker<Swan::VM> lock(vm);
 fb.pushHandle(handle);
 pushMultiple(fb, args...);
 fb.call(sizeof...(A));

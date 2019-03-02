@@ -2,6 +2,7 @@
 #include "SwanLib.hpp"
 #include "../vm/Dictionary.hpp"
 #include "../vm/Tuple.hpp"
+#include "../vm/Fiber_inlines.hpp"
 using namespace std;
 
 

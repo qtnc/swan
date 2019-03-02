@@ -83,7 +83,7 @@ else compiler.writeOpArg<uint_local_index_t>(OP_STORE_LOCAL, slot);
 
 static inline bool isUnpack (const shared_ptr<Expression>& expr);
 static inline bool isComprehension (const shared_ptr<Expression>& expr);
-static inline void doCompileTimeImport (const string& baseFile, shared_ptr<Expression> exprRequestedFile);
+static inline void doCompileTimeImport (QVM& vm, const string& baseFile, shared_ptr<Expression> exprRequestedFile);
 
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
@@ -519,7 +519,7 @@ shared_ptr<Expression> optimize () { from=from->optimize(); return shared_this()
 const QToken& nearestToken () { return from->nearestToken(); }
 string print () { return "import " + from->print(); }
 void compile (QCompiler& compiler) {
-doCompileTimeImport(compiler.parser.filename, from);
+doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, false));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
@@ -804,7 +804,7 @@ s += string(p.first.start, p.first.length) + " as " + string(p.second.start, p.s
 return s;
 }
 void compile (QCompiler& compiler) {
-doCompileTimeImport(compiler.parser.filename, from);
+doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
 static int importCount = 0;
 int subscriptSymbol = compiler.parser.vm.findMethodSymbol("[]");
 compiler.writeDebugLine(nearestToken());
@@ -901,11 +901,10 @@ static inline bool isComprehension  (const shared_ptr<Expression>& expr) {
 return !!dynamic_pointer_cast<ComprehensionExpression>(expr);
 }
 
-static inline void doCompileTimeImport (const string& baseFile, shared_ptr<Expression> exprRequestedFile) {
+static inline void doCompileTimeImport (QVM& vm, const string& baseFile, shared_ptr<Expression> exprRequestedFile) {
 auto expr = dynamic_pointer_cast<ConstantExpression>(exprRequestedFile);
 if (expr && expr->token.value.isString()) {
-QFiber& f = *QFiber::curFiber;
-LOCK_SCOPE(f.mutex)
+QFiber& f = vm.getActiveFiber();
 f.import(baseFile, expr->token.value.asString());
 f.pop();
 }}

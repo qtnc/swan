@@ -9,7 +9,7 @@ Swan::Handle& export Swan::Handle::operator= (Handle&& h) { value=h.value; h.val
 Swan::Handle QV::asHandle () {
 if (isObject()) {
 QObject* obj = asObject<QObject>();
-LOCK_SCOPE(obj->type->vm.globalMutex)
+LOCK_SCOPE(obj->type->vm.gil)
 obj->type->vm.keptHandles.push_back(*this);
 }
 Swan::Handle h;
@@ -21,7 +21,7 @@ export Swan::Handle::~Handle () {
 QV qv(value);
 if (qv.isObject()) {
 QObject* obj = qv.asObject<QObject>();
-LOCK_SCOPE(obj->type->vm.globalMutex)
+LOCK_SCOPE(obj->type->vm.gil)
 auto& keptHandles = obj->type->vm.keptHandles;
 auto it = find_if(keptHandles.begin(), keptHandles.end(), [&](const auto& x){ return x.i==qv.i; });
 if (it!=keptHandles.end()) keptHandles.erase(it);

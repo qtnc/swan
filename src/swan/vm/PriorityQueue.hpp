@@ -18,12 +18,12 @@ virtual ~QPriorityQueue () = default;
 
 inline void push (const QV& x) {
 data.push_back(x);
-std::push_heap(data.begin(), data.end(), QVBinaryPredicate(sorter));
+std::push_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 }
 
 inline QV pop () {
 if (!data.size()) return QV();
-std::pop_heap(data.begin(), data.end(), QVBinaryPredicate(sorter));
+std::pop_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 QV re = data.back();
 data.pop_back();
 return re;
@@ -31,7 +31,7 @@ return re;
 
 inline void erase (std::vector<QV>::iterator it) {
 data.erase(it);
-std::make_heap(data.begin(), data.end(), QVBinaryPredicate(sorter));
+std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 }
 
 };

@@ -16,7 +16,7 @@ for (auto& val: set1) if (set2.find(val)==set2.end()) result.insert(val);
 }
 
 template<class T> void unordered_set_symetric_difference  (const T& set1, const T& set2, T& result) {
-T intersection, union_;
+T intersection(set1.bucket_count(), set1.hash_function(), set1.key_eq()), union_(set1.bucket_count(), set1.hash_function(), set1.key_eq());
 unordered_set_union(set1, set2, union_);
 unordered_set_intersection(set1, set2, intersection);
 unordered_set_difference(union_, intersection, result);

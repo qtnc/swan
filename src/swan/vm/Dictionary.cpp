@@ -9,13 +9,15 @@ QObject(vm.objectClass), map(m), iterator(m.map.begin())
 {}
 
 QDictionary::QDictionary (QVM& vm, QV& sorter0): 
-QSequence(vm.dictionaryClass), map(sorter0), sorter(sorter0) 
+QSequence(vm.dictionaryClass), 
+map(QVBinaryPredicate(vm, sorter0)), 
+sorter(sorter0) 
 {}
 
 QDictionary::iterator QDictionary::get (const QV& key) {
 auto range = map.equal_range(key);
 if (range.first==range.second) return map.end();
-QVEqualler eq;
+QVEqualler eq(type->vm);
 auto it = find_if(range.first, range.second, [&](const auto& i){ return eq(i.first, key); });
 if (it!=range.second) return it;
 else return map.end();
