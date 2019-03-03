@@ -159,6 +159,7 @@ virtual void* pushNewUserPointer (size_t classId) = 0;
 virtual void pushHandle (const Handle& handle) = 0;
 
 virtual void pushCopy (int stackIndex = -1) = 0;
+virtual void swap (int stackIndex1 = -2, int stackIndex2 = -1) = 0;
 virtual void pop () = 0;
 
 virtual int loadString (const std::string& source, const std::string& name="") = 0;
@@ -166,6 +167,7 @@ virtual int loadFile (const std::string& filename) = 0;
 virtual void dumpBytecode (std::ostream& out, int count = 1) = 0;
 virtual void import (const std::string& baseFile, const std::string& toImport) = 0;
 virtual void storeImport (const std::string& name) = 0;
+virtual void importAndDumpBytecode (const std::string& baseFile, const std::string& toImport, std::ostream& out) = 0;
 
 virtual void call (int nArgs) = 0;
 virtual void callMethod (const std::string& name, int nArgs) = 0;
@@ -249,6 +251,8 @@ template <class T> inline void registerDestructor ();
 };
 
 struct VM {
+enum ImportHookState { IMPORT_REQUEST, BEFORE_IMPORT, BEFORE_RUN, AFTER_RUN };
+typedef std::function<bool(Swan::Fiber&, const std::string&, ImportHookState, int)> ImportHookFn;
 typedef std::function<std::string(const std::string&, const std::string&)> PathResolverFn;
 typedef std::function<std::string(const std::string&)> FileLoaderFn;
 typedef std::function<void(const CompilationMessage&)> CompilationMessageFn;
@@ -283,6 +287,8 @@ virtual const FileLoaderFn& getFileLoader () = 0;
 virtual void setFileLoader (const FileLoaderFn& fn) = 0;
 virtual const CompilationMessageFn& getCompilationMessageReceiver () = 0;
 virtual void setCompilationMessageReceiver (const CompilationMessageFn& fn) = 0;
+virtual const ImportHookFn& getImportHook () = 0;
+virtual void setImportHook (const ImportHookFn& fn) = 0;
 virtual int getOption (Option opt) = 0;
 virtual void setOption (Option opt, int value = 1) = 0;
 

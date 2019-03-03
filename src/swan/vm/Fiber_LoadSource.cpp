@@ -1,3 +1,4 @@
+#include "../../include/cpprintf.hpp"
 #include "Fiber.hpp"
 #include "VM.hpp"
 #include "../parser/Compiler.hpp"
@@ -40,4 +41,39 @@ if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_IN
 QClosure* closure = new QClosure(vm, *func);
 stack.push_back(QV(closure, QV_TAG_CLOSURE));
 return 1;
+}
+
+void QFiber::importAndDumpBytecode (const string& baseFile, const string& requestedFile, ostream& out) {
+GCLocker gcLocker(vm);
+vector<string> importList;
+unordered_map<string, QV> importMap;
+string finalFile = vm.pathResolver(baseFile, requestedFile);
+Swan::VM::ImportHookFn prevImportHook = vm.importHook;
+bool finished = false;
+vm.importHook = [&](Swan::Fiber& fb, const string& importedFile, Swan::VM::ImportHookState state, int count){
+if (this != static_cast<QFiber*>(&fb)) throw std::runtime_error("Import in different fibers");
+if (prevImportHook(fb, importedFile, state, count)) return true;
+if (!finished) switch(state){
+case Swan::VM::ImportHookState::IMPORT_REQUEST: {
+auto it = find(importList.begin(), importList.end(), importedFile);
+if (it!=importList.end()) importList.erase(it);
+importList.push_back(importedFile);
+}break;
+case Swan::VM::ImportHookState::BEFORE_RUN:
+if (count!=1) throw std::runtime_error("count!=1");
+if (importedFile == finalFile) finished=true;
+importMap[importedFile] = at(-1);
+break;
+}
+return false;
+};
+import(baseFile, requestedFile);
+pop();
+vm.importHook = prevImportHook;
+print("Import list = ");
+for (auto& s: importList) print(", \"%s\"", s);
+println(";");
+for (auto& s: importList) push(importMap[s]);
+dumpBytecode(out, importList.size());
+for (int i=0; i<importList.size(); i++) pop();
 }

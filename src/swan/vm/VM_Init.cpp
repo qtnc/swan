@@ -45,6 +45,10 @@ string s = out.str();
 return s;
 }
 
+static bool defaultImportHook (Swan::Fiber& f, const std::string& fn, Swan::VM::ImportHookState state, int n) {
+return false;
+}
+
 
 QVM::QVM ():
 activeFiber(nullptr),
@@ -56,7 +60,8 @@ gcTreshholdFactor(200),
 gcLock(false),
 pathResolver(defaultPathResolver),
 fileLoader(defaultFileLoader),
-messageReceiver(defaultMessageReceiver)
+messageReceiver(defaultMessageReceiver),
+importHook(defaultImportHook)
 {
 GCLocker gcLocker(*this);
 objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);

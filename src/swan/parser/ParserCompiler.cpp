@@ -812,8 +812,8 @@ compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVar
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
-string vn = format("#import%d", importCount++);
-compiler.findLocalVariable({ T_NAME, vn.c_str(), vn.length(), QV() }, LV_NEW | LV_CONST);
+QString* vn = QString::create(compiler.parser.vm, format("#import%d", importCount++));
+compiler.findLocalVariable({ T_NAME, vn->data, vn->length, QV() }, LV_NEW | LV_CONST);
 for (auto& p: imports) {
 compiler.writeOp(OP_DUP);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, p.first.start, p.first.length), QV_TAG_STRING)));
@@ -2585,7 +2585,7 @@ bool isConst = flags&VD_CONST;
 bool isGlobal = flags&VD_GLOBAL;
 bool exporting = flags&VD_EXPORT;
 if (compiler.parent || compiler.curScope>1) {
-if (isGlobal) compiler.compileError(nearestToken(), "Cannot declare global in a local scope, curScope=%d, parent=%p", compiler.curScope, compiler.parent);
+if (isGlobal) compiler.compileError(nearestToken(), "Cannot declare global in a local scope");
 if (exporting) compiler.compileError(nearestToken(), ("Cannot declare export in a local scope"));
 }
 for (auto& p: vars) {
@@ -2923,7 +2923,7 @@ function->nArgs = nArgs;
 function->constants = constants;
 function->bytecode = out.str();
 function->upvalues = upvalues;
-function->file = parser.displayName;
+function->file = parser.filename;
 result = result? result : parser.result;
 return function;
 }

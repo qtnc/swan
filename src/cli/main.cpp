@@ -12,7 +12,7 @@ void registerIO  (Swan::Fiber& f);
 void registerDate (Swan::Fiber& f);
 
 void printIntro () {
-println("Swan version 0.1.2019.2");
+println("Swan version 0.2.2019.3");
 println("Copyright (c) 2019, QuentinC ");
 println("For more info, go to http://github.com/qtnc/qscript");
 }
@@ -46,14 +46,13 @@ if (line=="exit" || line=="quit") break;
 code.append(line);
 code.push_back('\n');
 try {
-fiber.loadString(code, "REPL");
+fiber.loadString(code, "<REPL>");
 fiber.call(0);
 if (!fiber.isNull(-1)) {
 fiber.callMethod("toString", 1);
 cout << fiber.getCString(-1) << endl;
 }
 fiber.pop();
-//vm.garbageCollect();
 code.clear();
 } 
 catch (Swan::CompilationException& ce) {
@@ -69,31 +68,23 @@ line.clear();
 
 int main (int argc, char** argv) {
 vector<string> args, importModules;
-string inFile, outFile, expression, outDir;
+string inFile, outFile, expression;
 bool runREPL=false, compileOnly=false;
 int argIndex=1, exitCode=0;
 while(argIndex<argc) {
 string arg = argv[argIndex++];
 if (arg=="-c") compileOnly=true;
-else if (arg=="-d") outDir = argv[argIndex++];
 else if (arg=="-e") expression = argv[argIndex++];
 else if (arg=="-h" || arg=="--help" || arg=="-?") { printHelp(argv[0]); return 0; }
 else if (arg=="-i") runREPL=true;
 else if (arg=="-m") importModules.push_back(argv[argIndex++]);
 else if (arg=="-o") outFile = argv[argIndex++];
 else if (arg=="--") break;
-else if (!compileOnly && inFile.empty()) inFile = arg;
-else {
-argIndex -= compileOnly;
-break;
-}}
+else { inFile=arg; break; }
+}
 while(argIndex<argc) args.push_back(argv[argIndex++]);
 
 if (!compileOnly && inFile.empty() && expression.empty()) runREPL=true;
-if (compileOnly && !outFile.empty() && args.size()>1) {
-println(std::cerr, "Warning: output file ignored when compliling multiple files at once");
-outFile.clear();
-}
 
 try {
 Swan::VM& vm = Swan::VM::create();
@@ -115,29 +106,26 @@ fiber.storeGlobal("argv");
 }
 
 if (!expression.empty()) {
-fiber.loadString(expression, "<inline>");
+fiber.loadString(expression, "<cmdline>");
 fiber.call(0);
-//vm.garbageCollect();
 }
 
-if (!inFile.empty()) {
+if (!compileOnly && !inFile.empty()) {
 if (inFile=="-") {
-ostringstream out;
+ostringstream out(ios::binary);
 out << std::cin.rdbuf();
 fiber.loadString(out.str(), "<stdin>");
-}
-else fiber.loadFile(inFile);
 fiber.call(0);
+}
+else fiber.import("", inFile);
 exitCode = fiber.getOptionalNum(-1, 0);
 fiber.pop();
-//vm.garbageCollect();
 }
 
-if (compileOnly) for (auto& file: args) {
-if (!outFile.empty())  file=outFile;
-else file += ".qb";
-ofstream out(file, ios::binary);
-fiber.dumpBytecode(out);
+if (compileOnly && !inFile.empty()) {
+if (outFile.empty()) outFile = inFile + ".sb";
+ofstream out(outFile, ios::binary);
+fiber.importAndDumpBytecode("", inFile, out);
 }
 
 if (runREPL) repl(vm, fiber);

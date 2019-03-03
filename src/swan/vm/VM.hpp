@@ -22,9 +22,9 @@ QFiber *activeFiber, *rootFiber;
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
+ImportHookFn importHook;
 GIL gil;
-size_t gcAliveCount, gcTreshhold, gcTreshholdFactor;
-bool gcLock;
+size_t gcAliveCount, gcTreshhold, gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
 QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
@@ -99,14 +99,16 @@ virtual inline const FileLoaderFn& getFileLoader () final override { return file
 virtual inline void setFileLoader (const FileLoaderFn& fn) final override { fileLoader=fn; }
 virtual inline const CompilationMessageFn& getCompilationMessageReceiver () final override { return messageReceiver; }
 virtual inline void setCompilationMessageReceiver (const CompilationMessageFn& fn) final override { messageReceiver = fn; }
+virtual inline const ImportHookFn& getImportHook () final override { return importHook; }
+virtual inline void setImportHook (const ImportHookFn& fn) final override { importHook=fn; }
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
 };
 
 struct GCLocker {
 QVM& vm;
-GCLocker (QVM& vm0): vm(vm0) { vm.gcLock=true; }
-~GCLocker () { vm.gcLock=false; }
+GCLocker (QVM& vm0): vm(vm0) { ++vm.gcLock; }
+~GCLocker () { --vm.gcLock; }
 };
 
 #include "FiberVM.hpp"

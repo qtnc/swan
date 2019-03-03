@@ -162,13 +162,27 @@ vm.imports[name] = at(-1);
 void QFiber::import (const std::string& baseFile, const std::string& requestedFile) {
 LOCK_SCOPE(vm.gil)
 string finalFile = vm.pathResolver(baseFile, requestedFile);
+if (vm.importHook(*this, finalFile, Swan::VM::ImportHookState::IMPORT_REQUEST, 0)) return;
 auto it = vm.imports.find(finalFile);
 if (it!=vm.imports.end()) push(it->second);
 else {
 vm.imports[finalFile] = true;
 try {
-loadFile(finalFile);
-call(0);
+if (!vm.importHook(*this, finalFile, Swan::VM::ImportHookState::BEFORE_IMPORT, 0)) {
+int count = loadFile(finalFile);
+vm.importHook(*this, finalFile, Swan::VM::ImportHookState::BEFORE_RUN, count);
+while(--count>=0) {
+const QClosure* closure = at(-1).isClosure()? at(-1).asObject<QClosure>() : nullptr;
+const QFunction* func = closure? &closure->func : (at(-1).isNormalFunction()? at(-1).asObject<QFunction>() : nullptr);
+string funcFile = func? func->file : "";
+call(0); 
+if (funcFile.size()) vm.imports[funcFile] = at(-1);
+if (count>0) pop(); 
+}}
+vm.importHook(*this, finalFile, Swan::VM::ImportHookState::AFTER_RUN, 0);
 vm.imports[finalFile] = at(-1);
-} catch (...) { vm.imports.erase(finalFile); throw; }
+} catch (...) { 
+vm.imports.erase(finalFile); 
+throw; 
+}
 }}

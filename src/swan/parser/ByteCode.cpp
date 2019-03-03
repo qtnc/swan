@@ -24,7 +24,6 @@ template<class T> static inline void translateSymbol (T& symbol, unordered_map<i
 T orig = symbol;
 auto it = table.find(symbol);
 if (it!=table.end()) symbol = it->second;
-println("TranslateSymbol %d => %d, %s", orig, symbol, it!=table.end());
 }
 
 static void writeVLN (ostream& out, size_t x) {

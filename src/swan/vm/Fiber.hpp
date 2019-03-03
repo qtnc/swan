@@ -85,6 +85,7 @@ virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserB
 virtual void* pushNewUserPointer (size_t id) final override;
 virtual inline void pushHandle (const Swan::Handle& h) final override { push(QV(h.value)); }
 virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
+virtual inline void swap (int i1 = -2, int i2 = -1) final override { std::swap(at(i1), at(i2)); }
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return at(-1); }
 inline void push (const QV& x) { stack.push_back(x); }
@@ -99,6 +100,7 @@ virtual void storeImport (const std::string& name) final override;
 virtual int loadString  (const std::string& source, const std::string& name="") final override;
 virtual int loadFile (const std::string& filename) final override;
 virtual void dumpBytecode (std::ostream& out, int count = 1) final override;
+virtual void importAndDumpBytecode (const std::string& baseFile, const std::string& toImport, std::ostream& out) final override;
 int loadBytecode (std::istream& in);
 void saveBytecode (std::ostream& out, int count = 1);
 
