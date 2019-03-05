@@ -263,7 +263,9 @@ enum Option {
 VAR_DECL_MODE = 0, // Variable declaration mode
 VAR_STRICT = 0, // Undefined variables are signaled and stop compilation. Recommanded option.
 VAR_IMPLICIT, // Using an undefined variable cause it to be declared implicitly, as if the keyword var had been used
-VAR_IMPLICIT_GLOBAL // Same as VAR_IMPLICIT except that the variable is implicitly declared global. Useful for interactive mode.
+VAR_IMPLICIT_GLOBAL, // Same as VAR_IMPLICIT except that the variable is implicitly declared global. Useful for interactive mode.
+COMPILATION_DEBUG_INFO = 1, // compile with debug info
+GC_TRESHHOLD_FACTOR = 2 // Increase multiplier in GC treshhold at each GC cycle. >100%
 };
 
 protected: 

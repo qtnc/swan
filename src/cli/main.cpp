@@ -6,7 +6,9 @@
 #include<typeinfo>
 #include<exception>
 #include<cstring>
+#include<boost/algorithm/string.hpp>
 using namespace std;
+using boost::starts_with;
 
 void registerIO  (Swan::Fiber& f);
 void registerDate (Swan::Fiber& f);
@@ -24,6 +26,7 @@ println("Where [script] is the script to execute");
 println("And where [options] can be: ");
 println("-c: compile script but don't run it");
 println("-e: execute the following expression given on the command line");
+println("-g: save debug information when compiling");
 println("-h: print this help message and exit");
 println("-i: run interactive REPL (default when no script file is specified)");
 println("-m: import the following given module");
@@ -69,19 +72,24 @@ line.clear();
 int main (int argc, char** argv) {
 vector<string> args, importModules;
 string inFile, outFile, expression;
-bool runREPL=false, compileOnly=false;
+bool runREPL=false, compileOnly=false, compileDbgInfo=false;
 int argIndex=1, exitCode=0;
 while(argIndex<argc) {
 string arg = argv[argIndex++];
 if (arg=="-c") compileOnly=true;
 else if (arg=="-e") expression = argv[argIndex++];
+else if (arg=="-g") compileDbgInfo=true;
 else if (arg=="-h" || arg=="--help" || arg=="-?") { printHelp(argv[0]); return 0; }
 else if (arg=="-i") runREPL=true;
 else if (arg=="-m") importModules.push_back(argv[argIndex++]);
 else if (arg=="-o") outFile = argv[argIndex++];
-else if (arg=="--") break;
-else { inFile=arg; break; }
-}
+else if (starts_with(arg, "-")) println(std::cerr, "Warning: unknown option: %s", arg);
+else { 
+if (inFile.empty()) inFile=arg;
+else if (compileOnly && outFile.empty()) outFile = arg;
+else println(std::cerr, "Warning: unused extra argument: %s", arg);
+if (!compileOnly) break; 
+}}
 while(argIndex<argc) args.push_back(argv[argIndex++]);
 
 if (!compileOnly && inFile.empty() && expression.empty()) runREPL=true;
@@ -108,7 +116,10 @@ fiber.storeGlobal("argv");
 if (!expression.empty()) {
 fiber.loadString(expression, "<cmdline>");
 fiber.call(0);
-}
+if (!fiber.isNull(-1)) {
+fiber.callMethod("toString", 1);
+cout << fiber.getCString(-1) << endl;
+}}
 
 if (!compileOnly && !inFile.empty()) {
 if (inFile=="-") {
@@ -124,11 +135,12 @@ fiber.pop();
 
 if (compileOnly && !inFile.empty()) {
 if (outFile.empty()) outFile = inFile + ".sb";
+fiber.getVM().setOption(Swan::VM::Option::COMPILATION_DEBUG_INFO, compileDbgInfo);
 ofstream out(outFile, ios::binary);
 fiber.importAndDumpBytecode("", inFile, out);
 }
 
-if (runREPL) repl(vm, fiber);
+if (runREPL && !compileOnly) repl(vm, fiber);
 
 } 
 catch (Swan::RuntimeException& e) {

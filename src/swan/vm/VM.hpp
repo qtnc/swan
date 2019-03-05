@@ -44,6 +44,7 @@ QClass *randomClass, *randomMetaClass;
 QClass *gridClass, *gridMetaClass;
 #endif
 uint8_t varDeclMode = Option::VAR_STRICT;
+bool compileDbgInfo = true;
 
 QVM ();
 virtual ~QVM ();

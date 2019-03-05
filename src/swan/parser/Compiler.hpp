@@ -72,9 +72,7 @@ out.seekp(curpos);
 }
 void seek (int n) { out.seekp(n, std::ios_base::cur); }
 
-void writeDebugLine (const QToken& tk) {
-writeOpArg<int16_t>(OP_DEBUG_LINE, parser.getPositionOf(tk.start).first);
-}
+void writeDebugLine (const QToken& tk);
 
 void pushLoop ();
 void popLoop ();

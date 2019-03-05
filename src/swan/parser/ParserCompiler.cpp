@@ -85,6 +85,10 @@ static inline bool isUnpack (const shared_ptr<Expression>& expr);
 static inline bool isComprehension (const shared_ptr<Expression>& expr);
 static inline void doCompileTimeImport (QVM& vm, const string& baseFile, shared_ptr<Expression> exprRequestedFile);
 
+void QCompiler::writeDebugLine (const QToken& tk) {
+if (parser.vm.compileDbgInfo) writeOpArg<int16_t>(OP_DEBUG_LINE, parser.getPositionOf(tk.start).first);
+}
+
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
 virtual string print() = 0;
@@ -2900,7 +2904,7 @@ sta=sta->optimizeStatement();
 //println("Code after optimization:");
 //println("%s", sta->print());
 sta->compile(*this);
-int exporting = parent? -1 : findExportsVariable(false);
+int exporting = parent? -2 : findExportsVariable(false);
 if (exporting>=0) {
 writeOpLoadLocal(*this, exporting);
 writeOp(OP_RETURN);
@@ -2923,7 +2927,7 @@ function->nArgs = nArgs;
 function->constants = constants;
 function->bytecode = out.str();
 function->upvalues = upvalues;
-function->file = parser.filename;
+function->file = parent&&!vm.compileDbgInfo? "" : parser.filename;
 result = result? result : parser.result;
 return function;
 }

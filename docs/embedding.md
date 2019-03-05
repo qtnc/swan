@@ -1,20 +1,22 @@
 # Enbedding
 
 ## Initialisation
-First of all, you need to obtain the VM, as well as the fiber where Swan code will be executed.
+First of all, you need to create the VM, as well as the fiber where Swan code will be executed.
 
 ```cpp
-Swan::VM& vm = Swan::VM::getVM();
-Swan::Fiber& fiber = vm.getActiveFiber();
+Swan::VM* vm = Swan::VM::create();
+Swan::Fiber& fiber = vm->getActiveFiber();
 ```
 
-A single VM can exist for your entire program. VM and fibers can only be manipulated through references.
+Fibers can only be manipulated through references, as their construction and destruction are managed by the VM.
+When you have finished using the VM, call `release()`; don't use delete.
 
 ## Fiber and stack
 A *fiber* is a thread of execution.
 It holds a stack of values, which are used when running Swan code: functions or methods to call, objects, parameters and returns. The stack  grows and shrinks as code is executed.
+If you have already embedded lua or another similar scripting language, the following should look pretty familiar. 
 
-If you have already embedded lua or another similar scripting language, the following should look pretty familiar. Values on the stack are accessed by their index. Positive indices from 0 upwards indicate the nth element from the current base, while negative indices count from the top downwards.
+Values on the stack are accessed by their index. Positive indices from 0 upwards indicate the nth element from the current base, while negative indices count from the top downwards.
 Thus, index 0 indicates the stack base, while -1 indicates the last element at the top. 
 The element at the stack base is a little special: slot 0 is used for receiver object of methods (the object usually known as *this* or *self*), as well as for return values.
 
@@ -28,15 +30,24 @@ To complete the general list, *pop* removes the top value of the stack, making i
 
 ## Calling Swan from C++
 ### Loading code
-There are two methods to load Swan code:
+There are two basic methods to load Swan code:
 
-- *`loadSource(const std::string& source, const std::string& name)`*: this loads the source code contained in the source string. The name is used for debugging, in case a compilation or runtime error happens.
+- *`loadString(const std::string& source, const std::string& name)`*: this loads the source code contained in the source string. The name is used for debugging, in case a compilation or runtime error happens.
 - *`loadFile(const std::string& filename)`*: loads the source from the specified filename.
 
-Both methods push the fonction that has just been compiled on top of the stack without executing, as if *pushNativeFunction* had been called. In case of errors, an exception is thrown.
+Both methods push the fonction(s) that have just been loaded on top of the stack without executing, as if *pushNativeFunction* had been called. In case of errors, an exception is thrown.
+The number of functions pushed is returned by both methods. Several functions may be pushed in case you are loading compiled bytecode.
 
 Note that you can override the way files are loaded by setting a custom file loader (see *setFileLoader* and *setPathResolver* methods).
 BY default, it searches for regular files in the current directory, using `/` or `\` as directory separators.
+
+### Importing code
+For more advanced uses, *`import(originatingName, requestedName)`* is recommanded rather than `loadFile` or `loadString`.
+Calling `import` in C++ has the same effect as the Swan import instruction.
+
+`import()` has the advantage to both load and run the requested file, as well as correctly handling the case of bytecode pushing several functions on the stack at once.
+In fact, in that case, all functions have to be executed in turn from the stack top downwards and intermediate functions returns must be registered in the import list (see the `storeImport` method).
+The simplest `loadFile()` and `loadString()` don't handle that.
 
 ### Calling a function
 To call a function, follow these steps:
@@ -154,17 +165,25 @@ fiber.pop();
 
 The IO and Date modules of the CLI give more elaborated examples of C++ API made available to scripts.
 
-## Multithreading
-Unless compilation has been done with the NO_MUTEX option, multithreading is supported but limited. 
-There are two ways in which you can handle multithreading, each with advantages and drawbacks:
+## Saving bytecode
+Swan give you the ability to save compiled code (a.k.a. bytecode) to disk for a later reuse without the need to recompile again from source.
+There are two functions for doing that: a low-level, and a higher level one.
 
-- Use a distinct fiber per C++ thread. To do that, use `vm.getActiveFiber()`. A different fiber is returned for each thread.
-    - Scripts in the different fibers will effectively run concurrently
-    - Global variables as well as bound C++ objects that have some global state **are not thread-safe** by default.
-    - Running the garbage collector requires locking all active fibers on all threads
-- Use a single fiber for all C++ threads. To do that, simply pass your Swan::Fiber reference around, you will always use the same object.
-    - *Fibers themselves aren't thread-safe*. You must use `fiber.lock()`and `fiber.unlock()` to make sure the same fiber isn't used concurrently.
-    - Scripts aren't really run concurrently. You rely on the fact that the fiber lock is released when doing I/O and other expensive operations.
+- *`dumpBytecode`*dumps the function on top of the stack only
+- `*importAndDumpBytecode`* imports a file, executes its top-level code (code which isn't inside any function), and then dumps it.
+
+The advantage of `importAndDumpBytecode` is that it dumps everything needed for a  later run, e.g. if you import and dump A but A imports B and C, B and C are also dumped. That's why a dumped bytecode file can contain several functions.
+The generated file should be imported by calling the C++ `fiber.import` or using import in Swan.
+
+## Multithreading
+Unless Swan has been compiled with the NO_THREAD_SUPPORT option, the whole VM is protected by a single so called global interpreter lock (GIL).
+Hance, no two fibers are effectively run concurrently. 
+
+I tried to allow it, but it was too complicated. Problems essentially come from the garbage collector, which anyway needs to lock all fibers in all threads to do its job correctly.
+Perhaps it will be for another day. If you want to contribute in making a concurrent GC, the door is open.
+
+You can still use the same VM across multiple threads, as long as you take care of releasing the GIL and acquiring it again when you are doing I/O or other operations that take time without interaction with Swan.
+The VM has two methods `lock`and `unlock`, but it's better to use the RAII guard `ScopeUnlocker` class.
 
 ## VM settings and language options
 When embedding, you can set a few VM parameters as well as options that will change how scripts are parsed, compiled or run.
@@ -173,7 +192,7 @@ SEt language options with the *VM::setOption* method. The following options are 
 
 - VAR_DECL_MODE: define how variable declarations are threated; can be one of three possible modes:
     - VAR_STRICT: when an unknown variable is referenced in the code, compilation is stopped and throws an error. Variables must always be declared with *let* or *const*. This is the recommanded option.
-    - VAR_IMPLICIT: when an unknown variable is referenced in the code, it is implicitly declared as a new local variable, as if *let* or *const* had been used explicitly
+    - VAR_IMPLICIT: when an unknown variable is referenced in the code, it is implicitly declared as a new local variable, as if *let* or *const* had been used explicitly. That's seem cool, but may lead to surprises when using several times the same variable names in nested scopes; it's better avoided.
     - VAR_IMPLICIT_GLOBAL: same as VAR_IMPLICIT, except that new variable is implicitly declared global. This is useful for the CLI, but strongly discouraged for usual codes.
 
 Set VM parameters by using the appropriate method. The following settings can be tweaked:
@@ -181,3 +200,7 @@ Set VM parameters by using the appropriate method. The following settings can be
 - *Path resolver*: the path resolver resolves a relative path to an absolute one. By default, usual path syntax is used, with indifferent `/` or `\` separators, `..` for parent directory and `.` for current directory. An exception should be thrown when encountering an invalid path.
 - *file loader: the file loader takes an absolute path and loads the corresponding source file. By default, it loads files from the current directory. You can override this to load sources from custom or non file-based storage, to prevent unwanted file access, or to disable imports completely. An exception should be thrown when trying to load an unexisting file.
 - *compilation message receiver*: the compilation message receiver collects messages generated during the compilation (error messages). By default, messages are printed to standard output.
+- *import hook*: you can have greater control on imports with the hook. 
+For each import made in C++ or in Swan, it is called at different steps: immediately at request (IMPORT_REQUEST), before trying to look in a file (BEFORE_IMPORT), once the file has been loaded but not yet run (BEFORE_RUN), or after it has been run (AFTER_RUN). 
+On the two first steps, you have the option to return false and let the normal process going, or push something on the stack and return true. This gives you the possibility to load C++ libraries on demand from Swan. For example you can initialize a network library and push a Socket class on the stac, but do it only when `import "Socket"` is found in the code.
+On the two last steps, you may examine what has been loaded on top of the stack and replace it with something else; the return value is ignored.
