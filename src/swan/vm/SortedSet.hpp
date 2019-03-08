@@ -16,6 +16,10 @@ QSortedSet (struct QVM& vm, QV& sorter0);
 iterator find (const QV& key);
 bool add (const QV& key, bool allowDuplicate = false);
 virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { set.insert(v.begin(), v.end()); }
+virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { 
+auto it = start<0? v.end() +start +1 : v.begin() + start;
+v.insert(it, set.begin(), set.end());
+}
 virtual ~QSortedSet () = default;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this); }

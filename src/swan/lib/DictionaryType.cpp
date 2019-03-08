@@ -22,7 +22,7 @@ f.returnValue(map);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
 f.getObject<QSequence>(i) .copyInto(f, tuple);
-map->set(tuple[0], tuple.back());
+if (tuple.size())  map->set(tuple[0], tuple.back());
 }
 }
 
@@ -39,7 +39,7 @@ f.getObject<QSequence>(i) .copyInto(f, pairs);
 for (QV& pair: pairs) {
 tuple.clear();
 pair.asObject<QSequence>() ->copyInto(f, tuple);
-map->set(tuple[0], tuple.back());
+if (tuple.size()) map->set(tuple[0], tuple.back());
 }}
 }
 

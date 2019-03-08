@@ -20,6 +20,16 @@ sorter(sorter0)
 {}
 virtual bool gcVisit () override;
 virtual ~QPriorityQueue () = default;
+
+virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override {
+data.insert(data.end(), v.begin(), v.end());
+std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
+}
+virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { 
+auto it = start<0? v.end() +start +1 : v.begin() + start;
+v.insert(it, data.begin(), data.end());
+}
+
 virtual size_t getMemSize () override { return sizeof(*this); }
 
 inline void push (const QV& x) {

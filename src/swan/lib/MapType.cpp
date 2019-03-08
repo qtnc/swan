@@ -17,7 +17,7 @@ vector<QV, trace_allocator<QV>> tuple(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
 f.getObject<QSequence>(i) .copyInto(f, tuple);
-map->map[tuple[0]] = tuple.back();
+if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }
 }
 
@@ -31,7 +31,7 @@ f.getObject<QSequence>(i) .copyInto(f, pairs);
 for (QV& pair: pairs) {
 tuple.clear();
 pair.asObject<QSequence>()->copyInto(f, tuple);
-map->map[tuple[0]] = tuple.back();
+if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }}
 }
 

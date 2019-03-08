@@ -13,6 +13,10 @@ typedef set_type::iterator iterator;
 set_type set;
 QSet (QVM& vm);
 virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { set.insert(v.begin(), v.end()); }
+virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { 
+auto it = start<0? v.end() +start +1 : v.begin() + start;
+v.insert(it, set.begin(), set.end());
+}
 virtual void join (QFiber& f, const std::string& delim, std::string& out) override;
 virtual ~QSet () = default;
 virtual bool gcVisit () override;
