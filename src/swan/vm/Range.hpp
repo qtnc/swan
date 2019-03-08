@@ -14,6 +14,7 @@ if (inclusive) return (end-start) * (end -val) >= 0 ? val : QV();
 else return (end-start) * (end -val) > 0 ? val : QV();
 }
 virtual ~QRange () = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
 #endif

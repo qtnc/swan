@@ -103,7 +103,7 @@ writeString(out, func.bytecode);
 }
 
 static QV readFunctionBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
-QFunction& func = *new QFunction(vm);
+QFunction& func = *vm.construct<QFunction>(vm);
 references[readVLN(in)] = &func;
 func.nArgs = read<uint8_t>(in);
 func.vararg = read<uint8_t>(in);
@@ -164,7 +164,7 @@ writeQVBytecode(QV(&closure.func, QV_TAG_NORMAL_FUNCTION), out, references);
 static QV readClosureBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
 size_t ref = readVLN(in);
 QFunction& func = *readQVBytecode(vm, in, references, globalTable, methodTable).asObject<QFunction>();
-QClosure* closure = newVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
 references[ref] = closure;
 return QV(closure, QV_TAG_CLOSURE);
 }

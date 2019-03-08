@@ -1,11 +1,11 @@
-//#include "../../include/cpprintf.hpp"
+#include "../../include/cpprintf.hpp"
 #include "SwanLib.hpp"
 #include "../vm/List.hpp"
 using namespace std;
 
 static void listInstantiate (QFiber& f) {
 int n = f.getArgCount() -1;
-QList* list = new QList(f.vm);
+QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
 if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 }
@@ -27,7 +27,7 @@ f.returnValue(i>=0 && i<length? list.data.at(i) : QV());
 else if (f.isRange(1)) {
 int start, end;
 f.getRange(1).makeBounds(length, start, end);
-QList* newList = new QList(f.vm);
+QList* newList = f.vm.construct<QList>(f.vm);
 f.returnValue(newList);
 if (end-start>0) newList->data.insert(newList->data.end(), list.data.begin()+start, list.data.begin()+end);
 }
@@ -46,7 +46,7 @@ else if (f.isRange(1)) {
 int start, end;
 f.getRange(1).makeBounds(length, start, end);
 list.data.erase(list.data.begin()+start, list.data.begin()+end);
-f.getObject<QSequence>(2).insertIntoVector(f, list.data, start);
+f.getObject<QSequence>(2) .copyInto(f, list.data, start);
 f.returnValue(f.at(2));
 }
 else f.returnValue(QV());
@@ -147,7 +147,7 @@ rotate(list.data.begin(), middle, list.data.end());
 }
 
 static void listTimes (QFiber& f) {
-QList *list = f.at(0).asObject<QList>(), *newList = new QList(f.vm);
+QList *list = f.at(0).asObject<QList>(), *newList = f.vm.construct<QList>(f.vm);
 int times = f.getNum(1);
 f.returnValue(newList);
 if (times>0) for (int i=0; i<times; i++) newList->data.insert(newList->data.end(), list->data.begin(), list->data.end());
@@ -189,10 +189,10 @@ f.returnValue(re);
 }
 
 static void listFromSequence (QFiber& f) {
-QList* list = new QList(f.vm);
+QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i).insertIntoVector(f, list->data, list->data.size());
+f.getObject<QSequence>(i) .copyInto(f, list->data);
 }
 }
 
@@ -238,4 +238,6 @@ listMetaClass
 BIND_F( (), listInstantiate)
 BIND_F(of, listFromSequence)
 ;
+
+println("sizeof(QList)=%d", sizeof(QList));
 }

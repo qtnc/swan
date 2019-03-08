@@ -34,7 +34,7 @@ QClass* parent = parents[0].asObject<QClass>();
 QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStaticFields);
 cval = meta;
 QClass* cls = foreign?
-new QForeignClass(*this, meta, parent, name, nFields):
+construct<QForeignClass>(*this, meta, parent, name, nFields):
 QClass::create(*this, meta, parent, name, nStaticFields, nFields+std::max(0, parent->nFields));
 cval = cls;
 for (auto& p: parents) cls->mergeMixinMethods( p.asObject<QClass>() );

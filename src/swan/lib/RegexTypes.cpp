@@ -12,7 +12,7 @@ void stringReplaceWithoutRegex (QFiber& f);
 static void regexInstantiate (QFiber& f) {
 QString &pattern = f.getObject<QString>(1);
 auto opt = QRegex::parseOptions(f.getArgCount()>2 && f.isString(2)? f.getObject<QString>(2).begin() : nullptr);
-QRegex* regex = new QRegex(f.vm, pattern.begin(), pattern.end(), opt.first, opt.second);
+QRegex* regex = f.vm.construct<QRegex>(f.vm, pattern.begin(), pattern.end(), opt.first, opt.second);
 f.returnValue(regex);
 }
 
@@ -28,7 +28,7 @@ if (r.it==r.end) f.returnValue(QV());
 
 static void regexIteratorValue (QFiber& f) {
 QRegexIterator& r = f.getObject<QRegexIterator>(0);
-QRegexMatchResult* mr = new QRegexMatchResult(f.vm);
+QRegexMatchResult* mr = f.vm.construct<QRegexMatchResult>(f.vm);
 mr->match = *r.it++;
 f.returnValue(mr);
 }
@@ -100,7 +100,7 @@ if (start<0) start+=s.length;
 if (start>0) options |= regex_constants::match_prev_avail;
 if (regex_search(const_cast<const char*>(s.begin()+start), const_cast<const char*>(s.end()), match, r.regex, r.matchOptions | options)) re = match.position()+start;
 if (full && re<0) f.returnValue(QV());
-else if (full) f.returnValue(new QRegexMatchResult(f.vm, match));
+else if (full) f.returnValue(f.vm.construct<QRegexMatchResult>(f.vm, match));
 else f.returnValue(static_cast<double>(re));
 }
 
@@ -109,18 +109,18 @@ QString& s = f.getObject<QString>(0);
 QRegex& r = f.getObject<QRegex>(1);
 int group = f.getOptionalNum(2, -2);
 bool full = f.getOptionalBool(2, false);
-if (full) f.returnValue(new QRegexIterator(f.vm, s, r, r.matchOptions));
+if (full) f.returnValue(f.vm.construct<QRegexIterator>(f.vm, s, r, r.matchOptions));
 else {
 int groupCount = r.regex.mark_count();
 if (group<-1 || group>groupCount) group = groupCount==0?0:1;
-f.returnValue(new QRegexTokenIterator(f.vm, s, r, r.matchOptions, group));
+f.returnValue(f.vm.construct<QRegexTokenIterator>(f.vm, s, r, r.matchOptions, group));
 }}
 
 void stringSplitWithRegex (QFiber& f) {
 if (f.isString(1)) { stringSplitWithoutRegex(f); return; }
 QString& s = f.getObject<QString>(0);
 QRegex& r = f.getObject<QRegex>(1);
-f.returnValue(new QRegexTokenIterator(f.vm, s, r, r.matchOptions, -1));
+f.returnValue(f.vm.construct<QRegexTokenIterator>(f.vm, s, r, r.matchOptions, -1));
 }
 
 void stringReplaceWithRegex (QFiber& f) {
@@ -145,7 +145,7 @@ std::copy(last, s.begin()+m.position(0), out);
 last = s.begin()+m.position(0)+m.length(0);
 #endif
 f.push(fmt);
-f.push(new QRegexMatchResult(f.vm, m));
+f.push(f.vm.construct<QRegexMatchResult>(f.vm, m));
 f.call(1);
 QString* repl = f.ensureString(-1);
 std::copy(repl->begin(), repl->end(), out);

@@ -10,15 +10,16 @@
 #include "CallFrame.hpp"
 #include "ForeignInstance.hpp"
 #include "Function.hpp"
+#include "Allocator.hpp"
 #include<string>
 #include<vector>
 
 struct QFiber: Swan::Fiber, QSequence  {
-typedef execution_stack<QV> Stack;
+typedef execution_stack<QV, trace_allocator<QV>> Stack;
 Stack stack;
-std::vector<QCallFrame> callFrames;
-std::vector<QCatchPoint> catchPoints;
-std::vector<struct Upvalue*> openUpvalues;
+std::vector<QCallFrame, trace_allocator<QCallFrame>> callFrames;
+std::vector<QCatchPoint, trace_allocator<QCatchPoint>> catchPoints;
+std::vector<struct Upvalue*, trace_allocator<Upvalue*>> openUpvalues;
 QVM& vm;
 QFiber* parentFiber;
 FiberState state;
@@ -136,6 +137,7 @@ template<class... A> void runtimeError (const char* msg, const A&... args);
 
 virtual ~QFiber () = default;
 virtual bool gcVisit () override;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
 #endif

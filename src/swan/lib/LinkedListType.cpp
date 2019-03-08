@@ -1,3 +1,4 @@
+#include "../../include/cpprintf.hpp"
 #ifndef NO_OPTIONAL_COLLECTIONS
 #include "SwanLib.hpp"
 #include "../vm/LinkedList.hpp"
@@ -5,7 +6,7 @@ using namespace std;
 
 static void linkedListInstantiate (QFiber& f) {
 int n = f.getArgCount() -1;
-QLinkedList* list = new QLinkedList(f.vm);
+QLinkedList* list = f.vm.construct<QLinkedList>(f.vm);
 f.returnValue(list);
 if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 }
@@ -13,7 +14,7 @@ if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 static void linkedListIterate (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
 if (f.isNull(1)) {
-f.returnValue(new QLinkedListIterator(f.vm, list));
+f.returnValue(f.vm.construct<QLinkedListIterator>(f.vm, list));
 }
 else {
 QLinkedListIterator& mi = f.getObject<QLinkedListIterator>(1);
@@ -77,13 +78,11 @@ list.data.erase(it, list.data.end());
 }}
 
 static void linkedListFromSequence (QFiber& f) {
-QLinkedList* list = new QLinkedList(f.vm);
+QLinkedList* list = f.vm.construct<QLinkedList>(f.vm);
 f.returnValue(list);
-vector<QV> v;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i).insertIntoVector(f, v, v.size());
+f.getObject<QSequence>(i) .copyInto(f, *list);
 }
-list->data.insert(list->data.end(), v.begin(), v.end());
 }
 
 static void linkedListToString (QFiber& f) {
@@ -113,5 +112,7 @@ linkedListMetaClass
 BIND_F( (), linkedListInstantiate)
 BIND_F(of, linkedListFromSequence)
 ;
+
+println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));
 }
 #endif

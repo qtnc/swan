@@ -13,6 +13,7 @@ QBuffer (QVM& vm, uint32_t len);
 inline uint8_t* begin () { return data; }
 inline uint8_t* end () { return data+length; }
 virtual ~QBuffer () = default;
+virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (length+4); }
 };
 #endif
 #endif

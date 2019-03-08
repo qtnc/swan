@@ -7,7 +7,7 @@ using namespace std;
 static void pqInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
 if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
-QPriorityQueue* pq = new QPriorityQueue(f.vm, sorter);
+QPriorityQueue* pq = f.vm.construct<QPriorityQueue>(f.vm, sorter);
 f.returnValue(pq);
 for (int i=2, n=f.getArgCount(); i<n; i++) pq->push(f.at(i));
 }
@@ -15,10 +15,10 @@ for (int i=2, n=f.getArgCount(); i<n; i++) pq->push(f.at(i));
 static void pqFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
 if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
-QPriorityQueue* pq = new QPriorityQueue(f.vm, sorter);
+QPriorityQueue* pq = f.vm.construct<QPriorityQueue>(f.vm, sorter);
 f.returnValue(pq);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i).insertIntoVector(f, pq->data, 0);
+f.getObject<QSequence>(i) .copyInto(f, pq->data);
 }
 std::make_heap(pq->data.begin(), pq->data.end(), QVBinaryPredicate(f.vm, pq->sorter));
 }

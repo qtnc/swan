@@ -7,6 +7,7 @@ struct BoundFunction: QObject {
 QV object, method;
 BoundFunction (QVM& vm, const QV& o, const QV& m);
 virtual ~BoundFunction () = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
 #endif

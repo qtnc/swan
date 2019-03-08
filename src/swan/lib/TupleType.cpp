@@ -9,9 +9,9 @@ f.returnValue(tuple);
 }
 
 static void tupleFromSequence (QFiber& f) {
-vector<QV> items;
+vector<QV, trace_allocator<QV>> items(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i).insertIntoVector(f, items, items.size());
+f.getObject<QSequence>(i) .copyInto(f, items);
 }
 f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
 }

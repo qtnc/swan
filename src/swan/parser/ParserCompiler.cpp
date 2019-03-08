@@ -2922,11 +2922,13 @@ writeOp(OP_RETURN);
 
 QFunction* QCompiler::getFunction (int nArgs) {
 compile();
-QFunction* function = new QFunction(vm);
+QFunction* function = vm.construct<QFunction>(vm);
 function->nArgs = nArgs;
-function->constants = constants;
+function->constants.clear();
+function->constants.insert(function->constants.end(), constants.begin(), constants.end());
 function->bytecode = out.str();
-function->upvalues = upvalues;
+function->upvalues.clear();
+function->upvalues.insert(function->upvalues.end(), upvalues.begin(), upvalues.end());
 function->file = parent&&!vm.compileDbgInfo? "" : parser.filename;
 result = result? result : parser.result;
 return function;

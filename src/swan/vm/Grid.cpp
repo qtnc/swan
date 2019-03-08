@@ -1,12 +1,11 @@
 #ifndef NO_GRID
-#include "VLS.hpp"
 #include "Grid.hpp"
 #include "FiberVM.hpp"
 #include "String.hpp"
 using namespace std;
 
 QGrid* QGrid::create (QVM& vm, uint32_t width, uint32_t height, const QV* data) {
-QGrid* grid = newVLS<QGrid, QV>(width*height, vm, width, height);
+QGrid* grid = vm.constructVLS<QGrid, QV>(width*height, vm, width, height);
 if (data) memcpy(grid->data, data, width*height*sizeof(QV));
 else memset(grid->data, 0, width*height*sizeof(QV));
 return grid;

@@ -10,7 +10,7 @@ QObject(vm.objectClass), map(m), iterator(m.map.begin())
 
 QDictionary::QDictionary (QVM& vm, QV& sorter0): 
 QSequence(vm.dictionaryClass), 
-map(QVBinaryPredicate(vm, sorter0)), 
+map(QVBinaryPredicate(vm, sorter0), trace_allocator<pair<QV,QV>>(vm)), 
 sorter(sorter0) 
 {}
 

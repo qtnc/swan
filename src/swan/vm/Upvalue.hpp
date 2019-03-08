@@ -16,6 +16,7 @@ else return value;
 inline void close () { value = get(); }
 virtual bool gcVisit () override;
 virtual ~Upvalue() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
 #endif

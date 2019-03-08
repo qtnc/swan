@@ -17,6 +17,7 @@ inline std::string asString () { return std::string(data, length); }
 inline char* begin () { return data; }
 inline char* end () { return data+length; }
 virtual ~QString ();
+virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (length+1); }
 };
 
 #endif

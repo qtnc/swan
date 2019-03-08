@@ -1,3 +1,4 @@
+#include "../../include/cpprintf.hpp"
 #include "SwanLib.hpp"
 #include "../vm/Map.hpp"
 #include "../vm/Tuple.hpp"
@@ -10,26 +11,26 @@ f.returnValue(it!=map.map.end());
 }
 
 static void mapInstantiate (QFiber& f) {
-QMap* map = new QMap(f.vm);
+QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
-vector<QV> tuple;
+vector<QV, trace_allocator<QV>> tuple(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
-f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
+f.getObject<QSequence>(i) .copyInto(f, tuple);
 map->map[tuple[0]] = tuple.back();
 }
 }
 
 static void mapFromSequence (QFiber& f) {
-QMap* map = new QMap(f.vm);
+QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
-vector<QV> pairs, tuple;
+vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 pairs.clear();
-f.getObject<QSequence>(i).insertIntoVector(f, pairs, 0);
+f.getObject<QSequence>(i) .copyInto(f, pairs);
 for (QV& pair: pairs) {
 tuple.clear();
-pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
+pair.asObject<QSequence>()->copyInto(f, tuple);
 map->map[tuple[0]] = tuple.back();
 }}
 }
@@ -37,7 +38,7 @@ map->map[tuple[0]] = tuple.back();
 static void mapIterate (QFiber& f) {
 QMap& map = f.getObject<QMap>(0);
 if (f.isNull(1)) {
-f.returnValue(new QMapIterator(f.vm, map));
+f.returnValue(f.vm.construct<QMapIterator>(f.vm, map));
 }
 else {
 QMapIterator& mi = f.getObject<QMapIterator>(1);
@@ -99,4 +100,6 @@ mapMetaClass
 BIND_F( (), mapInstantiate)
 BIND_F(of, mapFromSequence)
 ;
+
+println("sizeof(QMap)=%d", sizeof(QMap));
 }

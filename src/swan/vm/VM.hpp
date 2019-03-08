@@ -24,7 +24,7 @@ FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 ImportHookFn importHook;
 GIL gil;
-size_t gcAliveCount, gcTreshhold, gcTreshholdFactor, gcLock;
+size_t gcMemUsage, gcTreshhold, gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
 QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
@@ -104,6 +104,27 @@ virtual inline const ImportHookFn& getImportHook () final override { return impo
 virtual inline void setImportHook (const ImportHookFn& fn) final override { importHook=fn; }
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
+
+inline void* allocate (size_t n) {
+gcMemUsage += n;
+return malloc(n);
+}
+inline void deallocate (void* p, size_t n) {
+gcMemUsage -= n;
+free(p);
+}
+template<class T, class... A> inline T* construct (A&&... args) {
+gcMemUsage += sizeof(T);
+return new(allocate(sizeof(T)))  T( std::forward<A>(args)... );
+}
+template<class T, class U, class... A> inline T* constructVLS (int nU, A&&... args) {
+char* ptr = reinterpret_cast<char*>(allocate(sizeof(T) + nU*sizeof(U)));
+U* uPtr = reinterpret_cast<U*>(ptr + sizeof(T));
+new(ptr) T( std::forward<A>(args)... );
+new(uPtr) U[nU];
+return reinterpret_cast<T*>(ptr);
+}
+
 };
 
 struct GCLocker {

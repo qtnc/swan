@@ -2,11 +2,13 @@
 #define _____SWAN_EXECUTION_STACK_HPP_____
 #include<functional>
 
-template<class T, class F = std::function<void(const T*, const T*)>, class Alloc = std::allocator<T>> struct execution_stack {
+template<class T, class Alloc = std::allocator<T>, class F = std::function<void(const T*, const T*)>> struct execution_stack {
 T *base, *top, *finish;
 Alloc allocator;
 F callback;
-inline execution_stack (const F& cb = nullptr, size_t initialCapacity = 4):  base(nullptr), top(nullptr), finish(nullptr), callback(cb) {
+inline execution_stack (const F& cb = nullptr, size_t initialCapacity = 4, const Alloc& alloc0 = std::allocator<T>()):  
+base(nullptr), top(nullptr), finish(nullptr), 
+callback(cb), allocator(alloc0) {
 base = allocator.allocate(initialCapacity);
 top = base;
 finish = base+initialCapacity;

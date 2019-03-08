@@ -1,12 +1,16 @@
 #include "FiberVM.hpp"
+#include "Value.hpp"
 #include "Range.hpp"
 
-QFiber::QFiber (QVM& vm0): 
-QSequence(vm0.fiberClass), 
-vm(vm0), 
+QFiber::QFiber (QVM& vm): 
+QSequence(vm.fiberClass), 
+vm(vm), 
 state(FiberState::INITIAL), 
-parentFiber(nullptr)
-, stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8)
+parentFiber(nullptr),
+callFrames(trace_allocator<QCallFrame>(vm)),
+catchPoints(trace_allocator<QCatchPoint>(vm)),
+openUpvalues(trace_allocator<Upvalue*>(vm)),
+stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8, trace_allocator<QV>(vm))
  {
 stack.reserve(8);
 callFrames.reserve(4);

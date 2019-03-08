@@ -5,7 +5,7 @@
 using namespace std;
 
 static void randomInstantiate (QFiber& f) {
-QRandom* r = new QRandom(f.vm);
+QRandom* r = f.vm.construct<QRandom>(f.vm);
 if (f.getArgCount()>=2 && f.isNum(1)) r->rand.seed(f.getNum(1));
 f.returnValue(r);
 }
@@ -28,8 +28,8 @@ uniform_int_distribution<int64_t> dist(0, n -1);
 f.returnValue(static_cast<double>( dist(r.rand) ));
 }} else {
 vector<double> weights;
-vector<QV> qw;
-f.getObject<QSequence>(1) .insertIntoVector(f, qw, 0);
+vector<QV, trace_allocator<QV>> qw(f.vm);
+f.getObject<QSequence>(1) .copyInto(f, qw);
 for (QV& x: qw) weights.push_back(x.asNum());
 discrete_distribution<size_t> dist(weights.begin(), weights.end());
 f.returnValue( static_cast<double>( dist(r.rand) ) );
@@ -60,16 +60,16 @@ QList& l = f.getObject<QList>(0);
 QRandom& r = f.getArgCount()>=2 && f.at(1).isInstanceOf(f.vm.randomClass)? f.getObject<QRandom>(1) : getDefaultRandom(f);
 int count = f.getOptionalNum(-1, 1);
 if (count>1) {
-vector<QV> tmp = l.data;
+auto tmp = l.data;
 shuffle(tmp.begin(), tmp.end(), r.rand);
-QList* re = new QList(f.vm);
+QList* re = f.vm.construct<QList>(f.vm);
 f.returnValue(re);
 for (int i=0, n=tmp.size(); i<count && i<n; i++) re->data.push_back(tmp[i]);
 } 
 else if (f.getArgCount()>=2 && !f.at(-1).isInstanceOf(f.vm.randomClass)) {
 vector<double> weights;
-vector<QV> qw;
-f.getObject<QSequence>(-1) .insertIntoVector(f, qw, 0);
+vector<QV, trace_allocator<QV>> qw(f.vm);
+f.getObject<QSequence>(-1) .copyInto(f, qw);
 for (QV& x: qw) weights.push_back(x.asNum());
 weights.resize(l.data.size());
 discrete_distribution<size_t> dist(weights.begin(), weights.end());
@@ -106,6 +106,6 @@ BIND_F(draw, listDraw)
 BIND_F(permute, listPermute)
 ;
 
-bindGlobal("rand", QV(new QRandom(*this)));
+bindGlobal("rand", QV(construct<QRandom>(*this)));
 }
 #endif

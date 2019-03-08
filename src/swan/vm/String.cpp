@@ -1,4 +1,3 @@
-#include "VLS.hpp"
 #include "String.hpp"
 #include "FiberVM.hpp"
 using namespace std;
@@ -38,7 +37,7 @@ if (len<=MAX_CACHED_STRING_LENGTH) {
 auto it = vm.stringCache.find(make_pair(str, str+len));
 if (it!=vm.stringCache.end()) return it->second;
 }
-QString* s = newVLS<QString, char>(len+1, vm, len);
+QString* s = vm.constructVLS<QString, char>(len+1, vm, len);
 if (len>0) memcpy(s->data, str, len+1);
 s->data[len] = 0;
 if (len<=MAX_CACHED_STRING_LENGTH) vm.stringCache.insert(make_pair(make_pair(s->begin(), s->end()), s));

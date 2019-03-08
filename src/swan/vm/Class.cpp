@@ -5,8 +5,15 @@
 #include "ExtraAlgorithms.hpp"
 
 QClass::QClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, int nf):
-QObject(type0), vm(vm0), parent(parent0), nFields(nf), name(name0)
+QObject(type0), 
+vm(vm0), 
+parent(parent0), nFields(nf), name(name0),
+methods(trace_allocator<QV>(vm))
 { copyParentMethods(); }
+
+QClass* QClass::create (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nStaticFields, int nFields) { 
+return vm.constructVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields); 
+}
 
 QClass* QClass::copyParentMethods () {
 if (parent && parent->methods.size()) methods = parent->methods;
@@ -49,7 +56,8 @@ return cls? *cls : *vm.classClass;
 
 
 QForeignClass::QForeignClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, int nf, DestructorFn destr):
-QClass(vm0, type0, parent0, name0, nf), destructor(destr)
+QClass(vm0, type0, parent0, name0, nf), 
+destructor(destr)
 {}
 
 

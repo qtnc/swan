@@ -6,7 +6,7 @@ using namespace std;
 
 static void fiberInstantiate (QFiber& f) {
 QClosure& closure = f.getObject<QClosure>(1);
-QFiber* fb = new QFiber(f.vm, closure);
+QFiber* fb = f.vm.construct<QFiber>(f.vm, closure);
 f.returnValue(QV(fb, QV_TAG_FIBER));
 }
 

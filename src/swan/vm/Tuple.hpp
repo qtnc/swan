@@ -14,11 +14,11 @@ if (n<0) n+=length;
 return data[n];
 }
 static QTuple* create (QVM& vm, size_t length, const QV* data);
-virtual void insertIntoVector (QFiber& f, std::vector<QV>& list, int start) override { list.insert(list.begin()+start, data, data+length); }
-virtual void insertIntoSet (QFiber& f, QSet& set) override { set.set.insert(data, data+length); }
-virtual void join (QFiber& f, const std::string& delim, std::string& out) override;
+virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { v.insert(v.begin()+start, &data[0], &data[length]); }
+virtual void join (QFiber& f, const std::string& delim, std::string& out) final override;
 virtual ~QTuple () = default;
 virtual bool gcVisit () override;
+virtual size_t getMemSize () override { return sizeof(*this) + sizeof(QV) * length; }
 };
 
 #endif

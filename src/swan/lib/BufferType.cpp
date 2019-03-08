@@ -23,7 +23,7 @@ f.returnValue(static_cast<double>(re));
 static void bufferPlus (QFiber& f) {
 QBuffer &first = f.getObject<QBuffer>(0), &second = f.getObject<QBuffer>(1);
 uint32_t length = first.length + second.length;
-QBuffer* result = newVLS<QBuffer, uint8_t>(length+1, f.vm, length);
+QBuffer* result = f.vm.constructVLS<QBuffer, uint8_t>(length+1, f.vm, length);
 memcpy(result->data, first.data, first.length);
 memcpy(result->data + first.length, second.data, second.length);
 result->data[length] = 0;
@@ -31,10 +31,10 @@ f.returnValue(result);
 }
 
 static void bufferFromSequence (QFiber& f) {
-vector<QV> values;
+vector<QV, trace_allocator<QV>> values(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 if (f.isNum(i) || f.isBuffer(i)) values.push_back(f.at(i));
-else f.getObject<QSequence>(i).insertIntoVector(f, values, values.size());
+else f.getObject<QSequence>(i) .copyInto(f, values);
 }
 string re;
 auto out = back_inserter(re);
@@ -188,10 +188,10 @@ f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
 }}
 
 static void stringFromSequence (QFiber& f) {
-vector<QV> values;
+vector<QV, trace_allocator<QV>> values(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 if (f.isNum(i) || f.isString(i)) values.push_back(f.at(i));
-else f.getObject<QSequence>(i).insertIntoVector(f, values, values.size());
+else f.getObject<QSequence>(i) .copyInto(f, values);
 }
 string re;
 auto out = back_inserter(re);

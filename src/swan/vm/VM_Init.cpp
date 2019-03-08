@@ -54,8 +54,8 @@ QVM::QVM ():
 activeFiber(nullptr),
 rootFiber(nullptr),
 firstGCObject(nullptr),
-gcAliveCount(0),
-gcTreshhold(10000),
+gcMemUsage(0),
+gcTreshhold(65536),
 gcTreshholdFactor(200),
 gcLock(false),
 pathResolver(defaultPathResolver),
@@ -180,10 +180,13 @@ initGridType();
 initGlobals();
 initMathFunctions();
 
-activeFiber = rootFiber = new QFiber(*this);
+activeFiber = rootFiber = construct<QFiber>(*this);
 auto& f = *rootFiber;
 f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
 f.call(0);
 f.pop();
+
+println("sizeof(QObject)=%d, sizeof(QFiber)=%d, sizeof(QInstance)=%d, sizeof(QClass)=%d, sizeof(QVM)=%d", sizeof(QObject), sizeof(QFiber), sizeof(QInstance), sizeof(QClass), sizeof(QVM));
+println("End of init, mem usage = %d", gcMemUsage);
 }
 

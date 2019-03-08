@@ -3,6 +3,11 @@
 #include "String.hpp"
 using namespace std;
 
+QList::QList (QVM& vm): 
+QSequence(vm.listClass),
+data(trace_allocator<QV>(vm))
+{}
+
 void QList::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (QV& x: data) {

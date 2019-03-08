@@ -10,7 +10,7 @@ QObject(vm.objectClass), set(m), iterator(m.set.begin())
 
 QSortedSet::QSortedSet (QVM& vm, QV& sorter0): 
 QSequence(vm.sortedSetClass), 
-set(QVBinaryPredicate(vm, sorter0)), 
+set(QVBinaryPredicate(vm, sorter0), trace_allocator<QV>(vm)), 
 sorter(sorter0) 
 {}
 

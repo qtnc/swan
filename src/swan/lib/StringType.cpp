@@ -39,7 +39,7 @@ f.returnValue(static_cast<double>(re));
 static void stringPlus (QFiber& f) {
 QString &first = f.getObject<QString>(0), &second = *f.ensureString(1);
 uint32_t length = first.length + second.length;
-QString* result = newVLS<QString, char>(length+1, f.vm, length);
+QString* result = f.vm.constructVLS<QString, char>(length+1, f.vm, length);
 memcpy(result->data, first.data, first.length);
 memcpy(result->data + first.length, second.data, second.length);
 result->data[length] = 0;
@@ -54,7 +54,7 @@ else if (times==0) f.returnValue(QString::create(f.vm, nullptr, 0));
 else if (times==1) f.returnValue(&s);
 else {
 uint32_t length = times * s.length;
-QString* result = newVLS<QString, char>(length+1, f.vm, length);
+QString* result = f.vm.constructVLS<QString, char>(length+1, f.vm, length);
 for (int i=0; i<times; i++) memcpy(result->data+s.length*i, s.data, s.length);
 result->data[length] = 0;
 f.returnValue(result);
@@ -216,7 +216,7 @@ void stringSplitWithoutRegex (QFiber& f) {
 string subject = f.ensureString(0)->asString(), separator = f.ensureString(1)->asString();
 vector<string> result;
 boost::split(result, subject, boost::is_any_of(separator), boost::token_compress_off);
-QList* list = new QList(f.vm);
+QList* list = f.vm.construct<QList>(f.vm);
 list->data.reserve(result.size());
 for (auto& s: result) list->data.push_back(QV(f.vm, s));
 f.returnValue(list);

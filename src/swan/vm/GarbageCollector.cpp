@@ -218,7 +218,7 @@ return obj;
 
 void QVM::garbageCollect () {
 LOCK_SCOPE(gil)
-//println(std::cerr, "Starting GC ! gcAliveCount=%d, gcTreshhold=%d", gcAliveCount.load(std::memory_order_relaxed), gcTreshhold);
+println("Starting GC! mem used = %d, treshhold = %d", gcMemUsage, gcTreshhold);
 
 auto initial = to_ptr(firstGCObject);
 for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
@@ -262,13 +262,15 @@ used++;
 else {
 if (prev) prev->next = ptr->next;
 it = ptr->next;
-delete ptr;
+size_t size = ptr->getMemSize();
+ptr->~QObject();
+deallocate(ptr, size);
 collectable++;
 }
 }
 //println(std::cerr, "GC Stats: %d objects ammong which %d used (%d%%) and %d collectable (%d%%)", count, used, 100*used/count, collectable, 100*collectable/count);
 prev->next = nullptr;
 firstGCObject = initial;
-gcAliveCount = count;
-gcTreshhold = std::max(gcTreshhold, count * gcTreshholdFactor / 100);
+gcTreshhold = std::max(gcTreshhold, gcMemUsage * gcTreshholdFactor / 100);
+println("GC finished. mem usage = %d, new treshhold = %d", gcMemUsage, gcTreshhold);
 }

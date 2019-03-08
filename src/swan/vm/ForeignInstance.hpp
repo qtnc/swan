@@ -5,7 +5,8 @@
 struct QForeignInstance: QSequence  {
 char userData[];
 QForeignInstance (QClass* type): QSequence(type) {}
-static inline QForeignInstance* create (QClass* type, int nBytes) { return newVLS<QForeignInstance, char>(nBytes, type); }
+static QForeignInstance* create (QClass* type, int nBytes);
 virtual ~QForeignInstance ();
+virtual size_t getMemSize () override ;
 };
 #endif

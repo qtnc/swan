@@ -38,7 +38,7 @@ QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);
 QFunction* func = compiler.getFunction();
 if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
-QClosure* closure = new QClosure(vm, *func);
+QClosure* closure = vm.construct<QClosure>(vm, *func);
 stack.push_back(QV(closure, QV_TAG_CLOSURE));
 return 1;
 }

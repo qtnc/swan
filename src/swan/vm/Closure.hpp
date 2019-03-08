@@ -8,6 +8,7 @@ struct Upvalue* upvalues[];
 QClosure (QVM& vm, QFunction& f);
 virtual bool gcVisit () final override;
 virtual ~QClosure () = default;
+virtual size_t getMemSize () override ;
 };
 
 #endif

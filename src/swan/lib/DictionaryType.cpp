@@ -16,12 +16,12 @@ f.returnValue(it!=map.map.end());
 static void dictionaryInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
 if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
-QDictionary* map = new QDictionary(f.vm, sorter);
-vector<QV> tuple;
+QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
+vector<QV, trace_allocator<QV>> tuple(f.vm);
 f.returnValue(map);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
-f.getObject<QSequence>(i).insertIntoVector(f, tuple, 0);
+f.getObject<QSequence>(i) .copyInto(f, tuple);
 map->set(tuple[0], tuple.back());
 }
 }
@@ -30,15 +30,15 @@ static void dictionaryFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV();
 if (sorter.isNull()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
 if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
-QDictionary* map = new QDictionary(f.vm, sorter);
+QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 f.returnValue(map);
-vector<QV> pairs, tuple;
+vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);
 for (int i=2, l=f.getArgCount(); i<l; i++) {
 pairs.clear();
-f.getObject<QSequence>(i).insertIntoVector(f, pairs, 0);
+f.getObject<QSequence>(i) .copyInto(f, pairs);
 for (QV& pair: pairs) {
 tuple.clear();
-pair.asObject<QSequence>()->insertIntoVector(f, tuple, 0);
+pair.asObject<QSequence>() ->copyInto(f, tuple);
 map->set(tuple[0], tuple.back());
 }}
 }
@@ -46,7 +46,7 @@ map->set(tuple[0], tuple.back());
 static void dictionaryIterate (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 if (f.isNull(1)) {
-f.returnValue(new QDictionaryIterator(f.vm, map));
+f.returnValue(f.vm.construct<QDictionaryIterator>(f.vm, map));
 }
 else {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(1);
@@ -139,5 +139,7 @@ dictionaryMetaClass
 BIND_F( (), dictionaryInstantiate)
 BIND_F(of, dictionaryFromSequence)
 ;
+
+println("sizeof(QDictionary)=%d", sizeof(QDictionary));
 }
 #endif

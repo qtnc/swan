@@ -1,5 +1,13 @@
 #include "VM.hpp"
 
+void* vm_alloc (QVM& vm, size_t n) {
+return vm.allocate(n);
+}
+
+void vm_dealloc (QVM& vm, void* p, size_t n) {
+vm.deallocate(p, n);
+}
+
 Swan::VM& Swan::VM::create () {
 return *new QVM();
 }

@@ -14,7 +14,7 @@ end = f.getNum(2);
 }
 if (nArgs>3 && f.isNum(3)) step = f.getNum(3);
 else step = end>=start? 1 : -1;
-f.returnValue(new QRange(f.vm, start, end, step, inclusive));
+f.returnValue(f.vm.construct<QRange>(f.vm, start, end, step, inclusive));
 }
 
 static void rangeIn (QFiber& f) {
@@ -37,7 +37,7 @@ f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV());
 
 QV rangeMake (QVM& vm, double start, double end, bool inclusive) {
 double step = end>=start? 1 : -1;
-return new QRange(vm, start, end, step, inclusive);
+return vm.construct<QRange>(vm, start, end, step, inclusive);
 }
 
 static void rangeToString (QFiber& f) {

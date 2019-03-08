@@ -6,8 +6,9 @@ struct QObject {
 QClass* type;
 QObject* next;
 QObject (QClass* tp);
-virtual ~QObject() = default;
 virtual bool gcVisit ();
+virtual size_t getMemSize () = 0;
+virtual ~QObject() = default;
 };
 
 #endif

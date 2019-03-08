@@ -1,3 +1,4 @@
+#include "../../include/cpprintf.hpp"
 #include "SwanLib.hpp"
 #include "../vm/Set.hpp"
 using namespace std;
@@ -16,7 +17,7 @@ for (auto& val: set1) if (set2.find(val)==set2.end()) result.insert(val);
 }
 
 template<class T> void unordered_set_symetric_difference  (const T& set1, const T& set2, T& result) {
-T intersection(set1.bucket_count(), set1.hash_function(), set1.key_eq()), union_(set1.bucket_count(), set1.hash_function(), set1.key_eq());
+T intersection(set1.bucket_count(), set1.hash_function(), set1.key_eq(), set1.get_allocator()), union_(set1.bucket_count(), set1.hash_function(), set1.key_eq(), set1.get_allocator());
 unordered_set_union(set1, set2, union_);
 unordered_set_intersection(set1, set2, intersection);
 unordered_set_difference(union_, intersection, result);
@@ -25,16 +26,16 @@ unordered_set_difference(union_, intersection, result);
 
 static void setInstantiate (QFiber& f) {
 int n = f.getArgCount() -1;
-QSet* set = new QSet(f.vm);
+QSet* set = f.vm.construct<QSet>(f.vm);
 f.returnValue(set);
 if (n>0) set->set.insert(&f.at(1), &f.at(1) +n);
 }
 
 static void setFromSequence (QFiber& f) {
-QSet* set = new QSet(f.vm);
+QSet* set = f.vm.construct<QSet>(f.vm);
 f.returnValue(set);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i).insertIntoSet(f, *set);
+f.getObject<QSequence>(i) .copyInto(f, *set);
 }
 }
 
@@ -52,28 +53,28 @@ f.returnValue(it!=set.set.end());
 
 static void setUnion (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
-QSet* result = new QSet(f.vm);
+QSet* result = f.vm.construct<QSet>(f.vm);
 f.returnValue(result);
 unordered_set_union(set1.set, set2.set, result->set);
 }
 
 static void setIntersection (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
-QSet* result = new QSet(f.vm);
+QSet* result = f.vm.construct<QSet>(f.vm);
 f.returnValue(result);
 unordered_set_intersection(set1.set, set2.set, result->set);
 }
 
 static void setDifference (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
-QSet* result = new QSet(f.vm);
+QSet* result = f.vm.construct<QSet>(f.vm);
 f.returnValue(result);
 unordered_set_difference(set1.set, set2.set, result->set);
 }
 
 static void setSymetricDifference (QFiber& f) {
 QSet &set1 = f.getObject<QSet>(0), &set2 = f.getObject<QSet>(1);
-QSet* result = new QSet(f.vm);
+QSet* result = f.vm.construct<QSet>(f.vm);
 f.returnValue(result);
 unordered_set_symetric_difference(set1.set, set2.set, result->set);
 }
@@ -101,7 +102,7 @@ f.returnValue(re);
 static void setIterate (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
 if (f.isNull(1)) {
-f.returnValue(new QSetIterator(f.vm, set));
+f.returnValue(f.vm.construct<QSetIterator>(f.vm, set));
 }
 else {
 QSetIterator& mi = f.getObject<QSetIterator>(1);
@@ -149,5 +150,7 @@ setMetaClass
 BIND_F( (), setInstantiate)
 BIND_F(of, setFromSequence)
 ;
+
+println("sizeof(QSet)=%d", sizeof(QSet));
 }
 

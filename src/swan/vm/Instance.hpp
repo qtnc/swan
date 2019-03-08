@@ -1,14 +1,14 @@
 #ifndef _____SWAN_INSTANCE_HPP_____
 #define _____SWAN_INSTANCE_HPP_____
-#include "VLS.hpp"
 #include "Sequence.hpp"
 
 struct QInstance: QSequence {
 QV fields[];
 QInstance (QClass* type): QSequence(type) {}
-static inline QInstance* create (QClass* type, int nFields) { return newVLS<QInstance, QV>(nFields, type); }
+static QInstance* create (QClass* type, int nFields);
 virtual ~QInstance () = default;
 virtual bool gcVisit () final override;
+virtual size_t getMemSize () override ;
 };
 
 #endif

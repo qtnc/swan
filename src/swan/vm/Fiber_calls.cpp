@@ -177,7 +177,7 @@ QV val = QV(QV_TAG_OPEN_UPVALUE | reinterpret_cast<uintptr_t>(&stack.at(callFram
 QFiber* _this=this;
 auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==_this && x->value.i==val.i; });
 if (it!=openUpvalues.end()) return *it;
-auto upvalue = new Upvalue(*this, slot);
+auto upvalue = vm.construct<Upvalue>(*this, slot);
 openUpvalues.push_back(upvalue);
 return upvalue;
 }

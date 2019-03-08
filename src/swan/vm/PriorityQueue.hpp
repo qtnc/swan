@@ -5,16 +5,22 @@
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
 #include "VM.hpp"
+#include "Allocator.hpp"
 #include <vector>
 #include<algorithm>
 
 struct QPriorityQueue: QSequence {
-std::vector<QV> data;
+typedef std::vector<QV, trace_allocator<QV>> container_type;
+container_type  data;
 QV sorter;
 QPriorityQueue (struct QVM& vm, QV& sorter0):
-QSequence(vm.priorityQueueClass), sorter(sorter0) {}
+QSequence(vm.priorityQueueClass), 
+data(trace_allocator<QV>(vm)),
+sorter(sorter0)
+{}
 virtual bool gcVisit () override;
 virtual ~QPriorityQueue () = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 
 inline void push (const QV& x) {
 data.push_back(x);
@@ -29,7 +35,7 @@ data.pop_back();
 return re;
 }
 
-inline void erase (std::vector<QV>::iterator it) {
+inline void erase (const container_type::iterator& it) {
 data.erase(it);
 std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 }

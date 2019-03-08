@@ -4,6 +4,11 @@
 #include "FiberVM.hpp"
 using namespace std;
 
+QLinkedList::QLinkedList (QVM& vm): 
+QSequence(vm.linkedListClass),
+data(trace_allocator<QV>(vm))
+{}
+
 void QLinkedList::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (QV& x: data) {

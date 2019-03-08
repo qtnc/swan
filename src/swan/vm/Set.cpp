@@ -5,7 +5,7 @@ using namespace std;
 
 QSet::QSet (QVM& vm): 
 QSequence(vm.setClass), 
-set(4, QVHasher(vm), QVEqualler(vm))  
+set(4, QVHasher(vm), QVEqualler(vm), trace_allocator<QV>(vm))  
 {}
 
 void QSet::join (QFiber& f, const string& delim, string& re) {

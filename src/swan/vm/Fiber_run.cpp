@@ -40,7 +40,7 @@ if (symbol<c.methods.size() && !c.methods[symbol].isNull()) return c.methods[sym
 else if (symbol<cls.methods.size() && !cls.methods[symbol].isNull()) return cls.methods[symbol];
 }
 else if (symbol<cls.methods.size() && !cls.methods[symbol].isNull()) {
-return QV(new BoundFunction(vm, obj, cls.methods[symbol]), QV_TAG_BOUND_FUNCTION);
+return QV(vm.construct<BoundFunction>(vm, obj, cls.methods[symbol]), QV_TAG_BOUND_FUNCTION);
 }
 return QV();
 }
@@ -188,7 +188,7 @@ BREAK
 CASE(OP_LOAD_CLOSURE) {
 QV& val = frame.closure->func.constants[frame.read<uint_constant_index_t>()];
 QFunction& func = *val.asObject<QFunction>();
-QClosure* closure = newVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
 for (int i=0, n=func.upvalues.size(); i<n; i++) {
 auto& upvalue = func.upvalues[i];
 closure->upvalues[i] = upvalue.upperUpvalue? closure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
@@ -322,8 +322,8 @@ BREAK
 CASE(OP_UNPACK_SEQUENCE) {
 QV val = top();
 pop();
-vector<QV> buffer;
-val.asObject<QSequence>()->insertIntoVector(*this, buffer, 0);
+vector<QV, trace_allocator<QV>> buffer(vm);
+val.asObject<QSequence>()->copyInto(*this, buffer);
 stack.insert(stack.end(), buffer.begin(), buffer.end());
 }
 BREAK
