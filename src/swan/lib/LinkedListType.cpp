@@ -113,6 +113,6 @@ BIND_F( (), linkedListInstantiate)
 BIND_F(of, linkedListFromSequence)
 ;
 
-println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));
+//println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));
 }
 #endif

@@ -60,6 +60,7 @@ f.returnValue(f.at(-1));
 }
 
 static void createClass (QFiber& f) {
+GCLocker gcLocker(f.vm);
 string name = f.getString(0);
 vector<QV> parents;
 int nFields=-1, nStaticFields=-1;
@@ -77,7 +78,7 @@ else parents.push_back(f.at(i));
 if (nFields<0) nFields=0;
 if (nStaticFields<0) nStaticFields=0;
 if (!parents.size()) parents.push_back(f.vm.objectClass);
-QClass* cls = f.vm.createNewClass(name, parents, nStaticFields, nFields, false, f.at(0));
+QClass* cls = f.vm.createNewClass(name, parents, nStaticFields, nFields, false);
 f.returnValue(cls);
 }
 

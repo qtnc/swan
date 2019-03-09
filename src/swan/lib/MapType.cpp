@@ -101,5 +101,5 @@ BIND_F( (), mapInstantiate)
 BIND_F(of, mapFromSequence)
 ;
 
-println("sizeof(QMap)=%d", sizeof(QMap));
+//println("sizeof(QMap)=%d", sizeof(QMap));
 }

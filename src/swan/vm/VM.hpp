@@ -54,7 +54,7 @@ virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, bool createNew);
 void bindGlobal (const std::string& name, const QV& value);
-QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign, QV& storeval);
+QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
 void addToGC (QObject* obj);
 

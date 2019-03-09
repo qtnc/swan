@@ -27,16 +27,14 @@ insert_n(globalVariables, 1+symbol-globalVariables.size(), QV());
 globalVariables.at(symbol) = value;
 }
 
-QClass* QVM::createNewClass (const string& name, vector<QV>& parents, int nStaticFields, int nFields, bool foreign, QV& cval) {
+QClass* QVM::createNewClass (const string& name, vector<QV>& parents, int nStaticFields, int nFields, bool foreign) {
 GCLocker gcLocker(*this);
 string metaName = name + ("MetaClass");
 QClass* parent = parents[0].asObject<QClass>();
 QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStaticFields);
-cval = meta;
 QClass* cls = foreign?
 construct<QForeignClass>(*this, meta, parent, name, nFields):
 QClass::create(*this, meta, parent, name, nStaticFields, nFields+std::max(0, parent->nFields));
-cval = cls;
 for (auto& p: parents) cls->mergeMixinMethods( p.asObject<QClass>() );
 meta->bind("()", instantiate);
 return cls;
@@ -56,8 +54,9 @@ if (dynamic_cast<QForeignClass*>(parent)) {
 runtimeError("Unable to inherit from foreign class %s", parent->name);
 return;
 }
-pushNull();
-QClass* cls = vm.createNewClass(name, parents, nStaticFields, nFields, false, at(-1));
+GCLocker gcLocker(vm);
+QClass* cls = vm.createNewClass(name, parents, nStaticFields, nFields, false);
+push(cls);
 }
 
 void QFiber::pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents) {
@@ -65,12 +64,13 @@ if (nParents<=0) {
 push(vm.objectClass);
 nParents = 1;
 }
+GCLocker gcLocker(vm);
 vector<QV> parents(stack.end() -nParents, stack.end());
-pushNull();
-QForeignClass* cls = static_cast<QForeignClass*>(vm.createNewClass(name, parents, 0, nUserBytes, true, at(-1)));
+QForeignClass* cls = static_cast<QForeignClass*>(vm.createNewClass(name, parents, 0, nUserBytes, true));
 cls->id = id;
 stack.erase(stack.end() -nParents, stack.end());
 vm.foreignClassIds[id] = cls;
+push(cls);
 }
 
 QV getItemFromLastArgMap (QFiber& f, const string& key) {

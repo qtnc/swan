@@ -239,5 +239,5 @@ BIND_F( (), listInstantiate)
 BIND_F(of, listFromSequence)
 ;
 
-println("sizeof(QList)=%d", sizeof(QList));
+//println("sizeof(QList)=%d", sizeof(QList));
 }

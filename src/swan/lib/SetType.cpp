@@ -151,6 +151,6 @@ BIND_F( (), setInstantiate)
 BIND_F(of, setFromSequence)
 ;
 
-println("sizeof(QSet)=%d", sizeof(QSet));
+//println("sizeof(QSet)=%d", sizeof(QSet));
 }
 

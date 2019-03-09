@@ -17,6 +17,7 @@ switch(opt){
 case Option::VAR_DECL_MODE: return varDeclMode;
 case Option::COMPILATION_DEBUG_INFO: return compileDbgInfo;
 case Option::GC_TRESHHOLD_FACTOR: return gcTreshholdFactor;
+case Option::GC_TRESHHOLD: return gcTreshhold;
 default: return 0;
 }}
 
@@ -24,6 +25,7 @@ void QVM::setOption (QVM::Option opt, int value) {
 switch(opt){
 case Option::VAR_DECL_MODE: varDeclMode = value; break;
 case Option::COMPILATION_DEBUG_INFO: compileDbgInfo = value; break;
-case GC_TRESHHOLD_FACTOR: gcTreshholdFactor = std::max(101, value); break;
+case Option::GC_TRESHHOLD_FACTOR: gcTreshholdFactor = std::max(110, value); break;
+case Option::GC_TRESHHOLD: gcTreshhold = std::max<size_t>(65536, std::max<size_t>(gcMemUsage + 16, value)); break;
 }}
 

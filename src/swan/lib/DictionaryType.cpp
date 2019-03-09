@@ -140,6 +140,6 @@ BIND_F( (), dictionaryInstantiate)
 BIND_F(of, dictionaryFromSequence)
 ;
 
-println("sizeof(QDictionary)=%d", sizeof(QDictionary));
+//println("sizeof(QDictionary)=%d", sizeof(QDictionary));
 }
 #endif
