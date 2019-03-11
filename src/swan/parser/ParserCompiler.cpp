@@ -37,7 +37,7 @@ double drshift (double, double);
 double dintdiv (double, double);
 
 template<class T> static inline uint32_t utf8inc (T& it, T end) {
-utf8::next(it, end);
+if (it!=end) utf8::next(it, end);
 return it==end? 0 : utf8::peek_next(it, end);
 }
 
@@ -95,6 +95,7 @@ virtual string print() = 0;
 virtual const QToken& nearestToken () = 0;
 virtual bool isExpression () { return false; }
 virtual bool isDecorable () { return false; }
+virtual bool isUsingExports () { return false; }
 virtual shared_ptr<Statement> optimizeStatement () { return shared_this(); }
 virtual void compile (QCompiler& compiler) {}
 };
@@ -753,6 +754,7 @@ vector<shared_ptr<Statement>> statements;
 BlockStatement (const vector<shared_ptr<Statement>>& sta): statements(sta) {}
 shared_ptr<Statement> optimizeStatement () { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
 const QToken& nearestToken () { return statements[0]->nearestToken(); }
+bool isUsingExports () override { return any_of(statements.begin(), statements.end(), [&](auto s){ return s && s->isUsingExports(); }); }
 void compile (QCompiler& compiler) {
 compiler.pushScope();
 for (auto sta: statements) {
@@ -775,7 +777,8 @@ int flags;
 VariableDeclaration (const vector<pair<QToken,shared_ptr<Expression>>>& vd, int flgs): vars(vd), flags(flgs)   {}
 const QToken& nearestToken () { return vars[0].first; }
 shared_ptr<Statement> optimizeStatement () { for (auto& v: vars) v.second=v.second->optimize(); return shared_this(); }
-virtual bool isDecorable () { return true; }
+virtual bool isDecorable () override { return true; }
+virtual bool isUsingExports () override { return flags&VD_EXPORT; }
 void compile (QCompiler& compiler);
 string print () {
 string s;
@@ -790,6 +793,15 @@ s += string(var.start, var.length) + (" = ") + val->print();
 }
 return s;
 }};
+
+struct ExportDeclaration: Statement  {
+vector<pair<QToken,shared_ptr<Expression>>> exports;
+const QToken& nearestToken () { return exports[0].first; }
+shared_ptr<Statement> optimizeStatement () { for (auto& v: exports) v.second=v.second->optimize(); return shared_this(); }
+bool isUsingExports () override { return true; }
+void compile (QCompiler& compiler);
+string print () { return "export!"; }
+};
 
 struct ImportDeclaration: Statement {
 shared_ptr<Expression> from;
@@ -809,21 +821,28 @@ return s;
 }
 void compile (QCompiler& compiler) {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-static int importCount = 0;
 int subscriptSymbol = compiler.parser.vm.findMethodSymbol("[]");
+vector<int> varSlots;
 compiler.writeDebugLine(nearestToken());
+for (auto& p: imports) {
+varSlots.push_back(compiler.findLocalVariable(p.second, LV_NEW | LV_CONST));
+compiler.writeOp(OP_LOAD_NULL);
+}
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, false));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
-QString* vn = QString::create(compiler.parser.vm, format("#import%d", importCount++));
-compiler.findLocalVariable({ T_NAME, vn->data, vn->length, QV() }, LV_NEW | LV_CONST);
-for (auto& p: imports) {
-compiler.writeOp(OP_DUP);
+for (int i=0, n=imports.size(); i<n; i++) {
+auto& p = imports[i];
+auto slot = varSlots[i];
+if (n>1) compiler.writeOp(OP_DUP);
+compiler.writeDebugLine(p.second);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, p.first.start, p.first.length), QV_TAG_STRING)));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-compiler.findLocalVariable(p.second, LV_NEW | LV_CONST);
+writeOpStoreLocal(compiler, slot);
+compiler.writeOp(OP_POP);
 }
+if (imports.size()>1) compiler.writeOp(OP_POP);
 }};
 
 struct FunctionParameter: Expression, Decorable {
@@ -1141,7 +1160,7 @@ return d;
 static void skipComment (const char*& in, const char* end) {
 int c = utf8::peek_next(in, end);
 if (isSpace(c) || isName(c)) {
-while(c && !isLine(c)) c=utf8::next(in, end);
+while(c && in<end && !isLine(c)) c=utf8::next(in, end);
 return;
 }
 int opening = c, closing = c, nesting = 1;
@@ -1900,9 +1919,23 @@ return parseClassDecl(VD_CONST | VD_EXPORT);
 else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
 return parseFunctionDecl(VD_CONST | VD_EXPORT);
 }
-parseError(("Expected 'function', 'var' or 'class' after 'export'"));
-return nullptr;
+else {
+auto exportDecl = make_shared<ExportDeclaration>();
+do {
+shared_ptr<Expression> exportExpr = parseExpression();
+if (!exportExpr) { parseError("Expected 'class', 'function', 'var' or expression after 'export'"); return nullptr; }
+QToken nameToken = cur;
+shared_ptr<NameExpression> nameExpr = dynamic_pointer_cast<NameExpression>(exportExpr);
+if (nameExpr && !match(T_AS)) nameToken = nameExpr->token;
+else {
+if (!nameExpr) consume(T_AS, "Expected 'as' after export expression");
+consume(T_NAME, "Expected export name after 'as'");
+nameToken = cur;
 }
+exportDecl->exports.push_back(make_pair(nameToken, exportExpr));
+} while (match(T_COMMA));
+return exportDecl;
+}}
 
 shared_ptr<Expression> QParser::parseImportExpression () {
 bool parent = match(T_LEFT_PAREN);
@@ -2654,6 +2687,21 @@ compiler.patch<FieldInfo>(fieldInfoPos, fieldInfo);
 compiler.curClass = oldClassDecl;
 }
 
+void ExportDeclaration::compile (QCompiler& compiler) {
+int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
+bool multi = exports.size()>1;
+int exportsSlot = compiler.findExportsVariable(true);
+writeOpLoadLocal(compiler, exportsSlot);
+for (auto& p: exports) {
+if (multi) compiler.writeOp(OP_DUP);
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, p.first.start, p.first.length), QV_TAG_STRING)));
+p.second->compile(compiler);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_3, subscriptSetterSymbol);
+compiler.writeOp(OP_POP);
+}
+if (multi) compiler.writeOp(OP_POP);
+}
+
 void FunctionParameter::compile (QCompiler& fc) {
 int slot = fc.localVariables.size();
 LocalVariable lv = { arg, fc.curScope, false, (flags&FP_CONST)  };
@@ -2796,6 +2844,16 @@ bool isConst = flags&LV_CONST;
 return parser.vm.findGlobalSymbol(string(name.start, name.length), createNew);
 }
 
+static shared_ptr<Statement> addReturnExports (shared_ptr<Statement> sta) {
+if (!sta->isUsingExports()) return sta;
+QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
+auto exs = make_shared<ReturnStatement>(exportsToken, make_shared<NameExpression>(exportsToken));
+auto bs = dynamic_pointer_cast<BlockStatement>(sta);
+if (bs) bs->statements.push_back(exs);
+else bs = make_shared<BlockStatement>(vector<shared_ptr<Statement>>({ sta, exs }));
+return bs;
+}
+
 int QCompiler::findExportsVariable (bool createIfNotExist) {
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
 int slot = findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
@@ -2908,16 +2966,12 @@ shared_ptr<Statement> sta = parser.parseStatements();
 if (sta && !parser.result) {
 //println("Code before optimization:");
 //println("%s", sta->print() );
+sta = addReturnExports(sta);
 sta=sta->optimizeStatement();
 //println("Code after optimization:");
 //println("%s", sta->print());
 sta->compile(*this);
-int exporting = parent? -2 : findExportsVariable(false);
-if (exporting>=0) {
-writeOpLoadLocal(*this, exporting);
-writeOp(OP_RETURN);
-}
-else if (lastOp==OP_POP) {
+if (lastOp==OP_POP) {
 seek(-1);
 writeOp(OP_RETURN);
 }

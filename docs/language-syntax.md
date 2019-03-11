@@ -400,7 +400,7 @@ if condition: yield expression
 ```
 
 ## Decorators
-Here's another construction inspired by python:
+Here's another popular construction inspired by python:
 
 ```
 function logged (value) {
@@ -476,6 +476,33 @@ variable.close
 Except that the *variable* is no longer available after the closing brace. An optional catch block is allowed, where the variable is still available.
 
 
+## Import and export
+The general syntax of import is: import *source* for *sourceName* as *destinationName*, ...
+
+- *source* is the place from where to import. It's typically a constant string indicating a file name to load.
+- *sourceName* is the name to import from in the source mapping
+- *destinationName* is the name of the variable to which the imported symbol will be affected to
+
+For exemple, by writing:
+`import 'file.swan' for src as dest`
+would load the file file.swan, search for an export named src, and put the imported symbol into the dest variable. After this statement, you can use dest as a regular local variable.
+A matching export written in file.swan could be èxport something as src`.
+
+Multiple symbols can naturally be imported at once from the same source with a comma-separated list: `import source for A as first, B as second, C as third, ...`.
+Of course, the as clause can be omited, in which case the destination and source name are identical.
+Import can also be used as an expression. In this case, `for` and `as` can't be used and a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`.
+
+To be able to import symbols from another source, they have to be explicitly exported first. The export keyword can be used in several ways:
+
+- export *expression* as *exportName*
+- export class *ClassName* { ... }
+- export function *functionName* (arguments) { ... }
+- export var *variableName* = *expression*
+
+With the first syntax, the given expression is stored in the exporting symbols with the given name.
+The second, third and fourth syntaxes respectively declare a class, function or serie of local variables. They are both stored in exporting symbols and normally usable in the current file.
+When using the export keyword, a local variable *exports* is automatically created to hold a map of exported symbols. 
+
 ## Miscellaneous syntax suggars
 ### Implicit map 
 When the last parameter of a function is a map, you can omit the encosing braces when calling it:
@@ -485,7 +512,6 @@ is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
 This may be used to simulates named function parameters to some extent, in combination with destructuring parameters (see below).
-
 
 ### Destructuring variable declaration
 You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
@@ -518,4 +544,30 @@ f(three: 333, two: 222, one: 111) # 666
 let m1 = {one: 1, two: 2, three: 3}
 for (key, value) in m1: print(key+'='+value) # It works since a map yield (key, value) tuples when iterated
 let m2 = Map.of( (k+k, v*v) for (k, v) in m1) # This will produce { oneone: 1, twotwo: 4, threethree: 9 }
+```
+
+## Comments
+Let's finish with the most usless thing, comments.
+As in many programming languages, there exist *short comments* going up to the end of the line, and *long comments* that can span multiple lines.
+
+- Short comments start with `#` and go up to the end of the line
+- Long comments start with `#a` and end with `a#`, where `a` can be any non-space and non-alphanumeric symbol. An opening paren, brace or bracket naturally match with the corresponding closing symbol.
+
+Examples:
+
+```
+# This is a single line comment
+
+#* This is a long comment
+    that can span multiple lines *#
+
+#{ When using paren, brackets or braces,
+    the comment must be closed with the adequate closing symbol
+    rather than the same symbol as the one used for opening }#
+
+#% Note that long comments may be nested
+#% several times with the same symbol
+%# this is still part of the comment
+#[ this also, but stay careful
+%# because this, no longer ! ]#
 ```
