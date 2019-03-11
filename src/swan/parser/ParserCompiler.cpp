@@ -1117,6 +1117,13 @@ bool isName (uint32_t c) {
 return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' || c>=128;
 }
 
+static bool isSpaceOrIgnorableLine (uint32_t c, const char* in, const char* end) {
+if (isSpace(c)) return true;
+else if (!isLine(c)) return false;
+while (in<end && (c=utf8::next(in, end)) && (isSpace(c) || isLine(c)));
+return string(".+-/*&|").find(c)!=string::npos;
+}
+
 static inline double parseNumber (const char*& in) {
 if (*in=='0') {
 switch(in[1]){
@@ -1262,8 +1269,8 @@ case '>': RET3('>', '=')
 case '#': skipComment(in, end); return nextNameToken(eatEq);
 }
 if (isName(c)) {
-while((c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8::next(in, end);
-if (utf8::peek_next(in, end)=='=' && eatEq) utf8::next(in, end);
+while(in<end && (c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8::next(in, end);
+if (in<end && utf8::peek_next(in, end)=='=' && eatEq) utf8::next(in, end);
 RET
 }
 auto p = getPositionOf(in);
@@ -1296,7 +1303,7 @@ if (in>=end || !*in) RET(T_END)
 int c;
 do {
 c = utf8::next(in, end);
-} while(isSpace(c) && *(start=in) && in<end);
+} while(isSpaceOrIgnorableLine(c, in, end) && *(start=in) && in<end);
 switch(c){
 case '\0': RET(T_END)
 case '\n': RET(T_LINE)
@@ -1344,7 +1351,7 @@ double d = parseNumber(--in);
 RETV(T_NUM, d)
 }
 else if (isName(c)) {
-while((c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8::next(in, end);
+while(in<end && (c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8::next(in, end);
 QTokenType type = T_NAME;
 auto it = KEYWORDS.find(string(start, in-start));
 if (it!=KEYWORDS.end()) type = it->second;
@@ -1353,6 +1360,7 @@ case T_TRUE: RETV(type, true)
 case T_FALSE: RETV(type, false)
 default: RET(type)
 }}
+else if (isSpace(c)) RET(T_END)
 auto p = getPositionOf(in);
 int line = p.first, column = p.second;
 println(std::cerr, "Line %d, column %d: unexpected character '%c' (%<#0$2X)", line, column, c);
