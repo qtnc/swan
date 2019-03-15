@@ -60,6 +60,7 @@ std::shared_ptr<Statement> parseSimpleStatement ();
 std::shared_ptr<Statement> parseDecoratedStatement ();
 std::shared_ptr<Statement> parseBlock ();
 std::shared_ptr<Statement> parseIf ();
+std::shared_ptr<Statement> parseSwitch ();
 std::shared_ptr<Statement> parseFor ();
 std::shared_ptr<Statement> parseWhile ();
 std::shared_ptr<Statement> parseRepeatWhile ();

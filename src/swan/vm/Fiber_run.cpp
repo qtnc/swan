@@ -229,6 +229,12 @@ if (top().isFalsy()) frame.bcp += arg1;
 pop();
 BREAK
 
+CASE(OP_JUMP_IF_TRUTY)
+arg1 = frame.read<uint_jump_offset_t>();
+if (!top().isFalsy()) frame.bcp += arg1;
+pop();
+BREAK
+
 CASE(OP_NEW_CLASS) {
 int nParents = frame.read<uint_field_index_t>();
 int nStaticFields = frame.read<uint_field_index_t>();

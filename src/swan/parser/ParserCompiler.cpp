@@ -574,6 +574,64 @@ if (elsePart) s+= (" else ") + elsePart->print();
 return s;
 }};
 
+struct SwitchStatement: Statement {
+shared_ptr<Expression> expr, comparator;
+vector<pair<shared_ptr<Expression>, vector<shared_ptr<Statement>>>> cases;
+vector<shared_ptr<Statement>> defaultCase;
+shared_ptr<Statement> optimizeStatement () { 
+expr = expr->optimize();
+for (auto& p: cases) { 
+p.first = p.first->optimize(); 
+for (auto& s: p.second) s = s->optimizeStatement();
+}
+for (auto& s: defaultCase) s=s->optimizeStatement();
+if (comparator) comparator = comparator->optimize();
+return shared_this(); 
+}
+const QToken& nearestToken () { return expr->nearestToken(); }
+void compile (QCompiler& compiler) {
+vector<int> jumps;
+compiler.pushLoop();
+compiler.pushScope();
+compiler.writeDebugLine(expr->nearestToken());
+int caseSlot = compiler.findLocalVariable({ T_NAME, ("#caseExpr"), 9, QV()}, LV_NEW | LV_CONST);
+int compSlot = compiler.findLocalVariable({ T_NAME, ("#caseComp"), 9, QV()}, LV_NEW | LV_CONST);
+expr->compile(compiler);
+if (comparator) comparator->compile(compiler);
+else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.vm.findMethodSymbol("==") | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
+for (int i=0, n=cases.size(); i<n; i++) {
+auto caseExpr = cases[i].first;
+compiler.writeDebugLine(caseExpr->nearestToken());
+writeOpLoadLocal(compiler, compSlot);
+writeOpLoadLocal(compiler, caseSlot);
+caseExpr->compile(compiler);
+writeOpCallFunction(compiler, 2);
+jumps.push_back(compiler.writeOpJump(OP_JUMP_IF_TRUTY));
+}
+auto defaultJump = compiler.writeOpJump(OP_JUMP);
+for (int i=0, n=cases.size(); i<n; i++) {
+compiler.patchJump(jumps[i]);
+compiler.pushScope();
+for (auto& s: cases[i].second) s->compile(compiler);
+compiler.popScope();
+}
+compiler.patchJump(defaultJump);
+compiler.pushScope();
+for (auto& s: defaultCase) s->compile(compiler);
+compiler.popScope();
+compiler.popScope();
+compiler.loops.back().condPos = compiler.writePosition();
+compiler.loops.back().endPos = compiler.writePosition();
+compiler.popLoop();
+}
+string print () {
+string s = "switch(" + expr->print() + ") with(" + comparator->print() + ") {";
+//for (auto& p: cases) s += "case " + p.first->print() + ":\r\n" + p.second->print() + "\r\n";
+//if (defaultCase) s+= "else: \r\n" + defaultCase->print();
+s += "}\r\n";
+return s;
+}};
+
 struct ForStatement: Statement {
 vector<QToken> loopVariables;
 shared_ptr<Expression> inExpression;
@@ -1045,6 +1103,7 @@ STATEMENT(IF, If),
 { T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX }},
 STATEMENT(REPEAT, RepeatWhile),
 STATEMENT(RETURN, Return),
+STATEMENT(SWITCH, Switch),
 STATEMENT(THROW, Throw),
 STATEMENT(TRY, Try),
 { T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
@@ -1070,6 +1129,7 @@ TOKEN(CATCH, catch),
 TOKEN(CLASS, class),
 TOKEN(CONTINUE, continue),
 TOKEN(CONST, const),
+TOKEN(FUNCTION, def),
 TOKEN(DEFAULT, default),
 TOKEN(ELSE, else),
 TOKEN(EXPORT, export),
@@ -1463,6 +1523,41 @@ elsePart = parseStatement();
 if (!elsePart) result = CR_INCOMPLETE;
 }
 return make_shared<IfStatement>(condition, ifPart, elsePart);
+}
+
+shared_ptr<Statement> QParser::parseSwitch () {
+auto sw = make_shared<SwitchStatement>();
+shared_ptr<Expression> activeCase;
+vector<shared_ptr<Statement>> statements;
+auto clearStatements = [&]()mutable{
+if (activeCase) sw->cases.push_back(make_pair(activeCase, statements));
+else sw->defaultCase = statements;
+statements.clear();
+};
+sw->expr = parseExpression();
+if (match(T_WITH)) sw->comparator = parseExpression();
+skipNewlines();
+consume(T_LEFT_BRACE, "Expected '{' to begin switch");
+while(true){
+skipNewlines();
+if (match(T_CASE)) {
+clearStatements();
+activeCase = parseExpression();
+match(T_COLON);
+}
+else if (matchOneOf(T_DEFAULT, T_ELSE)) {
+clearStatements();
+activeCase = nullptr;
+match(T_COLON);
+}
+else if (match(T_RIGHT_BRACE)) break;
+else {
+auto sta = parseStatement();
+if (!sta) { result=CR_INCOMPLETE; return nullptr; }
+statements.push_back(sta);
+}}
+clearStatements();
+return sw;
 }
 
 void ForStatement::parseHead (QParser& parser) {

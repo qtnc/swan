@@ -40,6 +40,9 @@ for x in this: val=x
 return val
 }
 
+Sequence::sorted = $$: List.of(this).sort
+Sequence::reversed = $$: List.of(this).reverse
+
 Sequence::toList = $$: List.of(this)
 Sequence::toTuple = $$: Tuple.of(this)
 Sequence::toSet = $$: Set.of(this)
