@@ -8,13 +8,19 @@
 #include<vector>
 #include<string>
 
+struct GlobalVariable {
+int index;
+bool isConst;
+};
+
 struct QVM: Swan::VM  {
 static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters;
 static std::unordered_map<std::string, DecodingConversionFn> bufferToStringConverters;
 
-std::vector<std::string> methodSymbols, globalSymbols;
+std::vector<std::string> methodSymbols;
 std::vector<QV> globalVariables;
 std::unordered_map<std::string,QV> imports;
+std::unordered_map<std::string, GlobalVariable> globalSymbols;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
 std::vector<QV> keptHandles;
@@ -52,7 +58,7 @@ void init ();
 virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 
 int findMethodSymbol (const std::string& name);
-int findGlobalSymbol (const std::string& name, bool createNew);
+int findGlobalSymbol (const std::string& name, int flags);
 void bindGlobal (const std::string& name, const QV& value);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 

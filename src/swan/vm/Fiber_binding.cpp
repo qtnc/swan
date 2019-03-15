@@ -2,6 +2,8 @@
 #include "VM.hpp"
 #include "BoundFunction.hpp"
 #include "Map.hpp"
+#include "Value.hpp"
+#include "Sequence.hpp"
 #include "ExtraAlgorithms.hpp"
 #include "OpCodeInfo.hpp"
 #include "Fiber_inlines.hpp"
@@ -22,7 +24,7 @@ f.returnValue(instance);
 }
 
 void QVM::bindGlobal (const string& name, const QV& value) {
-int symbol = findGlobalSymbol(name, true);
+int symbol = findGlobalSymbol(name, 1);
 insert_n(globalVariables, 1+symbol-globalVariables.size(), QV());
 globalVariables.at(symbol) = value;
 }
@@ -105,8 +107,24 @@ if (!value.isNull()) return value.asHandle();
 else return getOptionalHandle(stackIndex, defaultValue);
 }
 
+vector<double> QFiber::getNumList (int stackIndex) {
+vector<QV, trace_allocator<QV>> v0(vm);
+getObject<QSequence>(stackIndex) .copyInto(*this, v0);
+vector<double> v;
+for (QV x: v0) v.push_back(x.d);
+return v;
+}
+
+vector<string> QFiber::getStringList (int stackIndex) {
+vector<string> v;
+vector<QV, trace_allocator<QV>> v0(vm);
+getObject<QSequence>(stackIndex) .copyInto(*this, v0);
+for (QV x: v0) v.push_back(x.asString());
+return v;
+}
+
 void QFiber::loadGlobal (const string& name) {
-int symbol = vm.findGlobalSymbol(name, false);
+int symbol = vm.findGlobalSymbol(name, 0);
 if (symbol<0) pushNull();
 else push(vm.globalVariables.at(symbol));
 }

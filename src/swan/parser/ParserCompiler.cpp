@@ -146,7 +146,7 @@ struct LiteralListExpression: LiteralSequenceExpression {
 LiteralListExpression (const QToken& t): LiteralSequenceExpression(t) {}
 void compile (QCompiler& compiler) {
 compiler.writeDebugLine(nearestToken());
-int listSymbol = compiler.vm.findGlobalSymbol(("List"), false);
+int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
 if (isSingleSequence()) {
 int ofSymbol = compiler.vm.findMethodSymbol("of");
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, listSymbol);
@@ -179,7 +179,7 @@ return s;
 struct LiteralSetExpression: LiteralSequenceExpression {
 LiteralSetExpression (const QToken& t): LiteralSequenceExpression(t) {}
 void compile (QCompiler& compiler) {
-int setSymbol = compiler.vm.findGlobalSymbol(("Set"), false);
+int setSymbol = compiler.vm.findGlobalSymbol(("Set"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
 int ofSymbol = compiler.vm.findMethodSymbol("of");
@@ -219,7 +219,7 @@ const QToken& nearestToken () { return type; }
 shared_ptr<Expression> optimize () { for (auto& p: items) { p.first = p.first->optimize(); p.second = p.second->optimize(); } return shared_this(); }
 void compile (QCompiler& compiler) {
 vector<shared_ptr<Expression>> unpacks;
-int mapSymbol = compiler.vm.findGlobalSymbol(("Map"), false);
+int mapSymbol = compiler.vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
 int subscriptSetterSymbol = compiler.vm.findMethodSymbol(("[]="));
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
 compiler.writeDebugLine(nearestToken());
@@ -271,7 +271,7 @@ return s;
 struct LiteralTupleExpression: LiteralSequenceExpression {
 LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p): LiteralSequenceExpression(t, p) {}
 void compile (QCompiler& compiler) {
-int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), false);
+int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
 int ofSymbol = compiler.vm.findMethodSymbol("of");
@@ -308,7 +308,7 @@ vector<vector<shared_ptr<Expression>>> data;
 LiteralGridExpression (const QToken& t, const vector<vector<shared_ptr<Expression>>>& v): token(t), data(v) {}
 const QToken& nearestToken () { return token; }
 void compile (QCompiler& compiler) {
-int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), false);
+int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), LV_EXISTING | LV_FOR_READ);
 int size = data.size() * data[0].size();
 compiler.writeDebugLine(nearestToken());
 if (size>120) compiler.writeOp(OP_PUSH_VARARG_MARK);
@@ -344,7 +344,7 @@ string pattern, options;
 LiteralRegexExpression(const QToken& tk, const string& p, const string& o): tok(tk), pattern(p), options(o) {}
 const QToken& nearestToken () { return tok; }
 void compile (QCompiler& compiler) {
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV() }, false));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV() }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, pattern), QV_TAG_STRING)));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, options), QV_TAG_STRING)));
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -525,7 +525,7 @@ const QToken& nearestToken () { return from->nearestToken(); }
 string print () { return "import " + from->print(); }
 void compile (QCompiler& compiler) {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, false));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -886,7 +886,7 @@ for (auto& p: imports) {
 varSlots.push_back(compiler.findLocalVariable(p.second, LV_NEW | LV_CONST));
 compiler.writeOp(OP_LOAD_NULL);
 }
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, false));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -2429,7 +2429,7 @@ QFunction* func = fc.getFunction(0);
 func->name = "<comprehension>";
 compiler.result = fc.result;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", false));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 compiler.writeOp(OP_CALL_FUNCTION_1);
 }
@@ -2450,7 +2450,7 @@ if (slot>=0) {
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, slot);
 return;
 }
-slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), false);
+slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_READ);
 if (slot>=0) { 
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
 return;
@@ -2483,9 +2483,17 @@ else if (slot==LV_ERR_CONST) {
 compiler.compileError(token, ("Constant cannot be reassigned"));
 return;
 }
-slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), false);
+slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_WRITE);
 if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
+return;
+}
+else if (slot==LV_ERR_CONST) {
+compiler.compileError(token, ("Constant cannot be reassigned"));
+return;
+}
+else if (slot==LV_ERR_ALREADY_EXIST) {
+compiler.compileError(token, ("Already existing variable"));
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -2844,7 +2852,7 @@ func->vararg = (flags&FD_VARARG);
 func->name = string(name.start, name.length);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 bool fiber = flags&FD_FIBER;
-if (fiber) compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", false));
+if (fiber) compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_EXISTING));
 for (auto decoration: decorations) decoration->compile(compiler);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
@@ -2934,9 +2942,7 @@ return i;
 }
 
 int QCompiler::findGlobalVariable (const QToken& name, int flags) {
-bool createNew = flags&LV_NEW;
-bool isConst = flags&LV_CONST;
-return parser.vm.findGlobalSymbol(string(name.start, name.length), createNew);
+return parser.vm.findGlobalSymbol(string(name.start, name.length), flags);
 }
 
 static shared_ptr<Statement> addReturnExports (shared_ptr<Statement> sta) {
@@ -2953,7 +2959,7 @@ int QCompiler::findExportsVariable (bool createIfNotExist) {
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
 int slot = findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
 if (slot<0 && createIfNotExist) {
-int mapSlot = vm.findGlobalSymbol(("Map"), false);
+int mapSlot = vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
 slot = findLocalVariable(exportsToken, LV_NEW);
 writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, mapSlot);
 writeOp(OP_CALL_FUNCTION_0);
@@ -2982,13 +2988,18 @@ methodSymbols.push_back(name);
 return n;
 }}
 
-int QVM::findGlobalSymbol (const string& name, bool createNew) {
-auto it = find(globalSymbols.begin(), globalSymbols.end(), name);
-if (it!=globalSymbols.end()) return it - globalSymbols.begin();
-else if (!createNew && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return -1;
+int QVM::findGlobalSymbol (const string& name, int flags) {
+auto it = globalSymbols.find(name);
+if (it!=globalSymbols.end()) {
+auto& gv = it->second;
+if (flags&LV_NEW && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return LV_ERR_ALREADY_EXIST;
+else if ((flags&LV_FOR_WRITE) && gv.isConst) return LV_ERR_CONST;
+return gv.index;
+}
+else if (!(flags&LV_NEW) && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return -1;
 else {
 int n = globalSymbols.size();
-globalSymbols.push_back(name);
+globalSymbols[name] = { n, flags&LV_CONST };
 globalVariables.push_back(QV());
 return n;
 }}
@@ -3038,7 +3049,7 @@ println("");
 println("\n%d method symbols:", vm.methodSymbols.size());
 for (int i=0, n=vm.methodSymbols.size(); i<n; i++) println("%d (%<#0$4X). %s", i, vm.methodSymbols[i]);
 println("\n%d global symbols:", vm.globalSymbols.size());
-for (int i=0, n=vm.globalSymbols.size(); i<n; i++) println("%d (%<#0$4X). %s", i, vm.globalSymbols[i]);
+//for (int i=0, n=vm.globalSymbols.size(); i<n; i++) println("%d (%<#0$4X). %s", i, vm.globalSymbols[i]);
 println("\n%d constants:", constants.size());
 for (int i=0, n=constants.size(); i<n; i++) println("%d (%<#0$4X). %s", i, constants[i].print());
 }

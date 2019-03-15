@@ -5,8 +5,9 @@
 #define LV_NEW 1
 #define LV_CONST 2
 #define LV_FOR_READ 0
-#define LV_FOR_WRITE 2
+#define LV_FOR_WRITE 4
 #define LV_ERR_CONST -127
+#define LV_ERR_ALREADY_EXIST -126
 #define VD_LOCAL 1
 #define VD_CONST 2
 #define VD_GLOBAL 4

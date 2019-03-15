@@ -4,14 +4,16 @@ Here is a description of the language's syntax.
 ## Reserved keywords
 Some people take the number of keywords to grade the complexity of a language.
 
-29 actual keywords currently in use (synonyms aren't counted):
+32 actual keywords currently in use (synonyms aren't counted):
 
 * and (as a synonym for `&&`)
 * as
 * break
+* case
 * class
 * const
 * continue
+* default
 * else
 * export
 * false
@@ -29,6 +31,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * return
 * static
 * super
+* switch
 * throw
 * true
 * try
@@ -37,13 +40,10 @@ Some people take the number of keywords to grade the complexity of a language.
 * while
 * yield
 
-5 keywords currently not used but reserved for potential future use:
+2 keywords currently not used but reserved for potential future use:
 
 * async
 * await
-* case
-* default
-* switch
 
 ## Literal values
 * Boolean values: true, false
@@ -107,6 +107,24 @@ Where:
 
 Note that, like Python and in contrary to C, C++, Java, JavaScript and many other C-like languages, parentesis are optional around the condition.
 As in Python, a colon `:` can optionally separate the condition from a single statement for readability.
+
+Swan provide also the popular *switch* control statement:
+
+```
+switch (testExpression) {
+case value1: ...
+case value2: ...
+case value3: ...
+else: ...
+}
+```
+
+The test expression and the different case values are tested with the `==`operator by default. You can use another comparison function by specifying it: `switch testExpression with comparator { ... }`.
+This can be useful to be more strict (by using `is` instead of `==`, or to achieve a different effect).
+
+As in C/C++, Java and all other programming languages having the switch statement, the control jumps to the first matched value, and then the execution continues across all the following cases.
+To prevent the execution of following cases, use break.
+In the contrary of C/C++, Java and others, you can compare anything you want, you aren't restricted to numbers or strings.
 
 ## Iteration protocol
 A for loop written as:

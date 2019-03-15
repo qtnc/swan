@@ -46,7 +46,7 @@ f.returnValue( dist(r.rand) );
 }
 
 static inline QRandom& getDefaultRandom (QFiber& f) {
-return * f.vm.globalVariables[find(f.vm.globalSymbols.begin(), f.vm.globalSymbols.end(), "rand") -f.vm.globalSymbols.begin()] .asObject<QRandom>();
+return * f.vm.globalVariables[f.vm.globalSymbols["rand"].index] .asObject<QRandom>();
 }
 
 static void listShuffle (QFiber& f) {

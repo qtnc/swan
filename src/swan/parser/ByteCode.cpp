@@ -224,7 +224,9 @@ default: throw std::logic_error(format("Unknown type specifier '%c'", c));
 void QFiber::saveBytecode (ostream& out, int count) {
 unordered_set<void*> references;
 out.write("\x1B\x01", 2);
-writeSymbolTable(out, vm.globalSymbols);
+vector<string> globalSymbols(vm.globalVariables.size());
+for (auto& p: vm.globalSymbols) globalSymbols[p.second.index] = p.first;
+writeSymbolTable(out, globalSymbols);
 writeSymbolTable(out, vm.methodSymbols);
 writeVLN(out, count);
 for (int i=0; i<count; i++) {
@@ -236,8 +238,11 @@ char magic[2];
 in.read(magic, 2);
 unordered_map<int,int> globals, methods;
 unordered_map<uintptr_t, QObject*> references;
-readSymbolTable(in, globals, vm.globalSymbols);
+vector<string> globalSymbols(vm.globalVariables.size());
+for (auto& p: vm.globalSymbols) globalSymbols[p.second.index] = p.first;
+readSymbolTable(in, globals, globalSymbols);
 readSymbolTable(in, methods, vm.methodSymbols);
+for (int i=0, n=globalSymbols.size(); i<n; i++) { auto& s = globalSymbols[i]; vm.globalSymbols[s] = { i, false }; }
 size_t count = readVLN(in);
 for (size_t i=0; i<count; i++) {
 push(readQVBytecode(vm, in, references, globals, methods));

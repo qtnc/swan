@@ -136,6 +136,9 @@ inline bool getOptionalBool  (const std::string& key, bool defaultValue) { retur
 inline std::string getOptionalString (const std::string& key, const std::string& defaultValue) { return getOptionalString(-1, key, defaultValue); }
 inline Handle getOptionalHandle (const std::string& key, const Handle& defaultValue) { return getOptionalHandle(-1, key, defaultValue); }
 
+virtual std::vector<double> getNumList (int stackIndex) = 0;
+virtual std::vector<std::string> getStringList (int stackIndex) = 0;
+
 virtual void setNum (int stackIndex, double value) = 0;
 virtual void setBool (int stackIndex, bool value) = 0;
 virtual void setString (int stackIndex, const std::string& value) = 0;

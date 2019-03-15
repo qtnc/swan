@@ -62,6 +62,9 @@ virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defau
 virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) final override;
 virtual Swan::Handle getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) final override;
 
+virtual std::vector<double> getNumList (int stackIndex);
+virtual std::vector<std::string> getStringList (int stackIndex);
+
 virtual inline void setNum (int i, double d) final override { at(i).d = d; }
 virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
 virtual inline void setString  (int i, const std::string& s) final override;
