@@ -211,7 +211,7 @@ f.setBuffer(0, s.data(), s.size());
 }
 
 void registerIO (Swan::Fiber& f) {
-f.loadGlobal("Sequence");
+f.loadGlobal("Iterable");
 f.registerClass<IO>("IO", 1);
 f.registerDestructor<IO>();
 f.registerStaticMethod("open", STATIC_METHOD(ioOpen));

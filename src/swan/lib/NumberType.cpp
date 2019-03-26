@@ -114,7 +114,7 @@ BIND_L(..., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); })
 #undef OPB
 #undef OP
 
-numMetaClass
+numClass ->type
 ->copyParentMethods()
 BIND_F( (), numInstantiate)
 ;

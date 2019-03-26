@@ -10,10 +10,33 @@ f.returnValue(list);
 if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 }
 
-static void listIterate (QFiber& f) {
+static void listIterator (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-int i = 1 + (f.isNull(1)? -1 : f.getNum(1));
-f.returnValue(i>=list.data.size()? QV() : QV(static_cast<double>(i)));
+int index = f.getOptionalNum(1, 0);
+if (index<0) index += list.data.size();
+auto it = f.vm.construct<QListIterator>(f.vm, list);
+if (index>0) std::advance(it->iterator, index);
+f.returnValue(it);
+}
+
+static void listIteratorHasNext (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+f.returnValue(li.iterator != li.list.data.end() );
+}
+
+static void listIteratorHasPrevious  (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+f.returnValue(li.iterator > li.list.data.begin() );
+}
+
+static void listIteratorNext (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+f.returnValue(*li.iterator++);
+}
+
+static void listIteratorPrevious (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+f.returnValue(*li.iterator--);
 }
 
 static void listSubscript (QFiber& f) {
@@ -210,8 +233,7 @@ listClass
 ->copyParentMethods()
 BIND_F( [], listSubscript)
 BIND_F( []=, listSubscriptSetter)
-BIND_L( iteratorValue, { f.returnValue(f.getObject<QList>(0) .at(f.getNum(1))); })
-BIND_F(iterate, listIterate)
+BIND_F(iterator, listIterator)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QList>(0).data.size())); })
 BIND_F(toString, listToString)
 BIND_L(clear, { f.getObject<QList>(0).data.clear(); })
@@ -233,7 +255,15 @@ BIND_F(==, listEquals)
 BIND_F(*, listTimes)
 ;
 
-listMetaClass
+listIteratorClass
+->copyParentMethods()
+BIND_F(next, listIteratorNext)
+BIND_F(hasNext, listIteratorHasNext)
+BIND_F(previous, listIteratorPrevious)
+BIND_F(hasPrevious, listIteratorHasPrevious)
+;
+
+listClass -> type
 ->copyParentMethods()
 BIND_F( (), listInstantiate)
 BIND_F(of, listFromSequence)

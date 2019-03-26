@@ -1,6 +1,6 @@
 #ifndef _____SWAN_GRID_HPP_____
 #define _____SWAN_GRID_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
 #include "Set.hpp"

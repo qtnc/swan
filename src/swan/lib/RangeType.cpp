@@ -61,7 +61,7 @@ BIND_L(end, { f.returnValue(f.getObject<QRange>(0).end); })
 ;
 
 
-rangeMetaClass
+rangeClass ->type
 ->copyParentMethods()
 BIND_F( (), rangeInstantiate)
 ;

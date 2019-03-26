@@ -11,21 +11,33 @@ f.returnValue(list);
 if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 }
 
-static void linkedListIterate (QFiber& f) {
+static void linkedListIterator (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
-if (f.isNull(1)) {
-f.returnValue(f.vm.construct<QLinkedListIterator>(f.vm, list));
+int index = f.getOptionalNum(1, 0);
+if (index<0) index += list.data.size();
+auto it = f.vm.construct<QLinkedListIterator>(f.vm, list);
+if (index>0) std::advance(it->iterator, index);
+f.returnValue(it);
 }
-else {
-QLinkedListIterator& mi = f.getObject<QLinkedListIterator>(1);
-bool cont = mi.iterator != list.data.end();
-f.returnValue( cont? f.at(1) : QV());
-}}
 
-static void linkedListIteratorValue (QFiber& f) {
-QLinkedListIterator& mi = f.getObject<QLinkedListIterator>(1);
-QV val = *mi.iterator++;
-f.returnValue(val);
+static void linkedListIteratorHasNext (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+f.returnValue(li.iterator != li.list.data.end() );
+}
+
+static void linkedListIteratorHasPrevious  (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+f.returnValue(li.iterator != li.list.data.begin() );
+}
+
+static void linkedListIteratorNext (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+f.returnValue(*li.iterator++);
+}
+
+static void linkedListIteratorPrevious (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+f.returnValue(*li.iterator--);
 }
 
 static void linkedListPush (QFiber& f) {
@@ -103,11 +115,18 @@ BIND_F(unshift, linkedListUnshift)
 BIND_F(remove, linkedListRemove)
 BIND_F(removeIf, linkedListRemoveIf)
 BIND_F(toString, linkedListToString)
-BIND_F(iterate, linkedListIterate)
-BIND_F(iteratorValue, linkedListIteratorValue)
+BIND_F(iterator, linkedListIterator)
 ;
 
-linkedListMetaClass
+linkedListIteratorClass
+->copyParentMethods()
+BIND_F(next, linkedListIteratorNext)
+BIND_F(hasNext, linkedListIteratorHasNext)
+BIND_F(previous, linkedListIteratorPrevious)
+BIND_F(hasPrevious, linkedListIteratorHasPrevious)
+;
+
+linkedListClass ->type
 ->copyParentMethods()
 BIND_F( (), linkedListInstantiate)
 BIND_F(of, linkedListFromSequence)

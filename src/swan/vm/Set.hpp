@@ -1,6 +1,6 @@
 #ifndef _____SWAN_SET_HPP_____
 #define _____SWAN_SET_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
 #include "VM.hpp"
@@ -26,7 +26,7 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QSetIterator: QObject {
 QSet& set;
 QSet::iterator iterator;
-QSetIterator (QVM& vm, QSet& m): QObject(vm.objectClass), set(m), iterator(m.set.begin()) {}
+QSetIterator (QVM& vm, QSet& m): QObject(vm.setIteratorClass), set(m), iterator(m.set.begin()) {}
 virtual bool gcVisit () override;
 virtual ~QSetIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

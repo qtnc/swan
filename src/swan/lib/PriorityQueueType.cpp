@@ -40,16 +40,20 @@ f.returnValue(*it);
 pq.erase(it);
 }}}
 
-static void pqIterate (QFiber& f) {
+static void pqIterator (QFiber& f) {
 QPriorityQueue& pq = f.getObject<QPriorityQueue>(0);
-int index = 1 + f.getOptionalNum(1, -1);
-f.returnValue(index>=pq.data.size()? QV() : static_cast<double>(index));
+auto it = f.vm.construct<QPriorityQueueIterator>(f.vm, pq);
+f.returnValue(it);
 }
 
-static void pqIteratorValue (QFiber& f) {
-QPriorityQueue& pq = f.getObject<QPriorityQueue>(0);
-int i = f.getNum(1);
-f.returnValue(pq.data[i]);
+static void pqIteratorHasNext (QFiber& f) {
+QPriorityQueueIterator& li = f.getObject<QPriorityQueueIterator>(0);
+f.returnValue(li.iterator != li.pq.data.end() );
+}
+
+static void pqIteratorNext (QFiber& f) {
+QPriorityQueueIterator& li = f.getObject<QPriorityQueueIterator>(0);
+f.returnValue(*li.iterator++);
 }
 
 static void pqPop (QFiber& f) {
@@ -74,8 +78,7 @@ f.returnValue(re);
 void QVM::initPriorityQueueType () {
 priorityQueueClass
 ->copyParentMethods()
-BIND_F(iteratorValue, pqIteratorValue)
-BIND_F(iterate, pqIterate)
+BIND_F(iterator, pqIterator)
 BIND_F(toString, pqToString)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QPriorityQueue>(0).data.size())); })
 BIND_L(clear, { f.getObject<QPriorityQueue>(0).data.clear(); })
@@ -85,8 +88,13 @@ BIND_F(pop, pqPop)
 BIND_F(first, pqFirst)
 ;
 
+priorityQueueIteratorClass
+->copyParentMethods()
+BIND_F(next, pqIteratorNext)
+BIND_F(hasNext, pqIteratorHasNext)
+;
 
-priorityQueueMetaClass
+priorityQueueClass ->type
 ->copyParentMethods()
 BIND_F( (), pqInstantiate)
 BIND_F(of, pqFromSequence)

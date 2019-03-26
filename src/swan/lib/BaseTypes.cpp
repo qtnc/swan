@@ -170,7 +170,7 @@ BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4)); })
 BIND_F(hashCode, objectHashCode)
 ;
 
-sequenceClass
+iterableClass
 ->copyParentMethods()
 BIND_N(iterator)
 ;
@@ -182,7 +182,7 @@ BIND_F(iterate, fiberNext)
 BIND_L(iteratorValue, { f.returnValue(f.at(1)); })
 ;
 
-fiberMetaClass
+fiberClass ->type
 ->copyParentMethods()
 BIND_F( (), fiberInstantiate)
 ;

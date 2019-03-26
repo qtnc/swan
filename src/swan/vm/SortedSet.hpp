@@ -1,7 +1,7 @@
 #ifndef NO_OPTIONAL_COLLECTIONS
 #ifndef _____SWAN_SORTED_SET_HPP_____
 #define _____SWAN_SORTED_SET_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
 #include "Allocator.hpp"

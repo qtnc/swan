@@ -187,7 +187,7 @@ BIND_F(iterate, regexTokenIteratorIterate)
 BIND_F(iteratorValue, regexTokenIteratorValue)
 ;
 
-regexMetaClass
+regexClass ->type
 ->copyParentMethods()
 BIND_F( (), regexInstantiate)
 ;

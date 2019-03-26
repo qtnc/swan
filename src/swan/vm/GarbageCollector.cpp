@@ -9,6 +9,7 @@
 #include "Set.hpp"
 #include "Tuple.hpp"
 #include "String.hpp"
+#include "Range.hpp"
 #include "../../include/cpprintf.hpp"
 #include<algorithm>
 using namespace std;
@@ -109,6 +110,30 @@ for (uint32_t i=0; i<length; i++) data[i].gcVisit();
 return false;
 }
 
+bool QRangeIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+range.gcVisit();
+return false;
+}
+
+bool QStringIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+str.gcVisit();
+return false;
+}
+
+bool QListIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+list.gcVisit();
+return false;
+}
+
+bool QTupleIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+tuple.gcVisit();
+return false;
+}
+
 bool QMapIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
 map.gcVisit();
@@ -174,6 +199,12 @@ if (QObject::gcVisit()) return true;
 list.gcVisit();
 return false;
 }
+
+bool QPriorityQueueIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+pq.gcVisit();
+return false;
+}
 #endif
 
 #ifndef NO_GRID
@@ -204,6 +235,16 @@ return false;
 }
 #endif
 
+#ifndef NO_BUFFER
+#include "Buffer.hpp"
+bool QBufferIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+buf.gcVisit();
+return false;
+}
+#endif
+
+
 static QV makeqv (QObject* obj) {
 #define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
 T(QClosure, QV_TAG_CLOSURE)
@@ -224,7 +265,7 @@ auto initial = to_ptr(firstGCObject);
 for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
 
 vector<QObject*> roots = { 
-boolClass, bufferClass, classClass, fiberClass, functionClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, sequenceClass, stringClass, systemClass, tupleClass
+boolClass, bufferClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
 #ifndef NO_REGEX
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
 #endif

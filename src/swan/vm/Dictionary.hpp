@@ -1,7 +1,7 @@
 #ifndef NO_OPTIONAL_COLLECTIONS
 #ifndef _____SWAN_DICTIONARY_HPP_____
 #define _____SWAN_DICTIONARY_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
 #include "Allocator.hpp"

@@ -95,7 +95,7 @@ BIND_F( (), randomCall )
 BIND_F( normal, randomNormal)
 ;
 
-randomMetaClass
+randomClass ->type
 ->copyParentMethods()
 BIND_F( (), randomInstantiate)
 ;

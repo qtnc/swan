@@ -99,21 +99,20 @@ if (s2.set.end() == s2.set.find(x)) { re=false; break; }
 f.returnValue(re);
 }
 
-static void setIterate (QFiber& f) {
+static void setIterator (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
-if (f.isNull(1)) {
-f.returnValue(f.vm.construct<QSetIterator>(f.vm, set));
+auto it = f.vm.construct<QSetIterator>(f.vm, set);
+f.returnValue(it);
 }
-else {
-QSetIterator& mi = f.getObject<QSetIterator>(1);
-bool cont = mi.iterator != set.set.end();
-f.returnValue( cont? f.at(1) : QV());
-}}
 
-static void setIteratorValue (QFiber& f) {
-QSetIterator& mi = f.getObject<QSetIterator>(1);
-QV val = *mi.iterator++;
-f.returnValue(val);
+static void setIteratorHasNext (QFiber& f) {
+QSetIterator& li = f.getObject<QSetIterator>(0);
+f.returnValue(li.iterator != li.set.set.end() );
+}
+
+static void setIteratorNext (QFiber& f) {
+QSetIterator& li = f.getObject<QSetIterator>(0);
+f.returnValue(*li.iterator++);
 }
 
 static void setToString (QFiber& f) {
@@ -133,8 +132,7 @@ BIND_F(&, setIntersection)
 BIND_F(|, setUnion)
 BIND_F(-, setDifference)
 BIND_F(^, setSymetricDifference)
-BIND_F(iteratorValue, setIteratorValue)
-BIND_F(iterate, setIterate)
+BIND_F(iterator, setIterator)
 BIND_F(toString, setToString)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSet>(0).set.size())); })
 BIND_L(clear, { f.getObject<QSet>(0).set.clear(); })
@@ -144,8 +142,13 @@ BIND_F(in, setIn)
 BIND_F(==, setEquals)
 ;
 
+setIteratorClass
+->copyParentMethods()
+BIND_F(next, setIteratorNext)
+BIND_F(hasNext, setIteratorHasNext)
+;
 
-setMetaClass
+setClass ->type
 ->copyParentMethods()
 BIND_F( (), setInstantiate)
 BIND_F(of, setFromSequence)

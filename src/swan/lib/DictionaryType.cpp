@@ -134,7 +134,7 @@ BIND_F(upper, dictionaryUpperBound)
 BIND_F(put, dictionaryPut)
 ;
 
-dictionaryMetaClass
+dictionaryClass ->type
 ->copyParentMethods()
 BIND_F( (), dictionaryInstantiate)
 BIND_F(of, dictionaryFromSequence)

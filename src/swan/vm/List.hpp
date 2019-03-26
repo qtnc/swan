@@ -1,6 +1,6 @@
 #ifndef _____SWAN_LIST_HPP_____
 #define _____SWAN_LIST_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
 #include "Set.hpp"
@@ -8,7 +8,9 @@
 #include<vector>
 
 struct QList: QSequence {
-std::vector<QV, trace_allocator<QV>> data;
+typedef std::vector<QV, trace_allocator<QV>> vector_type;
+typedef vector_type::iterator iterator;
+vector_type data;
 QList (QVM& vm);
 inline QV& at (int n) {
 if (n<0) n+=data.size();
@@ -28,4 +30,12 @@ virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
+struct QListIterator: QObject {
+QList& list;
+QList::iterator iterator;
+QListIterator (QVM& vm, QList& m): QObject(vm.listIteratorClass), list(m), iterator(m.data.begin()) {}
+virtual bool gcVisit () override;
+virtual ~QListIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
+};
 #endif

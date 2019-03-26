@@ -3,7 +3,7 @@
 using namespace std;
 
 QMapIterator::QMapIterator (QVM& vm, QMap& m): 
-QObject(vm.objectClass), map(m), iterator(m.map.begin()) 
+QObject(vm.mapIteratorClass), map(m), iterator(m.map.begin()) 
 {}
 
 QMap::QMap (QVM& vm): 

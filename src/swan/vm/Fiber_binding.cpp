@@ -3,7 +3,7 @@
 #include "BoundFunction.hpp"
 #include "Map.hpp"
 #include "Value.hpp"
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "ExtraAlgorithms.hpp"
 #include "OpCodeInfo.hpp"
 #include "Fiber_inlines.hpp"

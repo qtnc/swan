@@ -2,7 +2,7 @@
 #define _____SWAN_FIBER_HPP_____
 #include "Core.hpp"
 #include "Value.hpp"
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "String.hpp"
 #include "Closure.hpp"
 #include "ExecutionStack.hpp"

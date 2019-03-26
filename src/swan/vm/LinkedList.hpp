@@ -1,7 +1,7 @@
 #ifndef NO_OPTIONAL_COLLECTIONS
 #ifndef _____SWAN_LINKED_LIST_HPP_____
 #define _____SWAN_LINKED_LIST_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
 #include "Set.hpp"
@@ -41,7 +41,7 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QLinkedListIterator: QObject {
 QLinkedList& list;
 QLinkedList::iterator iterator;
-QLinkedListIterator (QVM& vm, QLinkedList& m): QObject(vm.objectClass), list(m), iterator(m.data.begin()) {}
+QLinkedListIterator (QVM& vm, QLinkedList& m): QObject(vm.linkedListIteratorClass), list(m), iterator(m.data.begin()) {}
 virtual bool gcVisit () override;
 virtual ~QLinkedListIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

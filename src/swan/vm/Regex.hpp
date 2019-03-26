@@ -1,7 +1,7 @@
 #ifndef NO_REGEX
 #ifndef _____SWAN_REGEX_HPP_____
 #define _____SWAN_REGEX_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "String.hpp"
 #include "VM.hpp"
 

@@ -1,6 +1,6 @@
 #ifndef _____SWAN_MAP_HPP_____
 #define _____SWAN_MAP_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
 #include "Allocator.hpp"

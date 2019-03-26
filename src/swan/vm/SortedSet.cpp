@@ -5,7 +5,7 @@
 using namespace std;
 
 QSortedSetIterator::QSortedSetIterator (QVM& vm, QSortedSet& m): 
-QObject(vm.objectClass), set(m), iterator(m.set.begin()) 
+QObject(vm.sortedSetIteratorClass), set(m), iterator(m.set.begin()) 
 {}
 
 QSortedSet::QSortedSet (QVM& vm, QV& sorter0): 

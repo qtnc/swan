@@ -1,6 +1,6 @@
 #ifndef _____SWAN_INSTANCE_HPP_____
 #define _____SWAN_INSTANCE_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 
 struct QInstance: QSequence {
 QV fields[];

@@ -1,7 +1,7 @@
 #ifndef NO_BUFFER 
 #ifndef _____SWAN_BUFFER_HPP_____
 #define _____SWAN_BUFFER_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 
 struct QBuffer: QSequence {
 uint32_t length;
@@ -14,6 +14,15 @@ inline uint8_t* begin () { return data; }
 inline uint8_t* end () { return data+length; }
 virtual ~QBuffer () = default;
 virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (length+4); }
+};
+
+struct QBufferIterator: QObject {
+QBuffer& buf;
+int index;
+QBufferIterator (QVM& vm, QBuffer& m);
+virtual bool gcVisit () override;
+virtual ~QBufferIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 #endif
 #endif

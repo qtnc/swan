@@ -1,6 +1,6 @@
 #ifndef _____SWAN_TUPLE_HPP_____
 #define _____SWAN_TUPLE_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
 #include "Set.hpp"
@@ -22,6 +22,15 @@ virtual void join (QFiber& f, const std::string& delim, std::string& out) final 
 virtual ~QTuple () = default;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this) + sizeof(QV) * length; }
+};
+
+struct QTupleIterator: QObject {
+QTuple& tuple;
+int index;
+QTupleIterator (QVM& vm, QTuple& m): QObject(vm.tupleIteratorClass), tuple(m), index(0)  {}
+virtual bool gcVisit () override;
+virtual ~QTupleIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
 #endif

@@ -226,13 +226,13 @@ BIND_F(endsWith, bufferEndsWith)
 BIND_F(toString, bufferToString)
 ;
 
-stringMetaClass
+stringClass ->type
 ->copyParentMethods()
 BIND_F( (), stringInstantiate)
 BIND_F( of, stringFromSequence)
 ;
 
-bufferMetaClass
+bufferClass ->type
 ->copyParentMethods()
 BIND_F( (), bufferInstantiate)
 BIND_F(of, bufferFromSequence)

@@ -1,6 +1,6 @@
 #ifndef _____SWAN_RANGE_HPP_____
 #define _____SWAN_RANGE_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
 
@@ -17,4 +17,12 @@ virtual ~QRange () = default;
 virtual size_t getMemSize () override { return sizeof(*this); }
 };
 
+struct QRangeIterator: QObject {
+QRange& range;
+double value;
+QRangeIterator (QVM& vm, QRange& m): QObject(vm.objectClass), range(m), value(m.start)  {}
+virtual bool gcVisit () override;
+virtual ~QRangeIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
+};
 #endif

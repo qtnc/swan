@@ -1,6 +1,6 @@
 #ifndef _____SWAN_STRING_HPP_____
 #define _____SWAN_STRING_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include<string>
 
 void appendToString (QFiber& f, QV x, std::string& out);
@@ -20,4 +20,12 @@ virtual ~QString ();
 virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (length+1); }
 };
 
+struct QStringIterator: QObject {
+QString& str;
+int index;
+QStringIterator (QVM& vm, QString& m);
+virtual bool gcVisit () override;
+virtual ~QStringIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
+};
 #endif

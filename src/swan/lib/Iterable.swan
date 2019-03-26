@@ -1,0 +1,96 @@
+Iterable::all = $$f{
+for x in this: if !f(x): return false
+return true
+}
+
+Iterable::any = $$f{
+for x in this: if f(x): return true
+return false;
+}
+
+Iterable::none = $$f: !this.any(f)
+
+Iterable::find = $$f{
+for x in this {
+if f(x): return x
+}}
+
+Iterable::count = $$f{
+var count = 0
+for x in this: if x==f: count+=1
+return count
+}
+
+Iterable::countIf = $$f{
+var count = 0
+for x in this: if f(x): count+=1
+return count
+}
+
+Iterable::in = $$f{
+for x in this: if x==f: return true
+return false
+}
+
+Iterable::first = $$: for i in this: return i
+
+Iterable::last = $${
+let val = null
+for x in this: val=x
+return val
+}
+
+Iterable::sorted = $$: List.of(this).sort
+Iterable::reversed = $$: List.of(this).reverse
+
+Iterable::toList = $$: List.of(this)
+Iterable::toTuple = $$: Tuple.of(this)
+Iterable::toSet = $$: Set.of(this)
+Iterable::toMap = $$: Map.of(this)
+
+Iterable::map = $$f: f(x) for x in this
+
+Iterable::filter = $$f: x for x in this if f(x)
+
+Iterable::reduce = $$(f,a){
+for x in this: a = a==null ? x : f(a,x)
+return a
+}
+
+Iterable::min = $$(f=min): this.reduce(f)
+Iterable::max = $$(f=max): this.reduce(f)
+
+Iterable::dropWhile = $$f: $*{
+for x in this {
+if f(x) break
+yield x
+}}
+
+Iterable::skipWhile = $$f: $*{
+var test = true
+for x in this {
+if test && f(x) continue
+test = false
+yield x
+}}
+
+Iterable::skip = $$n: $*{
+let i = 0
+for x in this {
+if i>=n: yield x
+i+=1
+}}
+
+Iterable::limit = $$n: $*{
+let i=0
+for x in this {
+if i>=n: break
+i+=1
+yield x
+}}
+
+Iterable::enumerate = $$(n=0): $*{
+for x in this {
+yield (n, x)
+n+=1
+}}

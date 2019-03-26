@@ -84,21 +84,20 @@ if (s2.set.end() == s2.find(x)) { re=false; break; }
 f.returnValue(re);
 }
 
-static void setIterate (QFiber& f) {
+static void setIterator (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
-if (f.isNull(1)) {
-f.returnValue(f.vm.construct<QSortedSetIterator>(f.vm, set));
+auto it = f.vm.construct<QSortedSetIterator>(f.vm, set);
+f.returnValue(it);
 }
-else {
-QSortedSetIterator& mi = f.getObject<QSortedSetIterator>(1);
-bool cont = mi.iterator != set.set.end();
-f.returnValue( cont? f.at(1) : QV());
-}}
 
-static void setIteratorValue (QFiber& f) {
-QSortedSetIterator& mi = f.getObject<QSortedSetIterator>(1);
-QV val = *mi.iterator++;
-f.returnValue(val);
+static void setIteratorHasNext (QFiber& f) {
+QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+f.returnValue(li.iterator != li.set.set.end() );
+}
+
+static void setIteratorNext (QFiber& f) {
+QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+f.returnValue(*li.iterator++);
 }
 
 static void setLowerBound (QFiber& f) {
@@ -161,8 +160,7 @@ BIND_F(&, setIntersection)
 BIND_F(|, setUnion)
 BIND_F(-, setDifference)
 BIND_F(^, setSymetricDifference)
-BIND_F(iteratorValue, setIteratorValue)
-BIND_F(iterate, setIterate)
+BIND_F(iterator, setIterator)
 BIND_F(toString, setToString)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSortedSet>(0).set.size())); })
 BIND_L(clear, { f.getObject<QSortedSet>(0).set.clear(); })
@@ -178,8 +176,14 @@ BIND_F(in, setIn)
 BIND_F(==, setEquals)
 ;
 
+sortedSetIteratorClass
+->copyParentMethods()
+BIND_F(next, setIteratorNext)
+BIND_F(hasNext, setIteratorHasNext)
+;
 
-sortedSetMetaClass
+
+sortedSetClass ->type
 ->copyParentMethods()
 BIND_F( (), setInstantiate)
 BIND_F(of, setFromSequence)

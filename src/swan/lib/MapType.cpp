@@ -95,7 +95,7 @@ BIND_L(clear, { f.getObject<QMap>(0).map.clear(); })
 BIND_F(remove, mapRemove)
 ;
 
-mapMetaClass
+mapClass ->type
 ->copyParentMethods()
 BIND_F( (), mapInstantiate)
 BIND_F(of, mapFromSequence)

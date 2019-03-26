@@ -1,7 +1,7 @@
 #ifndef NO_OPTIONAL_COLLECTIONS
 #ifndef _____SWAN_PRIORITY_QUEUE_HPP_____
 #define _____SWAN_PRIORITY_QUEUE_HPP_____
-#include "Sequence.hpp"
+#include "Iterable.hpp"
 #include "Value.hpp"
 #include "HasherAndEqualler.hpp"
 #include "VM.hpp"
@@ -11,6 +11,7 @@
 
 struct QPriorityQueue: QSequence {
 typedef std::vector<QV, trace_allocator<QV>> container_type;
+typedef container_type::iterator iterator;
 container_type  data;
 QV sorter;
 QPriorityQueue (struct QVM& vm, QV& sorter0):
@@ -50,6 +51,15 @@ data.erase(it);
 std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 }
 
+};
+
+struct QPriorityQueueIterator: QObject {
+QPriorityQueue& pq;
+QPriorityQueue::iterator iterator;
+QPriorityQueueIterator (QVM& vm, QPriorityQueue& m): QObject(vm.priorityQueueIteratorClass), pq(m), iterator(m.data.begin()) {}
+virtual bool gcVisit () override;
+virtual ~QPriorityQueueIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
 };
 #endif
 #endif

@@ -92,7 +92,7 @@ BIND_F(toString, gridToString)
 BIND_F(==, gridEquals)
 ;
 
-gridMetaClass
+gridClass ->type
 ->copyParentMethods()
 BIND_F( (), gridInstantiate)
 ;

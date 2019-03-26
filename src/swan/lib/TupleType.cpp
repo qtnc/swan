@@ -120,7 +120,7 @@ BIND_F(==, tupleEquals)
 BIND_F(compare, tupleCompare)
 ;
 
-tupleMetaClass
+tupleClass ->type
 ->copyParentMethods()
 BIND_F( (), tupleInstantiate)
 BIND_F(of, tupleFromSequence)

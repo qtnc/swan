@@ -52,3 +52,7 @@ QString::~QString () {
 if (length<=MAX_CACHED_STRING_LENGTH)  type->vm.stringCache.erase(make_pair(begin(), end()));
 }
 
+QStringIterator::QStringIterator (QVM& vm, QString& m): 
+QObject(vm.stringIteratorClass), str(m), index(0)  
+{}
+

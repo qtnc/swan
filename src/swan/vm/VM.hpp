@@ -32,22 +32,25 @@ ImportHookFn importHook;
 GIL gil;
 size_t gcMemUsage, gcTreshhold, gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
-QClass *boolClass, *classClass, *fiberClass, *functionClass, *listClass, *mapClass, *nullClass, *numClass, *objectClass, *rangeClass, *sequenceClass, *setClass, *stringClass, *systemClass, *tupleClass;
-QClass *fiberMetaClass, *listMetaClass, *mapMetaClass, *numMetaClass, *rangeMetaClass, *setMetaClass, *stringMetaClass, *systemMetaClass, *tupleMetaClass;
+
+QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *systemClass;
+QClass *listClass, *mapClass, *rangeClass, *setClass, *stringClass, *tupleClass;
+QClass *iterableClass, *iteratorClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
 #ifndef NO_BUFFER
-QClass *bufferMetaClass, *bufferClass;
+QClass *bufferClass, *bufferIteratorClass;
 #endif
 #ifndef NO_REGEX
-QClass *regexClass, *regexMatchResultClass, *regexMetaClass, *regexIteratorClass, *regexTokenIteratorClass;
+QClass *regexClass, *regexMatchResultClass, *regexIteratorClass, *regexTokenIteratorClass;
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-QClass *dictionaryClass, *dictionaryMetaClass, *linkedListClass, *linkedListMetaClass, *priorityQueueClass, *priorityQueueMetaClass, *sortedSetClass, *sortedSetMetaClass;
+QClass *dictionaryClass, *linkedListClass, *priorityQueueClass, *sortedSetClass;
+QClass *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorClass, *priorityQueueIteratorClass;
 #endif
 #ifndef NO_RANDOM
-QClass *randomClass, *randomMetaClass;
+QClass *randomClass;
 #endif
 #ifndef NO_GRID
-QClass *gridClass, *gridMetaClass;
+QClass *gridClass;
 #endif
 uint8_t varDeclMode = Option::VAR_STRICT;
 bool compileDbgInfo = true;
@@ -66,7 +69,7 @@ void addToGC (QObject* obj);
 
 void initBaseTypes();
 void initNumberType();
-void initSequenceType();
+void initIterableType();
 void initStringType();
 void initListType();
 void initMapType();
