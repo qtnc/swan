@@ -50,7 +50,7 @@ QClass *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorCla
 QClass *randomClass;
 #endif
 #ifndef NO_GRID
-QClass *gridClass;
+QClass *gridClass, *gridIteratorClass;
 #endif
 uint8_t varDeclMode = Option::VAR_STRICT;
 bool compileDbgInfo = true;

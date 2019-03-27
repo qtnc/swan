@@ -215,6 +215,12 @@ if (QObject::gcVisit()) return true;
 for (uint32_t i=0, length=width*height; i<length; i++) data[i].gcVisit();
 return false;
 }
+
+bool QGridIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+grid.gcVisit();
+return false;
+}
 #endif
 
 #ifndef NO_REGEX

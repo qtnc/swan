@@ -28,4 +28,12 @@ if (y<0) y+=height;
 
 };
 
+struct QGridIterator: QObject {
+QGrid& grid;
+QGridIterator (QVM& vm, QGrid& m): QObject(vm.gridIteratorClass), grid(m) {}
+virtual bool gcVisit () override;
+virtual ~QGridIterator() = default;
+virtual size_t getMemSize () override { return sizeof(*this); }
+};
+
 #endif

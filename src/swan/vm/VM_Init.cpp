@@ -128,6 +128,7 @@ randomClass = QClass::create(*this, randomMetaClass, iterableClass, "Random", 0,
 #ifndef NO_GRID
 auto gridMetaClass = QClass::create(*this, classClass, classClass, "GridMetaClass", 0, -1);
 gridClass = QClass::create(*this, gridMetaClass, iterableClass, "Grid", 0, -1);
+gridIteratorClass = QClass::create(*this, classClass, iteratorClass, "GridIterator", 0, -1);
 #endif
 objectClass->type = classClass;
 classClass->type = classClass;

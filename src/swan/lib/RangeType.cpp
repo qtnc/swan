@@ -35,6 +35,35 @@ double re = r.start + n * r.step;
 f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV());
 }
 
+static void rangeIterator (QFiber& f) {
+QRange& range = f.getObject<QRange>(0);
+auto it = f.vm.construct<QRangeIterator>(f.vm, range);
+f.returnValue(it);
+}
+
+static void rangeIteratorHasNext (QFiber& f) {
+QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+double x = (ri.range.end - ri.range.start) * (ri.range.end - ri.value);
+f.returnValue(x>0 || (x==0 && ri.range.inclusive));
+}
+
+static void rangeIteratorHasPrevious (QFiber& f) {
+QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+f.returnValue(ri.value != ri.range.start);
+}
+
+static void rangeIteratorNext (QFiber& f) {
+QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+f.returnValue(ri.value);
+ri.value+=ri.range.step;
+}
+
+static void rangeIteratorPrevious (QFiber& f) {
+QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+ri.value-=ri.range.step;
+f.returnValue(ri.value);
+}
+
 QV rangeMake (QVM& vm, double start, double end, bool inclusive) {
 double step = end>=start? 1 : -1;
 return vm.construct<QRange>(vm, start, end, step, inclusive);
@@ -51,8 +80,7 @@ else f.returnValue(format("Range(%g, %g, %g, %s)", r.start, r.end, r.step, r.inc
 void QVM::initRangeType () {
 rangeClass
 ->copyParentMethods()
-BIND_L(iteratorValue, { f.returnValue(f.at(1)); })
-BIND_L(iterate, { f.returnValue(f.getObject<QRange>(0) .iterate(f.at(1))); })
+BIND_F(iterator, rangeIterator)
 BIND_F(toString, rangeToString)
 BIND_F(in, rangeIn)
 BIND_F([], rangeSubscript)
@@ -60,6 +88,13 @@ BIND_L(start, { f.returnValue(f.getObject<QRange>(0).start); })
 BIND_L(end, { f.returnValue(f.getObject<QRange>(0).end); })
 ;
 
+rangeIteratorClass
+->copyParentMethods()
+BIND_F(next, rangeIteratorNext)
+BIND_F(hasNext, rangeIteratorHasNext)
+BIND_F(previous, rangeIteratorPrevious)
+BIND_F(hasPrevious, rangeIteratorHasPrevious)
+;
 
 rangeClass ->type
 ->copyParentMethods()

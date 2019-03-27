@@ -52,7 +52,7 @@ f.callSymbol(nextSymbol, 1);
 f.popCppCallFrame();
 value = f.at(-1);
 f.pop();
-func(value);
+if (!value.isNull()) func(value);
 }}
 
 #endif

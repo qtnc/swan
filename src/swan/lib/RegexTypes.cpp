@@ -16,24 +16,24 @@ QRegex* regex = f.vm.construct<QRegex>(f.vm, pattern.begin(), pattern.end(), opt
 f.returnValue(regex);
 }
 
-static void regexIteratorIterate (QFiber& f) {
+static void regexIteratorHasNext (QFiber& f) {
 QRegexIterator& r = f.getObject<QRegexIterator>(0);
-if (r.it==r.end) f.returnValue(QV());
+f.returnValue(r.it!=r.end);
 }
 
-static void regexTokenIteratorIterate (QFiber& f) {
+static void regexTokenIteratorHasNext (QFiber& f) {
 QRegexTokenIterator& r = f.getObject<QRegexTokenIterator>(0);
-if (r.it==r.end) f.returnValue(QV());
+f.returnValue(r.it!=r.end);
 }
 
-static void regexIteratorValue (QFiber& f) {
+static void regexIteratorNext (QFiber& f) {
 QRegexIterator& r = f.getObject<QRegexIterator>(0);
 QRegexMatchResult* mr = f.vm.construct<QRegexMatchResult>(f.vm);
 mr->match = *r.it++;
 f.returnValue(mr);
 }
 
-static void regexTokenIteratorValue (QFiber& f) {
+static void regexTokenIteratorNext (QFiber& f) {
 QRegexTokenIterator& r = f.getObject<QRegexTokenIterator>(0);
 f.returnValue(*r.it++);
 }
@@ -177,14 +177,16 @@ BIND_F(length, regexMatchResultLength)
 
 regexIteratorClass
 ->copyParentMethods()
-BIND_F(iterate, regexIteratorIterate)
-BIND_F(iteratorValue, regexIteratorValue)
+BIND_N(iterator)
+BIND_F(hasNext, regexIteratorHasNext)
+BIND_F(next, regexIteratorNext)
 ;
 
 regexTokenIteratorClass
 ->copyParentMethods()
-BIND_F(iterate, regexTokenIteratorIterate)
-BIND_F(iteratorValue, regexTokenIteratorValue)
+BIND_N(iterator)
+BIND_F(hasNext, regexTokenIteratorHasNext)
+BIND_F(next, regexTokenIteratorNext)
 ;
 
 regexClass ->type

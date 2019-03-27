@@ -43,22 +43,35 @@ if (tuple.size()) map->set(tuple[0], tuple.back());
 }}
 }
 
-static void dictionaryIterate (QFiber& f) {
+static void dictionaryIterator (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
-if (f.isNull(1)) {
-f.returnValue(f.vm.construct<QDictionaryIterator>(f.vm, map));
+auto it = f.vm.construct<QDictionaryIterator>(f.vm, map);
+f.returnValue(it);
 }
-else {
-QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(1);
-bool cont = mi.iterator != map.map.end();
-f.returnValue( cont? f.at(1) : QV());
-}}
 
-static void dictionaryIteratorValue (QFiber& f) {
-QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(1);
+static void dictionaryIteratorHasNext (QFiber& f) {
+QDictionaryIterator& li = f.getObject<QDictionaryIterator>(0);
+f.returnValue(li.iterator != li.map.map.end() );
+}
+
+static void dictionaryIteratorNext (QFiber& f) {
+QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 ++mi.iterator;
+f.returnValue(tuple);
+}
+
+static void dictionaryIteratorHasPrevious (QFiber& f) {
+QDictionaryIterator& li = f.getObject<QDictionaryIterator>(0);
+f.returnValue(li.iterator != li.map.map.begin() );
+}
+
+static void dictionaryIteratorPrevious (QFiber& f) {
+QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+--mi.iterator;
+QV data[] = { mi.iterator->first, mi.iterator->second };
+QTuple* tuple = QTuple::create(f.vm, 2, data);
 f.returnValue(tuple);
 }
 
@@ -125,13 +138,20 @@ BIND_F( []=, dictionarySubscriptSetter)
 BIND_F(in, dictionaryIn)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDictionary>(0).map.size())); })
 BIND_F(toString, dictionaryToString)
-BIND_F(iterate, dictionaryIterate)
-BIND_F(iteratorValue, dictionaryIteratorValue)
+BIND_F(iterator, dictionaryIterator)
 BIND_L(clear, { f.getObject<QDictionary>(0).map.clear(); })
 BIND_F(remove, dictionaryRemove)
 BIND_F(lower, dictionaryLowerBound)
 BIND_F(upper, dictionaryUpperBound)
 BIND_F(put, dictionaryPut)
+;
+
+dictionaryIteratorClass
+->copyParentMethods()
+BIND_F(next, dictionaryIteratorNext)
+BIND_F(hasNext, dictionaryIteratorHasNext)
+BIND_F(previous, dictionaryIteratorPrevious)
+BIND_F(hasPrevious, dictionaryIteratorHasPrevious)
 ;
 
 dictionaryClass ->type

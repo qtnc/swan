@@ -100,6 +100,16 @@ QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
 f.returnValue(*li.iterator++);
 }
 
+static void setIteratorHasPrevious (QFiber& f) {
+QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+f.returnValue(li.iterator != li.set.set.begin() );
+}
+
+static void setIteratorPrevious (QFiber& f) {
+QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+f.returnValue(*--li.iterator);
+}
+
 static void setLowerBound (QFiber& f) {
 QSortedSet &set = f.getObject<QSortedSet>(0);
 auto it = set.set.lower_bound(f.at(1));
@@ -180,8 +190,9 @@ sortedSetIteratorClass
 ->copyParentMethods()
 BIND_F(next, setIteratorNext)
 BIND_F(hasNext, setIteratorHasNext)
+BIND_F(previous, setIteratorPrevious)
+BIND_F(hasPrevious, setIteratorHasPrevious)
 ;
-
 
 sortedSetClass ->type
 ->copyParentMethods()

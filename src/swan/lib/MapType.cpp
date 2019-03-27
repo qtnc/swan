@@ -35,19 +35,19 @@ if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }}
 }
 
-static void mapIterate (QFiber& f) {
+static void mapIterator (QFiber& f) {
 QMap& map = f.getObject<QMap>(0);
-if (f.isNull(1)) {
-f.returnValue(f.vm.construct<QMapIterator>(f.vm, map));
+auto it = f.vm.construct<QMapIterator>(f.vm, map);
+f.returnValue(it);
 }
-else {
-QMapIterator& mi = f.getObject<QMapIterator>(1);
-bool cont = mi.iterator != map.map.end();
-f.returnValue( cont? f.at(1) : QV());
-}}
 
-static void mapIteratorValue (QFiber& f) {
-QMapIterator& mi = f.getObject<QMapIterator>(1);
+static void mapIteratorHasNext (QFiber& f) {
+QMapIterator& li = f.getObject<QMapIterator>(0);
+f.returnValue(li.iterator != li.map.map.end() );
+}
+
+static void mapIteratorNext (QFiber& f) {
+QMapIterator& mi = f.getObject<QMapIterator>(0);
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 ++mi.iterator;
@@ -89,10 +89,15 @@ BIND_L( []=, { f.returnValue(f.getObject<QMap>(0) .set(f.at(1), f.at(2))); })
 BIND_F(in, mapIn)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QMap>(0).map.size())); })
 BIND_F(toString, mapToString)
-BIND_F(iterate, mapIterate)
-BIND_F(iteratorValue, mapIteratorValue)
+BIND_F(iterator, mapIterator)
 BIND_L(clear, { f.getObject<QMap>(0).map.clear(); })
 BIND_F(remove, mapRemove)
+;
+
+mapIteratorClass
+->copyParentMethods()
+BIND_F(next, mapIteratorNext)
+BIND_F(hasNext, mapIteratorHasNext)
 ;
 
 mapClass ->type
