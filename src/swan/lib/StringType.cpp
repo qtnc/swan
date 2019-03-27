@@ -24,10 +24,37 @@ QString& s2 = *f.ensureString(1);
 return strnatcmp(s1.data, s2.data);
 }
 
-static void stringIterate (QFiber& f) {
+static void stringIterator (QFiber& f) {
 QString& s = f.getObject<QString>(0);
-int i = 1 + (f.isNull(1)? -1 : f.getNum(1)), length = utf8::distance(s.begin(), s.end());
-f.returnValue(i>=length? QV() : QV(static_cast<double>(i)));
+int index = f.getOptionalNum(1, 0);
+if (index<0) index += s.length +1;
+auto it = f.vm.construct<QStringIterator>(f.vm, s);
+if (index>0) utf8::advance(it->iterator, index, s.end());
+f.returnValue(it);
+}
+
+static void stringIteratorHasNext (QFiber& f) {
+QStringIterator& li = f.getObject<QStringIterator>(0);
+f.returnValue(li.iterator < li.str.end() );
+}
+
+static void stringIteratorHasPrevious  (QFiber& f) {
+QStringIterator& li = f.getObject<QStringIterator>(0);
+f.returnValue(li.iterator > li.str.begin() );
+}
+
+static void stringIteratorNext (QFiber& f) {
+QStringIterator& li = f.getObject<QStringIterator>(0);
+auto startPos = li.iterator;
+utf8::next(li.iterator, li.str.end());
+f.returnValue(QV( QString::create(f.vm, startPos, li.iterator), QV_TAG_STRING));
+}
+
+static void stringIteratorPrevious (QFiber& f) {
+QStringIterator& li = f.getObject<QStringIterator>(0);
+auto endPos = li.iterator;
+utf8::previous(li.iterator, li.str.begin());
+f.returnValue(QV( QString::create(f.vm, li.iterator, endPos), QV_TAG_STRING));
 }
 
 static void stringHashCode (QFiber& f) {
@@ -247,8 +274,7 @@ BIND_F(in, stringIn)
 BIND_F(hashCode, stringHashCode)
 BIND_F(length, stringLength)
 BIND_F( [], stringSubscript)
-BIND_F(iterate, stringIterate)
-BIND_F(iteratorValue, stringSubscript)
+BIND_F(iterator, stringIterator)
 BIND_L(compare, { f.returnValue(static_cast<double>(stringCompare(f))); })
 OP(==) OP(!=)
 OP(<) OP(>) OP(<=) OP(>=)
@@ -276,6 +302,14 @@ BIND_F(replace, stringReplaceWithoutRegex)
 #endif
 BIND_F(trim, stringTrim)
 BIND_F(format, stringFormat)
+;
+
+stringIteratorClass
+->copyParentMethods()
+BIND_F(next, stringIteratorNext)
+BIND_F(hasNext, stringIteratorHasNext)
+BIND_F(previous, stringIteratorPrevious)
+BIND_F(hasPrevious, stringIteratorHasPrevious)
 ;
 }
 

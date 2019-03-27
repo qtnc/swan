@@ -30,8 +30,8 @@ return at(i) .isInstanceOf( vm.foreignClassIds[classId] );
 
 template<class F> static inline void iterateSequence (QFiber& f, const QV& initial, const F& func) {
 int iteratorSymbol = f.vm.findMethodSymbol(("iterator"));
-int iterateSymbol = f.vm.findMethodSymbol(("iterate"));
-int iteratorValueSymbol = f.vm.findMethodSymbol(("iteratorValue"));
+int nextSymbol = f.vm.findMethodSymbol(("next"));
+int hasNextSymbol = f.vm.findMethodSymbol(("hasNext"));
 f.push(initial);
 f.pushCppCallFrame();
 f.callSymbol(iteratorSymbol, 1);
@@ -40,17 +40,15 @@ QV iterable = f.at(-1), key, value;
 f.pop();
 while(true){
 f.push(iterable);
-f.push(key);
 f.pushCppCallFrame();
-f.callSymbol(iterateSymbol, 2);
+f.callSymbol(hasNextSymbol, 1);
 f.popCppCallFrame();
 key = f.at(-1);
 f.pop();
-if (key.isNull()) break;
+if (key.isFalsy()) break;
 f.push(iterable);
-f.push(key);
 f.pushCppCallFrame();
-f.callSymbol(iteratorValueSymbol, 2);
+f.callSymbol(nextSymbol, 1);
 f.popCppCallFrame();
 value = f.at(-1);
 f.pop();

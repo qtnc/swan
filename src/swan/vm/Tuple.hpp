@@ -22,12 +22,14 @@ virtual void join (QFiber& f, const std::string& delim, std::string& out) final 
 virtual ~QTuple () = default;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this) + sizeof(QV) * length; }
+inline QV* begin () { return data; }
+inline QV* end () { return data+length; }
 };
 
 struct QTupleIterator: QObject {
 QTuple& tuple;
-int index;
-QTupleIterator (QVM& vm, QTuple& m): QObject(vm.tupleIteratorClass), tuple(m), index(0)  {}
+const QV* iterator;
+QTupleIterator (QVM& vm, QTuple& m): QObject(vm.tupleIteratorClass), tuple(m), iterator(m.begin()) {}
 virtual bool gcVisit () override;
 virtual ~QTupleIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

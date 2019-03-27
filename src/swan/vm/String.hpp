@@ -22,7 +22,7 @@ virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (l
 
 struct QStringIterator: QObject {
 QString& str;
-int index;
+char* iterator;
 QStringIterator (QVM& vm, QString& m);
 virtual bool gcVisit () override;
 virtual ~QStringIterator() = default;

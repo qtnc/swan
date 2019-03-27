@@ -16,10 +16,33 @@ f.getObject<QSequence>(i) .copyInto(f, items);
 f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
 }
 
-static void tupleIterate (QFiber& f) {
+static void tupleIterator (QFiber& f) {
 QTuple& tuple = f.getObject<QTuple>(0);
-int i = 1 + f.getOptionalNum(1, -1);
-f.returnValue(i>=tuple.length? QV() : QV(static_cast<double>(i)));
+int index = f.getOptionalNum(1, 0);
+if (index<0) index += tuple.length +1;
+auto it = f.vm.construct<QTupleIterator>(f.vm, tuple);
+if (index>0) std::advance(it->iterator, index);
+f.returnValue(it);
+}
+
+static void tupleIteratorHasNext (QFiber& f) {
+QTupleIterator& li = f.getObject<QTupleIterator>(0);
+f.returnValue(li.iterator != li.tuple.end() );
+}
+
+static void tupleIteratorHasPrevious  (QFiber& f) {
+QTupleIterator& li = f.getObject<QTupleIterator>(0);
+f.returnValue(li.iterator > li.tuple.begin() );
+}
+
+static void tupleIteratorNext (QFiber& f) {
+QTupleIterator& li = f.getObject<QTupleIterator>(0);
+f.returnValue(*li.iterator++);
+}
+
+static void tupleIteratorPrevious (QFiber& f) {
+QTupleIterator& li = f.getObject<QTupleIterator>(0);
+f.returnValue(*--li.iterator);
 }
 
 static void tupleSubscript (QFiber& f) {
@@ -110,14 +133,21 @@ void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
 BIND_F( [], tupleSubscript)
-BIND_L( iteratorValue, { f.returnValue(f.getObject<QTuple>(0) .at(f.getNum(1))); })
-BIND_F(iterate, tupleIterate)
+BIND_F(iterator, tupleIterator)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QTuple>(0).length)); })
 BIND_F(toString, tupleToString)
 BIND_F(hashCode, tupleHashCode)
 BIND_F(*, tupleTimes)
 BIND_F(==, tupleEquals)
 BIND_F(compare, tupleCompare)
+;
+
+tupleIteratorClass
+->copyParentMethods()
+BIND_F(next, tupleIteratorNext)
+BIND_F(hasNext, tupleIteratorHasNext)
+BIND_F(previous, tupleIteratorPrevious)
+BIND_F(hasPrevious, tupleIteratorHasPrevious)
 ;
 
 tupleClass ->type

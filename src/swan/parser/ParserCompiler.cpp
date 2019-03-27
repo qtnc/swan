@@ -2354,15 +2354,13 @@ return shared_this();
 void ForStatement::compile (QCompiler& compiler) {
 compiler.pushScope();
 int iteratorSlot = compiler.findLocalVariable({ T_NAME, ("#iterator"), 9, QV()}, LV_NEW | LV_CONST);
-int keySlot = compiler.findLocalVariable({ T_NAME, ("#key"), 4, QV() }, LV_NEW);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
-int iterateSymbol = compiler.vm.findMethodSymbol(("iterate"));
-int iteratorValueSymbol = compiler.vm.findMethodSymbol(("iteratorValue"));
+int nextSymbol = compiler.vm.findMethodSymbol(("next"));
+int hasNextSymbol = compiler.vm.findMethodSymbol(("hasNext"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
 compiler.writeDebugLine(inExpression->nearestToken());
 inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
-compiler.writeOp(OP_LOAD_NULL);
 compiler.pushLoop();
 compiler.pushScope();
 vector<int> valueSlots;
@@ -2371,13 +2369,10 @@ for (auto& loopVariable: loopVariables) valueSlots.push_back(compiler.findLocalV
 int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
 writeOpLoadLocal(compiler, iteratorSlot);
-writeOpLoadLocal(compiler, keySlot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iterateSymbol);
-writeOpStoreLocal(compiler, keySlot);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, hasNextSymbol);
 compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
 writeOpLoadLocal(compiler, iteratorSlot);
-writeOpLoadLocal(compiler, keySlot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, iteratorValueSymbol);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, nextSymbol);
 if (destructuring==T_RIGHT_PAREN || destructuring==T_RIGHT_BRACKET || (destructuring==T_END && valueSlots.size()>1)) {
 for (int i=1; i<valueSlots.size(); i++) {
 writeOpLoadLocal(compiler, valueSlots[0]);

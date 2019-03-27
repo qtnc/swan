@@ -13,7 +13,7 @@ if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 static void listIterator (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 int index = f.getOptionalNum(1, 0);
-if (index<0) index += list.data.size();
+if (index<0) index += list.data.size() +1;
 auto it = f.vm.construct<QListIterator>(f.vm, list);
 if (index>0) std::advance(it->iterator, index);
 f.returnValue(it);
@@ -36,7 +36,7 @@ f.returnValue(*li.iterator++);
 
 static void listIteratorPrevious (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
-f.returnValue(*li.iterator--);
+f.returnValue(*--li.iterator);
 }
 
 static void listSubscript (QFiber& f) {
