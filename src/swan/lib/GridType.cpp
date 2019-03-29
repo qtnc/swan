@@ -18,10 +18,19 @@ QGrid* grid = QGrid::create(f.vm, width, height, n? &f.at(3) : nullptr);
 f.returnValue(grid);
 }
 
-static void gridIterate (QFiber& f) {
+static void gridIterator (QFiber& f) {
 QGrid& grid = f.getObject<QGrid>(0);
-int i = 1 + f.getOptionalNum(1, -1);
-f.returnValue(i>=grid.width*grid.height? QV() : QV(static_cast<double>(i)));
+f.returnValue(f.vm.construct<QGridIterator>(f.vm, grid));
+}
+
+static void gridIteratorHasNext (QFiber& f) {
+QGridIterator& gi = f.getObject<QGridIterator>(0);
+f.returnValue( gi.iterator < gi.grid.data+gi.grid.width*gi.grid.height);
+}
+
+static void gridIteratorNext (QFiber& f) {
+QGridIterator& gi = f.getObject<QGridIterator>(0);
+f.returnValue(*gi.iterator++);
 }
 
 static void gridSubscript (QFiber& f) {
@@ -83,13 +92,18 @@ gridClass
 ->copyParentMethods()
 BIND_F( [], gridSubscript)
 BIND_F( []=, gridSubscriptSetter)
-BIND_L( iteratorValue, { f.returnValue(f.getObject<QGrid>(0) .data[static_cast<uint32_t>(f.getNum(1))]); })
-BIND_F(iterate, gridIterate)
+BIND_F(iterator, gridIterator)
 BIND_L(width, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).width)); })
 BIND_L(height, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).height)); })
 BIND_L(length, { auto& g = f.getObject<QGrid>(0); f.returnValue(g.width*g.height); })
 BIND_F(toString, gridToString)
 BIND_F(==, gridEquals)
+;
+
+gridIteratorClass
+->copyParentMethods()
+BIND_F(next, gridIteratorNext)
+BIND_F(hasNext, gridIteratorHasNext)
 ;
 
 gridClass ->type

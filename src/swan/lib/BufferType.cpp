@@ -8,11 +8,35 @@
 #include<utf8.h>
 using namespace std;
 
-static void bufferIterate (QFiber& f) {
+static void bufferIterator (QFiber& f) {
 QBuffer& b = f.getObject<QBuffer>(0);
-int i = 1 + (f.isNull(1)? -1 : f.getNum(1));
-f.returnValue(i>=b.length? QV() : QV(static_cast<double>(i)));
+int index = f.getOptionalNum(1, 0);
+if (index<0) index += b.length +1;
+auto it = f.vm.construct<QBufferIterator>(f.vm, b);
+if (index>0) std::advance(it->iterator, index);
+f.returnValue(it);
 }
+
+static void bufferIteratorHasNext (QFiber& f) {
+QBufferIterator& li = f.getObject<QBufferIterator>(0);
+f.returnValue(li.iterator < li.buf.end() );
+}
+
+static void bufferIteratorHasPrevious  (QFiber& f) {
+QBufferIterator& li = f.getObject<QBufferIterator>(0);
+f.returnValue(li.iterator > li.buf.begin() );
+}
+
+static void bufferIteratorNext (QFiber& f) {
+QBufferIterator& li = f.getObject<QBufferIterator>(0);
+f.returnValue(static_cast<double>(*li.iterator++));
+}
+
+static void bufferIteratorPrevious (QFiber& f) {
+QStringIterator& li = f.getObject<QStringIterator>(0);
+f.returnValue(static_cast<double>(*--li.iterator));
+}
+
 
 static void bufferHashCode (QFiber& f) {
 QBuffer& b = f.getObject<QBuffer>(0);
@@ -217,7 +241,7 @@ BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QBuffer>(0).lengt
 BIND_F([], bufferSubscript)
 BIND_F(+, bufferPlus)
 BIND_F(in, bufferIn)
-BIND_F(iterate, bufferIterate)
+BIND_F(iterator, bufferIterator)
 BIND_F(indexOf, bufferFind)
 BIND_F(lastIndexOf, bufferRfind)
 BIND_F(findFirstOf, bufferFindFirstOf)
@@ -225,6 +249,15 @@ BIND_F(startsWith, bufferStartsWith)
 BIND_F(endsWith, bufferEndsWith)
 BIND_F(toString, bufferToString)
 ;
+
+bufferIteratorClass
+->copyParentMethods()
+BIND_F(next, bufferIteratorNext)
+BIND_F(hasNext, bufferIteratorHasNext)
+BIND_F(previous, bufferIteratorPrevious)
+BIND_F(hasPrevious, bufferIteratorHasPrevious)
+;
+
 
 stringClass ->type
 ->copyParentMethods()

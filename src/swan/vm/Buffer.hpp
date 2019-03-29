@@ -18,7 +18,7 @@ virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (l
 
 struct QBufferIterator: QObject {
 QBuffer& buf;
-int index;
+const uint8_t* iterator;
 QBufferIterator (QVM& vm, QBuffer& m);
 virtual bool gcVisit () override;
 virtual ~QBufferIterator() = default;

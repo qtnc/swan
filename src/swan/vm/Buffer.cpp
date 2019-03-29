@@ -18,7 +18,7 @@ return create(s->type->vm, s->data, s->length);
 }
 
 QBufferIterator::QBufferIterator (QVM& vm, QBuffer& m): 
-QObject(vm.bufferIteratorClass), buf(m), index(0)  
+QObject(vm.bufferIteratorClass), buf(m), iterator(m.data)
 {}
 
 #endif
