@@ -123,8 +123,8 @@ The test expression and the different case values are tested with the `==`operat
 This can be useful to be more strict (by using `is` instead of `==`, or to achieve a different effect).
 
 As in C/C++, Java and all other programming languages having the switch statement, the control jumps to the first matched value, and then the execution continues across all the following cases.
-To prevent the execution of following cases, use break.
-In the contrary of C/C++, Java and others, you can compare anything you want, you aren't restricted to numbers or strings.
+To prevent the execution of following cases, use the break keyword.
+But in the contrary of C/C++, Java and others, you can compare anything you want, you aren't restricted to numbers or strings.
 
 ## Iteration protocol
 A for loop written as:
@@ -135,18 +135,17 @@ statements...
 }
 ```
 
-Is more or less equivalent to the below code, except that `key` and `iterator` aren't effectively accessible.
+Is more or less equivalent to the below code, except that `iterator` aren't effectively accessible.
 
 ```
 let iterator = iterable.iterator
-let key = null
-while true {
-key = iterator.iterate(key)
-if !key: break
-let item = iterator.iteratorValue(key)
+while iterator.hasNext {
+let item = iterator.next
 statements...
 }
 ```
+
+The iterator protocol has been inspired by Java.
 
 ## Lists, tuples and maps
 List items are enclosed in brackets `[...]`. Items can be of etherogenous types (including list temselves).  
