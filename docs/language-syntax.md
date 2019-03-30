@@ -48,7 +48,7 @@ Some people take the number of keywords to grade the complexity of a language.
 ## Literal values
 * Boolean values: true, false
 * Null value: null
-* Number: 10, -69, 3.14, 0xFFFD, 0777, 0b111
+* Num: 10, -69, 3.14, 0xFFFD, 0777, 0b111
 * String: `"Hello"`, `'world'`
 * List: `[1, 2, 3, 4, 5]`, `[]`
 * Map: `{one: 1, two: 2, three: 3 }`, `{}`
@@ -147,7 +147,8 @@ statements...
 
 The iterator protocol has been inspired by Java.
 
-## Lists, tuples and maps
+## Collections: lists, tuples, maps, sets
+### Lists and tuples
 List items are enclosed in brackets `[...]`. Items can be of etherogenous types (including list temselves).  
 Example: `[1, 2, 3.14, true, false, null, "String"]`.
 
@@ -159,6 +160,7 @@ Tuples are normally used to hold etherogenous elements and where the position is
 Lists are better used when all elements are of the same type and where actual position in the list has no real significance.
 As in python, due to syntax ambiguities, an additional comma must be present at the end of a single-item tuple, i.e. `(1,)`.
 
+### Maps and sets
 Maps key/value pairs are enclosed in braces `{...}`. Keys must be hashable, i.e. implement the method hashCode. This is the case for Num, String and Tuples.   
 Example: `{"one": "un", "two": "deux", "three": "trois", "four": "quatre"}`
 
@@ -178,6 +180,23 @@ Elements in a set are guaranteed to be unique. Sets support operators fors `&, |
 
 You can create your own hashable types by implementing the *hashCode* method, which must return a number.
 Similarly to Java, when you implement *hashCode*, you should also implement the `==` operator, as well as make sure that the hashCode remains immutable after the object has been created, otherwise you may not find back your item in a map or set.
+
+### Grids a.k.a matrices
+If Swan has been compiled with grid/matrix support, an additional Grid type is available.
+It represents a 2D table, which gamers often call grid or 2D map, and which mathematicians call matrix. Each cell contains a value and is usually designated by its column (X) and row (Y).
+
+A special syntax for writing literal grids exist, in two forms:
+
+```
+| 1, 2, 3 |
+| 4, 5, 6 |
+| 7, 8, 9 |
+```
+
+Which can also be written in its shortened form:  
+`| 1, 2, 3; 4, 5, 6; 7, 8, 9 |`
+
+You may mix the two forms, though it's quite unusual.
 
 ## Functions and closures
 Functions can capture variables to form closures.
@@ -306,8 +325,8 @@ print(v2>v1) # true
 
 ```
 # We can take a method from a class and use it as a standalone function:
-# Number::+ is a kind of shortcut for $(a,b): a+b
-var plus = Number::+, multiply = Number::*
+# Num::+ is a kind of shortcut for $(a,b): a+b
+var plus = Num::+, multiply = Num::*
 print(plus(4, 3)) #7
 print(multiply(3, 4)) #12
 
@@ -318,7 +337,7 @@ print(triple(9)) #27
 
 # We can even assign a new method to a class already constructed
 # The following is totally useless, but it's fun
-Number::* = Number::/
+Num::* = Num::/
 print(4*5) #0.8 (!)
 ```
 

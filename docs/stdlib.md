@@ -3,7 +3,7 @@ Here's a very quick reference of the standard library included with the language
 
 The following classes, objects, methods, functions, form the core part of the language.
 
-Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/LinkedList/PriorityQueue/SortedSet, and Grid.
+Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/Heap/LinkedList/SortedSet, and Grid.
 Unless so disabled, they are always available in the CLI as well as when embedding Swan into your own C++ application.
 
 ## Bool: is Object
@@ -39,12 +39,12 @@ Methods:
 - toString: return a string representation of this object
 
 ## Class: is Object
-An object of type Class represents a class, e.g. Object, Number, Bool, etc.
-The is operator overload of class provide for instance check, i.e. `4 is Number` returns true.
+An object of type Class represents a class, e.g. Object, Num, Bool, etc.
+The is operator overload of class provide for instance check, i.e. `4 is Num` returns true.
 
 Methods:
 
-- name: name of the class, e.g. Number, Bool, etc.
+- name: name of the class, e.g. Num, Bool, etc.
 - toString: return a string representation of this object. For classes, this is equivalent to its name.
 
 ## Dictionary: is Iterable
@@ -52,6 +52,9 @@ A Dictionary is an associative container where keys are sorted.
 
 Constructor: Dictionary(sorter=::<, items...), where sorter is any kind of callable taking two arguments and returning true if the first argument goes before the second.
 - Operators: [], []=, +, in
+
+Items in a dictionary are indexed by their key, i.e. `dictionary["somekey"]` returns or overwrites the value associated with "somekey".
+If several values have been associated with the same key, the value returned when indexing is unspecified.
 
 Methods:
 
@@ -86,6 +89,10 @@ Grid can be used as 2D map, or as matrix in the mathmatical sense. A few useful 
 - Unary operators: -
 - Comparison oprators: ==, !=
 
+Grids are indexed with their X and Y coordinates. i.e. `grid[0, 0]` denotes the first top-left cell.
+Negative indices count from the end, i.e. `grid[-1, -1]` denotes the last bottom-right cell.
+Indexing with ranges allow to  return or overwrite subgrids, i.e. `grid[1..-1, 1..-1]` returns a subgrid excluding the first and last row and the first and last column. 
+
 Methods:
 
 - draw(startX, startY, endX, endY, value): draw a line between the points (startX, startY) and (endX, endY), setting the touched cells with the value given
@@ -99,6 +106,25 @@ Methods:
 The traversal test callback takes 6 arguments and must return a value indicating whether or not a given way is traversable (allow traveling through it).
 Arguments: value, grid, newX, newY, previousX, previousY, where (newX, newY) is the point where the algorithm wants to go to, (previousX, previousY) is the point which it comes from, grid is a reference to the whole grid, and value is the same as `grid[newX,newY]`. For most usages, considering only the first argument alone can be sufficient.
 Return value: false or any value <1 to denote an unpassable wall, true or any value >=1 to denote an open passage with its cost. Returning a value greater than 1 indicates a passage that can be difficult or dangerous, which would be better avoided if possible.
+
+## Heap: is Iterable
+Storing items in heap order allows to quickly fetch the element with the highest priority (the greatest one according to the sorter).
+It is generally faster than a sorted set, if you only need to access the greatest element, and don't care about the order of other items after the first one.
+Its downsides are that, removing elements other than the first greatest one may be slow, and elements aren't returned in their natural order when iterating.
+
+- Constructor: Heap(sorter=::<, ...items): construct an heap from a serie of items, sorting them by the sorter given
+- Operators: none
+
+Methods:
+
+- static Heap.of(sorter, ...sequences): create an heap from a serie of concatenated sequences
+- clear: remove all elements from the heap
+- first: return the first item  of the heap (the greatest one according to the sort order defined by the sorter)
+- iterator: return an iterator to iterate through the elements of the queue. Elements are yielded in an unspecified order, *not* in the order given by the sorter.
+- length: return the number of items present in the queue
+- pop: remove and return the first item (the greatest one according to the sort order defined by the sorter)
+- push(...items): insert one or more items in the heap
+- remove(...items): remove one or more items from the heap. Be careful, this operation may be slow (linear worst case)
 
 ## Iterable: is Object
 The Iterable class is the base class for all subclasses holding a sequence of something that can be iterated through, such as String, List, Tuple, Map, etc.
@@ -134,8 +160,10 @@ Methods:
 A linked list is a collection of items connected together via linked nodes. IN principle, all items are of the same type, though this isn't enforeced.
 When items are frequently added or removed at the beginning or at the end but never in the middle of the list, its performances are better than List. LinkedList fits well when used as a queue or stack.
 
+Note: to prevent from possible slow operations, LinkedList doesn't provide `[]` and `[]=` indexing/subscripting  operators.
+
 - Constructor: LinkedList(items...): construct a linked list from a serie of given items
-- Operators: [], []=, +, in
+- Operators: +, in
 
 Methods:
 
@@ -156,6 +184,10 @@ A list is a collection of items, in principe all of the same type (even if it is
 - Implicit construction when using [...] notation
 - Operators: `[], []=, +, *, in`
 - Comparison operators: ==, !=
+
+Items in a list are indexed by their position, 0 being the first, 1 the second, etc. 
+Negative indices count from the end, thus -1 indicates the last item, -2 the one before the last, etc.
+Indexing with a range, i.e. `list[2...5]` allow to return or overwrite a sublist. The size of the list is automatically adjusted when overwriting sublists of different sizes.
 
 Methods:
 
@@ -192,6 +224,8 @@ IN order to be held in a Map, keys must all be hashable, i.e. implement the hash
 - Implicit construction when using {...} notation
 - Operators: [], []=, +, in
 
+Items in a map are indexed by their key, i.e. `map["somekey"]` returns or overwrites the value associated with "somekey".
+
 Methods: 
 
 - static Map.of(sequences...): construct a Map from one or more source mappings
@@ -210,7 +244,7 @@ The Null class has only one instance, null itself.
 
 No specific method
 
-## Number: is Object
+## Num: is Object
 Class of all numbers.
 
 - Constructor: Num(string, base=10): where base can be between 2 and 36 inclusive
@@ -240,25 +274,6 @@ Methods:
 - toString: return a string representation of this object. If there is no more specific overload, the default toString of all objects return the type and the memory location where the object is, e.g. "Object@0xFFFD000012345678"
 - type: return the type of the object as Class object
 
-## PriorityQueu: is Iterable
-A priority queue stores items in heap order, allowing to quickly fetch the element with the highest priority (the greatest one according to the sorter), as well as to insert new elements while maintaining the heap order.
-It is generally faster than a sorted set, if you only need to access the greatest element, and don't care about the order of other items after the first one.
-Its downsides are that, removing elements other than the first greatest one may be slow, and elements aren't returned in their natural order when iterating through the queue.
-
-- Constructor: PriorityQueue(sorter=::<, ...items): construct a priority queue from a serie of items, sorting them by the sorter given
-- Operators: none
-
-Methods:
-
-- static PriorityQueue.of(sorter, ...sequences): create a priority queue from a serie of concatenated sequences
-- clear: remove all elements from the queue
-- first: return the first item  of the priority queue (the one with the greatest priority)
-- iterator: return an iterator to iterate through the elements of the queue. Elements are yielded in an unspecified order, *not* in the order of their priority.
-- length: return the number of items present in the queue
-- pop: remove and return the first item (the one with the greatest priority)
-- push(...items): insert one or more items in the priority queue
-- remove(...items): remove one or more items from the priority queue. Be careful, this operation may be slow.
-
 ## Range: is Iterable
 A range, as its name says, denotes a range of numbers.
 Each range has a *start*, *end* and *step*. Ranges can be viewed as collections that efficiently contain any value `start + step*N` for any integral N N as long as the result is between *start* and *end*.
@@ -267,6 +282,8 @@ Each range has a *start*, *end* and *step*. Ranges can be viewed as collections 
 - Constructor: Range(end, step=1, endInclusive=false), where start=0
 - Implicit construction when using N..M or N...M  notations, where N..M is equivalent to Range(N, M, 1, false) and N...M to Range(N, M, 1, true).
 - Operators: [], in
+
+Indexing a range works similarly as if it were a list. Thus `range[0]` returns start, `range[n]` returns `start+n*step` if `<end`.
 
 Methods:
 
@@ -412,6 +429,10 @@ The other big difference with lists is that tuples are immutable and override th
 - Implicitly constructed when using (...,) notation
 - Operators: `[], +, *, in`
 - Comparison operators: `<, <=, ==, >=, >, !=` via compare
+
+Items in a tuple are indexed by their position, 0 being the first, 1 the second, etc. 
+Negative indices count from the end, thus -1 indicates the last item, -2 the one before the last, etc.
+Indexing with a range, i.e. `tuple[2...5]` allow to return a subtuple.
 
 Methods:
 
