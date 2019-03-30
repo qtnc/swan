@@ -69,7 +69,7 @@ classClass = QClass::create(*this, nullptr, objectClass, "Class", 0, -1);
 auto fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass", 0, -1);
 auto listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass", 0, -1);
 auto mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass", 0, -1);
-auto numMetaClass = QClass::create(*this, classClass, classClass, "NumberMetaClass", 0, -1);
+auto numMetaClass = QClass::create(*this, classClass, classClass, "NumMetaClass", 0, -1);
 auto rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass", 0, -1);
 auto setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass", 0, -1);
 auto stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass", 0, -1);
@@ -83,7 +83,7 @@ fiberClass = QClass::create(*this, fiberMetaClass, iterableClass, "Fiber", 0, -1
 listClass = QClass::create(*this, listMetaClass, iterableClass, "List", 0, -1);
 mapClass = QClass::create(*this, mapMetaClass, iterableClass, "Map", 0, -1);
 nullClass = QClass::create(*this, classClass, objectClass, "Null", 0, -1);
-numClass = QClass::create(*this, numMetaClass, objectClass, "Number", 0, -1);
+numClass = QClass::create(*this, numMetaClass, objectClass, "Num", 0, -1);
 rangeClass = QClass::create(*this, rangeMetaClass, iterableClass, "Range", 0, -1);
 setClass = QClass::create(*this, setMetaClass, iterableClass, "Set", 0, -1);
 stringClass = QClass::create(*this, stringMetaClass, iterableClass, "String", 0, -1);
@@ -114,9 +114,9 @@ dictionaryIteratorClass = QClass::create(*this, classClass, iteratorClass, "Dict
 auto linkedListMetaClass = QClass::create(*this, classClass, classClass, "LinkedListMetaClass", 0, -1);
 linkedListClass = QClass::create(*this, linkedListMetaClass, iterableClass, "LinkedList", 0, -1);
 linkedListIteratorClass = QClass::create(*this, classClass, iteratorClass, "LinkedListIterator", 0, -1);
-auto priorityQueueMetaClass = QClass::create(*this, classClass, classClass, "PriorityQueueMetaClass", 0, -1);
-priorityQueueClass = QClass::create(*this, priorityQueueMetaClass, iterableClass, "PriorityQueue", 0, -1);
-priorityQueueIteratorClass = QClass::create(*this, classClass, iteratorClass, "PriorityQueueIterator", 0, -1);
+auto heapMetaClass = QClass::create(*this, classClass, classClass, "HeapMetaClass", 0, -1);
+heapClass = QClass::create(*this, heapMetaClass, iterableClass, "Heap", 0, -1);
+heapIteratorClass = QClass::create(*this, classClass, iteratorClass, "HeapIterator", 0, -1);
 auto sortedSetMetaClass = QClass::create(*this, classClass, classClass, "SortedSetMetaClass", 0, -1);
 sortedSetClass = QClass::create(*this, sortedSetMetaClass, iterableClass, "SortedSet", 0, -1);
 sortedSetIteratorClass = QClass::create(*this, classClass, iteratorClass, "SortedSetIterator", 0, -1);
@@ -175,7 +175,7 @@ initBufferType();
 initLinkedListType();
 initDictionaryType();
 initSortedSetType();
-initPriorityQueueType();
+initHeapType();
 #endif
 
 #ifndef NO_REGEX

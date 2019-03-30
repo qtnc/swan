@@ -9,18 +9,18 @@
 #include <vector>
 #include<algorithm>
 
-struct QPriorityQueue: QSequence {
+struct QHeap: QSequence {
 typedef std::vector<QV, trace_allocator<QV>> container_type;
 typedef container_type::iterator iterator;
 container_type  data;
 QV sorter;
-QPriorityQueue (struct QVM& vm, QV& sorter0):
-QSequence(vm.priorityQueueClass), 
+QHeap (struct QVM& vm, QV& sorter0):
+QSequence(vm.heapClass), 
 data(trace_allocator<QV>(vm)),
 sorter(sorter0)
 {}
 virtual bool gcVisit () override;
-virtual ~QPriorityQueue () = default;
+virtual ~QHeap () = default;
 
 virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override {
 data.insert(data.end(), v.begin(), v.end());
@@ -53,12 +53,12 @@ std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 
 };
 
-struct QPriorityQueueIterator: QObject {
-QPriorityQueue& pq;
-QPriorityQueue::iterator iterator;
-QPriorityQueueIterator (QVM& vm, QPriorityQueue& m): QObject(vm.priorityQueueIteratorClass), pq(m), iterator(m.data.begin()) {}
+struct QHeapIterator: QObject {
+QHeap& heap;
+QHeap::iterator iterator;
+QHeapIterator (QVM& vm, QHeap& m): QObject(vm.heapIteratorClass), heap(m), iterator(m.data.begin()) {}
 virtual bool gcVisit () override;
-virtual ~QPriorityQueueIterator() = default;
+virtual ~QHeapIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }
 };
 #endif

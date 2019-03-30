@@ -43,8 +43,8 @@ QClass *bufferClass, *bufferIteratorClass;
 QClass *regexClass, *regexMatchResultClass, *regexIteratorClass, *regexTokenIteratorClass;
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-QClass *dictionaryClass, *linkedListClass, *priorityQueueClass, *sortedSetClass;
-QClass *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorClass, *priorityQueueIteratorClass;
+QClass *dictionaryClass, *linkedListClass, *heapClass, *sortedSetClass;
+QClass *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorClass, *heapIteratorClass;
 #endif
 #ifndef NO_RANDOM
 QClass *randomClass;
@@ -83,7 +83,7 @@ void initBufferType();
 void initLinkedListType();
 void initDictionaryType();
 void initSortedSetType ();
-void initPriorityQueueType ();
+void initHeapType ();
 #endif
 #ifndef NO_REGEX
 void initRegexTypes();

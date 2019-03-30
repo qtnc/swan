@@ -149,7 +149,7 @@ return false;
 #ifndef NO_OPTIONAL_COLLECTIONS
 #include "LinkedList.hpp"
 #include "Dictionary.hpp"
-#include "PriorityQueue.hpp"
+#include "Heap.hpp"
 #include "SortedSet.hpp"
 
 bool QLinkedList::gcVisit () {
@@ -175,7 +175,7 @@ for (const QV& item: set) const_cast<QV&>(item).gcVisit();
 return false;
 }
 
-bool QPriorityQueue::gcVisit () {
+bool QHeap::gcVisit () {
 if (QObject::gcVisit()) return true;
 sorter.gcVisit();
 for (const QV& item: data) const_cast<QV&>(item).gcVisit();
@@ -200,9 +200,9 @@ list.gcVisit();
 return false;
 }
 
-bool QPriorityQueueIterator::gcVisit () {
+bool QHeapIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
-pq.gcVisit();
+heap.gcVisit();
 return false;
 }
 #endif
@@ -277,8 +277,8 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-, dictionaryClass, linkedListClass, priorityQueueClass, sortedSetClass
-, dictionaryIteratorClass, linkedListIteratorClass, priorityQueueIteratorClass, sortedSetIteratorClass
+, dictionaryClass, linkedListClass, heapClass, sortedSetClass
+, dictionaryIteratorClass, linkedListIteratorClass, heapIteratorClass, sortedSetIteratorClass
 #endif
 #ifndef NO_GRID
 , gridClass, gridIteratorClass
