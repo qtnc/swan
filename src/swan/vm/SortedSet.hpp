@@ -28,6 +28,7 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QSortedSetIterator: QObject {
 QSortedSet& set;
 QSortedSet::iterator iterator;
+bool forward;
 QSortedSetIterator (QVM& vm, QSortedSet& s);
 virtual bool gcVisit () override;
 virtual ~QSortedSetIterator() = default;

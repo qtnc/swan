@@ -60,6 +60,7 @@ QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 ++mi.iterator;
 f.returnValue(tuple);
+mi.forward=true;
 }
 
 static void dictionaryIteratorHasPrevious (QFiber& f) {
@@ -73,6 +74,14 @@ QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 f.returnValue(tuple);
+mi.forward=false;
+}
+
+static void dictionaryIteratorRemove (QFiber& f) {
+QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+if (mi.forward) --mi.iterator;
+f.returnValue(mi.iterator->second);
+mi.map.map.erase(mi.iterator++);
 }
 
 static void dictionaryToString (QFiber& f) {
@@ -152,6 +161,7 @@ BIND_F(next, dictionaryIteratorNext)
 BIND_F(hasNext, dictionaryIteratorHasNext)
 BIND_F(previous, dictionaryIteratorPrevious)
 BIND_F(hasPrevious, dictionaryIteratorHasPrevious)
+BIND_F(remove, dictionaryIteratorRemove)
 ;
 
 dictionaryClass ->type

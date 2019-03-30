@@ -279,7 +279,7 @@ virtual void call (int nArgs) = 0;
 /** Call a method with the specified name and given number of arguments. The object on which to call the method (i.e. this/self), and then the arguments, must first be pushed on the stack. The this/self as well as the arguments are poped form the stack. */
 virtual void callMethod (const std::string& name, int nArgs) = 0;
 /** Store the object at stack index -1 as a global variable with the given name */
-virtual void storeGlobal (const std::string& name) = 0;
+virtual void storeGlobal (const std::string& name, bool isConst=false) = 0;
 /** Push the value of the global variable given by its name onto the stack */
 virtual void loadGlobal (const std::string& name) = 0;
 /** Store a method to a class. The class on which to store the method, and then the method itself as a Function object, must first be pushed on the stack. */
@@ -330,9 +330,9 @@ storeGlobal(name);
 }
 
 /** Register a C++ function for use in Swan. The given name become a global variable allowing to call the function. */
-inline void registerFunction (const std::string& name, const NativeFunction& func) {
+inline void registerFunction (const std::string& name, const NativeFunction& func, bool isConst=false) {
 pushNativeFunction(func);
-storeGlobal(name);
+storeGlobal(name, isConst);
 pop();
 }
 
@@ -372,6 +372,30 @@ registerStaticMethod(name, getter);
 registerStaticMethod(name+"=", setter);
 }
 
+/** Register a new global variable for use in Swan */
+inline void registerGlobal (const std::string& name, double value, bool isConst=false) {
+pushNum(value);
+storeGlobal(name, isConst);
+}
+
+/** Register a new global variable for use in Swan */
+inline void registerGlobal (const std::string& name, const std::string& value, bool isConst=false) {
+pushString(value);
+storeGlobal(name, isConst);
+}
+
+/** Register a global constant for use in Swan */
+inline void registerConst (const std::string& name, double value, bool isConst=true) {
+pushNum(value);
+storeGlobal(name, isConst);
+}
+
+/** Register a global constant for use in Swan */
+inline void registerConst (const std::string& name, const std::string& value, bool isConst=true) {
+pushString(value);
+storeGlobal(name, isConst);
+}
+
 /** Store a C++ construtor as a Swan constructor method. The class on which to store the constructor method must be pushed first. */
 template <class T, class... A> inline void registerConstructor ();
 
@@ -390,13 +414,13 @@ typedef std::function<void(std::istream& in, std::ostream& out)> EncodingConvers
 typedef std::function<void(std::istream& in, std::ostream& out, int)> DecodingConversionFn;
 
 enum Option {
-VAR_DECL_MODE = 0, // Variable declaration mode
-VAR_STRICT = 0, // Undefined variables are signaled and stop compilation. Recommanded option.
-VAR_IMPLICIT, // Using an undefined variable cause it to be declared implicitly, as if the keyword var had been used
-VAR_IMPLICIT_GLOBAL, // Same as VAR_IMPLICIT except that the variable is implicitly declared global. Useful for interactive mode.
-COMPILATION_DEBUG_INFO = 1, // compile with debug info
-GC_TRESHHOLD_FACTOR = 2, // Increase multiplier in GC treshhold at each GC cycle. Minimum 110%, Default: 200%
-GC_TRESHHOLD = 3 // Treshhold memory usage at which to trigger the GC. Minimum: 64 KB, Default: 64 KB
+VAR_DECL_MODE = 0, /// Variable declaration mode
+VAR_STRICT = 0, /// Undefined variables are signaled and stop compilation. Recommanded option.
+VAR_IMPLICIT, /// Using an undefined variable cause it to be declared implicitly, as if the keyword var had been used
+VAR_IMPLICIT_GLOBAL, /// Same as VAR_IMPLICIT except that the variable is implicitly declared global. Useful for interactive mode.
+COMPILATION_DEBUG_INFO = 1, /// compile with debug info
+GC_TRESHHOLD_FACTOR = 2, /// Increase multiplier in GC treshhold at each GC cycle. Minimum 110%, Default: 200%
+GC_TRESHHOLD = 3 /// Treshhold memory usage at which to trigger the GC. Minimum: 64 KB, Default: 64 KB
 };
 
 protected: 

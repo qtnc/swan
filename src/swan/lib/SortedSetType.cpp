@@ -98,6 +98,7 @@ f.returnValue(li.iterator != li.set.set.end() );
 static void setIteratorNext (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
 f.returnValue(*li.iterator++);
+li.forward=true;
 }
 
 static void setIteratorHasPrevious (QFiber& f) {
@@ -108,6 +109,14 @@ f.returnValue(li.iterator != li.set.set.begin() );
 static void setIteratorPrevious (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
 f.returnValue(*--li.iterator);
+li.forward=false;
+}
+
+static void setIteratorRemove (QFiber& f) {
+QSortedSetIterator& mi = f.getObject<QSortedSetIterator>(0);
+if (mi.forward) --mi.iterator;
+f.returnValue(*mi.iterator);
+mi.set.set.erase(mi.iterator++);
 }
 
 static void setLowerBound (QFiber& f) {
@@ -192,6 +201,7 @@ BIND_F(next, setIteratorNext)
 BIND_F(hasNext, setIteratorHasNext)
 BIND_F(previous, setIteratorPrevious)
 BIND_F(hasPrevious, setIteratorHasPrevious)
+BIND_F(remove, setIteratorRemove)
 ;
 
 sortedSetClass ->type

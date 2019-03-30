@@ -23,8 +23,8 @@ f.callSymbol(ctorSymbol, f.getArgCount());
 f.returnValue(instance);
 }
 
-void QVM::bindGlobal (const string& name, const QV& value) {
-int symbol = findGlobalSymbol(name, 1);
+void QVM::bindGlobal (const string& name, const QV& value, bool isConst) {
+int symbol = findGlobalSymbol(name, 1 | (isConst?2:0));
 insert_n(globalVariables, 1+symbol-globalVariables.size(), QV());
 globalVariables.at(symbol) = value;
 }
@@ -129,8 +129,8 @@ if (symbol<0) pushNull();
 else push(vm.globalVariables.at(symbol));
 }
 
-void QFiber::storeGlobal (const string& name) {
-vm.bindGlobal(name, top());
+void QFiber::storeGlobal (const string& name, bool isConst) {
+vm.bindGlobal(name, top(), isConst);
 }
 
 void QFiber::storeMethod (const string& name) {

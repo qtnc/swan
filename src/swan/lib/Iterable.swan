@@ -10,9 +10,11 @@ return false;
 
 Iterable::none = $$f: !this.any(f)
 
-Iterable::find = $$f{
-for x in this {
-if f(x): return x
+Iterable::find = $$(f,asitr){
+let it = this.iterator
+while it.hasNext {
+let value = it.next
+if f(value) return asitr? it : value
 }}
 
 Iterable::count = $$f{

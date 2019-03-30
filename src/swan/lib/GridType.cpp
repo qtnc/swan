@@ -41,6 +41,19 @@ if (x<0) x+=grid.width;
 if (y<0) y+=grid.height;
 f.returnValue(x>=0 && y>=0 && x<grid.width && y<grid.height? grid.at(x,y) : QV());
 }
+else if (f.isRange(1) || f.isRange(2)) {
+int startX, startY, endX, endY;
+if (f.isRange(1)) f.getRange(1).makeBounds(grid.width, startX, endX);
+else Swan::Range(f.getNum(1), f.getNum(1), true).makeBounds(grid.width, startX, endX);
+if (f.isRange(2)) f.getRange(2).makeBounds(grid.height, startY, endY);
+else Swan::Range(f.getNum(2), f.getNum(2), true).makeBounds(grid.height, startY, endY);
+QGrid* subgrid = QGrid::create(f.vm, (endX-startX), (endY-startY), nullptr);
+for (int x=startX, i=0; x<endX; x++, i++) {
+for (int y=startY, j=0; y<endY; y++, j++) {
+subgrid->at(i, j) = grid.at(x, y);
+}}
+f.returnValue(subgrid);
+}
 else f.returnValue(QV());
 }
 
@@ -51,6 +64,19 @@ int x = f.getNum(1), y = f.getNum(2);
 if (x<0) x+=grid.width;
 if (y<0) y+=grid.height;
 grid.at(x, y) = f.at(3);
+}
+else if (f.isRange(1) || f.isRange(2)) {
+int startX, startY, endX, endY;
+if (f.isRange(1)) f.getRange(1).makeBounds(grid.width, startX, endX);
+else Swan::Range(f.getNum(1), f.getNum(1), true).makeBounds(grid.width, startX, endX);
+if (f.isRange(2)) f.getRange(2).makeBounds(grid.height, startY, endY);
+else Swan::Range(f.getNum(2), f.getNum(2), true).makeBounds(grid.height, startY, endY);
+vector<QV, trace_allocator<QV>> v(f.vm);
+f.getObject<QSequence>(3) .copyInto(f, v);
+for (int y=startY, i=0, n=v.size(); y<endY && i<n; y++) {
+for (int x=startX; x<endX && i<n; x++, i++) {
+grid.at(x, y) = v[i];
+}}
 }
 f.returnValue(f.at(3));
 }

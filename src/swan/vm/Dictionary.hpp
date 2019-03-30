@@ -24,6 +24,7 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QDictionaryIterator: QObject {
 QDictionary& map;
 QDictionary::iterator iterator;
+bool forward;
 QDictionaryIterator (QVM& vm, QDictionary& m);
 virtual bool gcVisit () override;
 virtual ~QDictionaryIterator() = default;

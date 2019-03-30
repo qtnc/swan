@@ -108,7 +108,7 @@ virtual void importAndDumpBytecode (const std::string& baseFile, const std::stri
 int loadBytecode (std::istream& in);
 void saveBytecode (std::ostream& out, int count = 1);
 
-virtual void storeGlobal (const std::string& name) final override;
+virtual void storeGlobal (const std::string& name, bool isConst=false) final override;
 virtual void loadGlobal (const std::string& name) final override;
 virtual void storeMethod (const std::string& name) final override;
 virtual void storeStaticMethod (const std::string& name) final override;

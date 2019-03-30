@@ -5,7 +5,8 @@
 using namespace std;
 
 QDictionaryIterator::QDictionaryIterator (QVM& vm, QDictionary& m): 
-QObject(vm.dictionaryIteratorClass), map(m), iterator(m.map.begin()) 
+QObject(vm.dictionaryIteratorClass), map(m), 
+iterator(m.map.begin()), forward(false)
 {}
 
 QDictionary::QDictionary (QVM& vm, QV& sorter0): 

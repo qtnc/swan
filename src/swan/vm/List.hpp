@@ -33,7 +33,8 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QListIterator: QObject {
 QList& list;
 QList::iterator iterator;
-QListIterator (QVM& vm, QList& m): QObject(vm.listIteratorClass), list(m), iterator(m.data.begin()) {}
+bool forward;
+QListIterator (QVM& vm, QList& m): QObject(vm.listIteratorClass), list(m), iterator(m.data.begin()), forward(false) {}
 virtual bool gcVisit () override;
 virtual ~QListIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

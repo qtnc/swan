@@ -33,11 +33,28 @@ f.returnValue(li.iterator != li.list.data.begin() );
 static void linkedListIteratorNext (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
 f.returnValue(*li.iterator++);
+li.forward=true;
 }
 
 static void linkedListIteratorPrevious (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
 f.returnValue(*--li.iterator);
+li.forward=false;
+}
+
+static void linkedListIteratorRemove (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+if (li.forward) --li.iterator;
+f.returnValue(*li.iterator);
+if (li.forward) li.list.data.erase(li.iterator++);
+else li.list.data.erase(li.iterator--);
+}
+
+static void linkedListIteratorInsert (QFiber& f) {
+QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+QV value = f.at(1);
+li.iterator = li.list.data.insert(li.iterator, value);
+if (li.forward) ++li.iterator;
 }
 
 static void linkedListPush (QFiber& f) {
@@ -124,6 +141,9 @@ BIND_F(next, linkedListIteratorNext)
 BIND_F(hasNext, linkedListIteratorHasNext)
 BIND_F(previous, linkedListIteratorPrevious)
 BIND_F(hasPrevious, linkedListIteratorHasPrevious)
+BIND_F(add, linkedListIteratorInsert)
+BIND_F(insert, linkedListIteratorInsert)
+BIND_F(remove, linkedListIteratorRemove)
 ;
 
 linkedListClass ->type

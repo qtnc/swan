@@ -32,11 +32,27 @@ f.returnValue(li.iterator > li.list.data.begin() );
 static void listIteratorNext (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
 f.returnValue(*li.iterator++);
+li.forward=true;
 }
 
 static void listIteratorPrevious (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
 f.returnValue(*--li.iterator);
+li.forward=false;
+}
+
+static void listIteratorRemove (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+if (li.forward) --li.iterator;
+f.returnValue(*li.iterator);
+li.iterator = li.list.data.erase(li.iterator);
+}
+
+static void listIteratorInsert (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+QV value = f.at(1);
+li.iterator = li.list.data.insert(li.iterator, value);
+if (li.forward) ++li.iterator;
 }
 
 static void listSubscript (QFiber& f) {
@@ -261,6 +277,9 @@ BIND_F(next, listIteratorNext)
 BIND_F(hasNext, listIteratorHasNext)
 BIND_F(previous, listIteratorPrevious)
 BIND_F(hasPrevious, listIteratorHasPrevious)
+BIND_F(remove, listIteratorRemove)
+BIND_F(add, listIteratorInsert)
+BIND_F(insert, listIteratorInsert)
 ;
 
 listClass -> type

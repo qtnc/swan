@@ -271,21 +271,23 @@ auto initial = to_ptr(firstGCObject);
 for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
 
 vector<QObject*> roots = { 
-boolClass, bufferClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+, listIteratorClass, mapIteratorClass, rangeIteratorClass, setIteratorClass, stringIteratorClass, tupleIteratorClass
 #ifndef NO_REGEX
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
 , dictionaryClass, linkedListClass, priorityQueueClass, sortedSetClass
+, dictionaryIteratorClass, linkedListIteratorClass, priorityQueueIteratorClass, sortedSetIteratorClass
 #endif
 #ifndef NO_GRID
-, gridClass
+, gridClass, gridIteratorClass
 #endif
 #ifndef NO_RANDOM
 , randomClass
 #endif
 #ifndef NO_BUFFER
-, bufferClass
+, bufferClass, bufferIteratorClass
 #endif
 , activeFiber, rootFiber
 };

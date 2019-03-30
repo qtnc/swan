@@ -8,7 +8,12 @@
 #include<set>
 #include<cmath>
 #include "../../include/cpprintf.hpp"
+#include<boost/heap/fibonacci_heap.hpp>
 using namespace std;
+
+struct point;
+typedef boost::heap::fibonacci_heap<point, boost::heap::compare<std::function<bool(const point&, const point&)>>> heap;
+typedef heap::handle_type heap_handle;
 
 struct point {
 int x, y;
@@ -20,7 +25,6 @@ inline bool operator!= (const point& a, const point& b) { return !(a==b); }
 inline point operator+ (const point& a, const point& b) { return {a.x+b.x, a.y+b.y}; }
 inline point operator- (const point& a, const point& b) { return {a.x-b.x, a.y-b.y}; }
 
-
 struct PointHasher {
 inline size_t operator() (const point& p) const { return (p.x<<16) | p.y; }
 };
@@ -30,7 +34,9 @@ static const constexpr double maxval = 1e9;
 double f, g, h;
 point pt, parent;
 int dir;
-AStarPointInfo(double f1=maxval, double g1=maxval, double h1=maxval, const point& x=point(-1,-1), const point& p=point(-1,-1), int d=-1): f(f1), g(g1), h(h1), pt(x), parent(p), dir(d) {}
+heap_handle handle;
+bool handleInitialized;
+AStarPointInfo(double f1=maxval, double g1=maxval, double h1=maxval, const point& x=point(-1,-1), const point& p=point(-1,-1), int d=-1, heap_handle hh = heap_handle(), bool hi=false): f(f1), g(g1), h(h1), pt(x), parent(p), dir(d), handle(hh), handleInitialized(hi)  {}
 };
 
 static void gridFillRect (QFiber& f) {
@@ -124,22 +130,23 @@ f.returnValue(QV());
 return;
 }
 QV callback = f.at(5);
-double diagCost = 0, turnCost = 0;
-bool asDirList = false;
+double diagCost = f.getOptionalNum(8, "diagonals", 0), turnCost = f.getOptionalNum(9, "turns", 0);
+bool asDirList = f.getOptionalBool(7, "asDirectionList", false);
 vector<point> neighbors;
 if (diagCost>0) neighbors  = { {0,1}, {1,0}, {0,-1}, {-1,0}, {1,1}, {1,-1}, {-1,-1}, {-1,1}  };
 else neighbors  = { {0,1}, {1,0}, {0,-1}, {-1,0} };
 unordered_map<point, AStarPointInfo, PointHasher> info;
 unordered_set<point, PointHasher> closedList;
-auto ptless = [&](const point& a, const point& b){ return info[a].f < info[b].f; };
-multiset<point, std::function<bool(const point&, const point&)>> openList(ptless);
-info[src]  = AStarPointInfo(0, 0, 0, src, src);
-openList.insert(src);
+auto comparator = [&](const point& a, const point& b){ return info[a].f > info[b].f; };
+heap openList(comparator);
+auto& srcInfo = (info[src]  = AStarPointInfo(0, 0, 0, src, src));
+srcInfo.handle = openList.push(src);
+srcInfo.handleInitialized = true;
 point p;
 int nNeighbors = neighbors.size();
 while(!openList.empty()) {
-p = *openList.begin();
-openList.erase(openList.begin());
+p = openList.top();
+openList.pop();
 closedList.insert(p);
 if (p==dest) break;
 for (int d=0; d<nNeighbors; d++) {
@@ -171,10 +178,9 @@ double G = pInfo.g + cost*(d>=4? diagCost:1) + (d!=pInfo.dir? turnCost:0);
 double H = diff.length();
 double F = G+H;
 if (nextInfo.f<F) continue;
-auto fnd = find_if(openList.begin(), openList.end(), [&](const point& x){ return x==nextInfo.pt; });
-if (fnd!=openList.end()) openList.erase(fnd);
-nextInfo = { F, G, H, next, p, d };
-openList.insert(next);
+nextInfo = { F, G, H, next, p, d, nextInfo.handle, nextInfo.handleInitialized  };
+if (nextInfo.handleInitialized) openList.increase(nextInfo.handle);
+else { nextInfo.handle = openList.push(next); nextInfo.handleInitialized=true; }
 }//going through neighbors
 }//going through openList
 if (p!=dest) { // No path found
