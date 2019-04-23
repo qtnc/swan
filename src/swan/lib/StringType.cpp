@@ -8,10 +8,12 @@
 #include<utf8.h>
 using namespace std;
 
+extern double strtod_c  (const char*, char** = nullptr);
+
 QV stringToNumImpl (QString& s, int base) {
 char* end = nullptr;
 if (base<0 || base>32) {
-double re = strtod(s.begin(), &end);
+double re = strtod_c(s.begin(), &end);
 return end && end==s.end()? re : QV();
 } else {
 long long re = strtoll(s.begin(), &end, base);

@@ -15,6 +15,7 @@
 using namespace std;
 
 extern const char* OPCODE_NAMES[];
+extern double strtod_c  (const char*, char** = nullptr);
 
 static const char 
 *THIS = "this",
@@ -1212,7 +1213,7 @@ case 'b': case 'B': return strtoll(in+2, const_cast<char**>(&in), 2);
 case '1': case '2': case '3': case '4': case '5': case '6': case '7': return strtoll(in+1, const_cast<char**>(&in), 8);
 default: break;
 }}
-double d = strtod(in, const_cast<char**>(&in));
+double d = strtod_c(in, const_cast<char**>(&in));
 if (in[-1]=='.') in--;
 return d;
 }
