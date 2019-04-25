@@ -18,6 +18,7 @@ If you have already embedded lua or another similar scripting language, the foll
 
 Values on the stack are accessed by their index. Positive indices from 0 upwards indicate the nth element from the current base, while negative indices count from the top downwards.
 Thus, index 0 indicates the stack base, while -1 indicates the last element at the top. 
+
 The element at the stack base is a little special: slot 0 is used for receiver object of methods (the object usually known as *this* or *self*), as well as for return values.
 
 Calling C++ from Swan or Swan from C++ involves modifying the stack. Fibers have three important families of methods to manipulate the stack:
@@ -26,7 +27,7 @@ Calling C++ from Swan or Swan from C++ involves modifying the stack. Fibers have
 - setXXX, such as setBool, setNum, setString, etc. sets the given stack index to the specified value. The value previously present at that place is erased.
 - pushXXX, such as pushBool, pushNum, pushString, etc. pushes the given value at the top of the stack, making it grow by one element.
 
-To complete the general list, *pop* removes the top value of the stack, making it shrink by one unit.
+To complete the general list, *pop* removes the top value of the stack, making it shrink by one unit, and there are also a few other stack manipulation functions to move and/or copy elements around.
 
 ## Calling Swan from C++
 ### Loading code
@@ -69,7 +70,7 @@ fiber.pop();
 ### Calling a method
 To call a method, follow these steps:
 
-- Push the receiver this object on the stack
+- Push the receiver object a.k.a this/self on the stack
 - Push all method arguments, using pushNum/pushString/pushBool/etc.
 - Call the method *`callMethod(const std::string& name, int nArgs)`* on the Swan::Fiber, specifying the name of the method to be called and the number of arguments passed. The receiver this object counts for one argument, so nArgs must be greater than 0.
 
@@ -117,6 +118,8 @@ Only the fields of the first parent are inherited, other additional parents are 
 To register a constructor, use *`registerConstructor<T, A...>()`*, where *T* is your C++ class, and *A...* constructor arguments. 
 In fact, this registers a *constructor* method passing the right parameters.
 
+Alternatively, if your objects are created by a factory rather than a constructor, you can register a static method *`()`*. This will replace the original default way of handling calls to `ClassName()` by your function.
+
 To register a destructor, use *`registerDestructor<T>()`*, where *T* is your C++ class. You are recommanded to do it even if the class has no explicit destructor.
 The destructor will be called upon garbage collection of the object.
 
@@ -129,7 +132,10 @@ The following macros convert C++ fonctions into valid Swan functions with the pr
 - *`GETTER(TYPE, NAME)`* and *`SETTER(TYPE, NAME)`* generates only a getter or only a setter for the given member field. Useful if you wish to write a read-only or write-only property.
 - *`STATIC_METHOD(NAME)`* is intended to be used when registering static methods with *registerStaticMethod*. In that particular case, stack index 0 contains a reference to the class object, which has to be ignored when retrieving method arguments in C++.
 
-Example with a simple point c++ class:
+Note that there is no overloading concept in Swan. You may need to create a classic wrapper with the prototype `void function (Swan::Fiber& fiber)` to be able to manage all possible overloadings of your constructors and methods.
+There is currently no way to automatically handle overloadings.
+
+Example of simplified registration with a simple point c++ class:
 
 ```
 // Our Point class
@@ -175,6 +181,8 @@ There are two functions for doing that: a low-level, and a higher level one.
 The advantage of `importAndDumpBytecode` is that it dumps everything needed for a  later run, e.g. if you import and dump A but A imports B and C, B and C are also dumped. That's why a dumped bytecode file can contain several functions.
 The generated file should be imported by calling the C++ `fiber.import` or using import in Swan.
 
+Keep in main that saved bytecode isn't in any way encrypted or obfuscated. It's possible and even relatively easy to decompile Swan bytecode if you don't take any other protection measure.
+
 ## Multithreading
 Unless Swan has been compiled with the NO_THREAD_SUPPORT option, the whole VM is protected by a single so called global interpreter lock (GIL).
 Hance, no two fibers are effectively run concurrently. 
@@ -194,6 +202,9 @@ SEt language options with the *VM::setOption* method. The following options are 
     - VAR_STRICT: when an unknown variable is referenced in the code, compilation is stopped and throws an error. Variables must always be declared with *let* or *const*. This is the recommanded option.
     - VAR_IMPLICIT: when an unknown variable is referenced in the code, it is implicitly declared as a new local variable, as if *let* or *const* had been used explicitly. That's seem cool, but may lead to surprises when using several times the same variable names in nested scopes; it's better avoided.
     - VAR_IMPLICIT_GLOBAL: same as VAR_IMPLICIT, except that new variable is implicitly declared global. This is useful for the CLI, but strongly discouraged for usual codes.
+- COMPILATION_DEBUG_INFO: when compiling and saving bytecode, keep or discard debug info. When debug info is striped, function names, line numbers and a few other informations are no longer given in stack traces when an error occurs.
+- GC_TRESHHOLD: treshhold memory usage at which the garbage collector is triggered for its first cycle. Default: 65536 = 64KB.
+- GC_TRESHHOLD_FACTOR: for further garbage collections, the GC is triggered when reaching `memory usage at the end of previous cycle * treshhold factor`. Default: 200%. For example with the initial treshhold of 64KB and a factor of 150%, if 50KB is still used at the end of the first collection, the next cycle will be at 75KB. With a smaller factor, the GC is going to run and interfer with script execution more often, but a bigger factor globally implies more unreclaimed memory for a longer time.
 
 Set VM parameters by using the appropriate method. The following settings can be tweaked:
 
