@@ -14,7 +14,7 @@ void registerIO  (Swan::Fiber& f);
 void registerDate (Swan::Fiber& f);
 
 void printIntro () {
-println("Swan version 0.2.2019.3");
+println("Swan version 0.2.2019.4");
 println("Copyright (c) 2019, QuentinC ");
 println("For more info, go to http://github.com/qtnc/qscript");
 }
