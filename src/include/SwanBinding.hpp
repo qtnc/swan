@@ -1,7 +1,6 @@
 	#ifndef _____SWAN_BINDING_HPP_____
 #define _____SWAN_BINDING_HPP_____
 #include "Swan.hpp"
-#include "cpprintf.hpp"
 
 namespace Swan {
 namespace Binding {
@@ -416,6 +415,31 @@ std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1
 callNative(seq, obj, func, params);
 }
 };
+
+//##Begin added
+template<class T, class R, class... A> struct SwanWrapper< R (T::*)(A...)const> {
+typedef R(T::*Func)(A...)const;
+template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
+template<Func func> static void wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+R result = callNative(seq, obj, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+};
+
+template<class T, class... A> struct SwanWrapper< void(T::*)(A...)const> {
+typedef void(T::*Func)(A...)const;
+template<int... S> static void callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  (obj->*func)( std::get<S>(params)... );  }
+template<Func func> static void wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+callNative(seq, obj, func, params);
+}
+};
+//##End added
 
 template<class R, class... A> struct SwanWrapper< R(A...) > {
 typedef R(*Func)(A...);
