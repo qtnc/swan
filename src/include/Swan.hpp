@@ -187,6 +187,8 @@ inline bool getOptionalBool (int stackIndex, bool defaultValue) { return getArgC
 /** Return the value of the String object at the given stack index as a C++ std::string object, or defaultValue if there isn't that many stack elements or if the given stack element isn't of an appropriate type */
 inline std::string getOptionalString (int stackIndex, const std::string& defaultValue) { return getArgCount()>stackIndex && isString(stackIndex)? getString(stackIndex) : defaultValue; }
 /** Return an handle to the object at the given stack index, or defaultValue if there isn't that many stack elements or if the given stack element isn't of an appropriate type */
+inline void* getOptionalUserPointer (int stackIndex, size_t classId, void* defaultValue = nullptr) { return getArgCount()>stackIndex && isUserPointer(stackIndex, classId)? getUserPointer(stackIndex) : defaultValue; }
+/** Return an handle to the object at the given stack index, or defaultValue if there isn't that many stack elements or if the given stack element isn't of an appropriate type */
 inline Handle getOptionalHandle  (int stackIndex, const Handle& defaultValue) { return getArgCount()>stackIndex? getHandle(stackIndex) : defaultValue; }
 
 /** Look for a Num object at the given stack index, or inside a Map at index -1 with the given key. Return the value of that Num object if found, otherwise defaultValue */
@@ -196,6 +198,8 @@ virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defau
 /** Look for a String object at the given stack index, or inside a Map at index -1 with the given key. Return the value of that String object as a C++ std::string if found, otherwise defaultValue */
 virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) = 0;
 /** Look for any object at the given stack index, or inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue */
+virtual void* getOptionalUserPointer   (int stackIndex, const std::string& key, size_t classId, void* defaultValue = nullptr) = 0;
+/** Look for any object at the given stack index, or inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue */
 virtual Handle getOptionalHandle  (int stackIndex, const std::string& key, const Handle& defaultValue) = 0;
 
 /** Look for a Num object inside a Map at index -1 with the given key. Return the value of that Num object if found, otherwise defaultValue */
@@ -204,6 +208,8 @@ inline double getOptionalNum (const std::string& key, double defaultValue) { ret
 inline bool getOptionalBool  (const std::string& key, bool defaultValue) { return getOptionalBool(-1, key, defaultValue); }
 /** Look for a String object inside a Map at index -1 with the given key. Return the value of that String object as a C++ std::string if found, otherwise defaultValue */
 inline std::string getOptionalString (const std::string& key, const std::string& defaultValue) { return getOptionalString(-1, key, defaultValue); }
+/** Look for any object inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue */
+inline void* getOptionalUserPointer  (const std::string& key, size_t classId, void* defaultValue = nullptr) { return getOptionalUserPointer(-1, key, classId, defaultValue); }
 /** Look for any object inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue */
 inline Handle getOptionalHandle (const std::string& key, const Handle& defaultValue) { return getOptionalHandle(-1, key, defaultValue); }
 
@@ -260,6 +266,12 @@ virtual void pushCopy (int stackIndex = -1) = 0;
 virtual void swap (int stackIndex1 = -2, int stackIndex2 = -1) = 0;
 /** Pop the last stack element. The behavior is undefined if the stack is currently empty. */
 virtual void pop () = 0;
+/** Replace the element at the given stack index by another element */
+virtual void setCopy (int targetIndex, int sourceIndex = -1) = 0;
+virtual void insertCopy (int targetIndex, int sourceIndex = -1) = 0;
+/** Replace the element at the given stack index by the element at the back of the stack and pop it */
+inline void setAndPop (int stackIndex) { setCopy(stackIndex, -1); pop(); }
+inline void insertAndPop (int stackIndex) { insertCopy(stackIndex, -1); pop(); }
 
 /** Loads the given Swan source code and compile it. Return the number of Function objects pushed to the stack. The name is used in compilation or runtime error messages. */
 virtual int loadString (const std::string& source, const std::string& name="") = 0;
@@ -301,9 +313,29 @@ template<class T> inline bool isUserObject (int stackIndex) {
 return isUserPointer(stackIndex, typeid(T).hash_code());
 }
 
+/** Check if the element at stack index is of the templated type given. The type must of course first be registered. */
+template<class T> inline bool isUserPointer (int stackIndex) {
+return isUserPointer(stackIndex, typeid(T).hash_code());
+}
+
 /** Return a reference pointing to the object at the given stack index, if it is of any registered type (non built-in Swan type). The behavior is undefined in case the requested element isn't of the required type. */
 template<class T> inline T& getUserObject (int stackIndex) {
 return *static_cast<T*>(getUserPointer(stackIndex));
+}
+
+/** Return a reference pointing to the object at the given stack index, if it is of any registered type (non built-in Swan type). The behavior is undefined in case the requested element isn't of the required type. */
+template<class T> inline T* getOptionalUserPointer (int stackIndex, T* defaultValue = nullptr) {
+return static_cast<T*>(getUserPointer(stackIndex, typeid(T).hash_code(), defaultValue));
+}
+
+/** Return a reference pointing to the object at the given stack index, if it is of any registered type (non built-in Swan type). The behavior is undefined in case the requested element isn't of the required type. */
+template<class T> inline T* getOptionalUserPointer (int stackIndex, const std::string& key, T* defaultValue = nullptr) {
+return static_cast<T*>(getUserPointer(stackIndex, key, typeid(T).hash_code(), defaultValue));
+}
+
+/** Return a reference pointing to the object at the given stack index, if it is of any registered type (non built-in Swan type). The behavior is undefined in case the requested element isn't of the required type. */
+template<class T> inline T* getOptionalUserPointer (const std::string& key, T* defaultValue = nullptr) {
+return getOptionalUserPointer<T>(-1, key, defaultValue);
 }
 
 /** Replace the element at stack index by an object of a registered type. The object is copied. T must be copiable and the copy constructor must be accessible. */

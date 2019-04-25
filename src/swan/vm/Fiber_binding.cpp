@@ -101,6 +101,12 @@ if (value.isString()) return value.asString();
 else return getOptionalString(stackIndex, defaultValue);
 }
 
+void* QFiber::getOptionalUserPointer (int stackIndex, const std::string& key, size_t classId, void* defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (value.isInstanceOf( vm.foreignClassIds[classId] )) return value.asObject<QForeignInstance>()->userData;
+else return getOptionalUserPointer(stackIndex, classId, defaultValue);
+}
+
 Swan::Handle QFiber::getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) {
 QV value = getItemFromLastArgMap(*this, key);
 if (!value.isNull()) return value.asHandle();

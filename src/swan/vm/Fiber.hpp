@@ -55,11 +55,13 @@ virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHa
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
 virtual inline std::string getOptionalString  (int i, const std::string& defaultValue) { return getArgCount()>i && isString(i)? getString(i) : defaultValue; }
+virtual inline void* getOptionalUserPointer (int i, size_t classId, void* defaultValue = nullptr) { return getArgCount()>i && isUserPointer(i, classId)? getUserPointer(i) : defaultValue; }
 virtual inline Swan::Handle getOptionalHandle  (int i, const Swan::Handle& defaultValue) { return getArgCount()>i && !isNull(i)? at(i).asHandle() : defaultValue; }
 
 virtual double getOptionalNum (int stackIndex, const std::string& key, double defaultValue) final override;
 virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) final override;
 virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) final override;
+virtual void* getOptionalUserPointer (int stackIndex, const std::string& key, size_t classId, void* defaultValue = nullptr) final override;
 virtual Swan::Handle getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) final override;
 
 virtual std::vector<double> getNumList (int stackIndex);
@@ -90,6 +92,8 @@ virtual void* pushNewUserPointer (size_t id) final override;
 virtual inline void pushHandle (const Swan::Handle& h) final override { push(QV(h.value)); }
 virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
 virtual inline void swap (int i1 = -2, int i2 = -1) final override { std::swap(at(i1), at(i2)); }
+virtual inline void setCopy (int i, int j) final override { at(i) = at(j); }
+virtual inline void insertCopy (int i, int j) final override { stack.insert(&at(i), at(j)); }
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return at(-1); }
 inline void push (const QV& x) { stack.push_back(x); }
