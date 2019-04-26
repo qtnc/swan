@@ -18,6 +18,11 @@
 #include<typeinfo>
 #include<iosfwd>
 
+/** Swan version in use: hexadecimal number 0xVVYYMMPP, where V=major version, Y=year, M=month, P=patch.
+Compatibility is ensured if the version only differ in patch, i.e. 0.19.4a is compatible with 0.19.4b, but not with 0.19.5.
+*/
+#define SWAN_VERSION 0x00130400UL
+
 namespace Swan {
 
 struct VM;
@@ -945,8 +950,14 @@ virtual void setOption (Option opt, int value = 1) = 0;
 /** Run the garbage collector explicitly */
 virtual void garbageCollect () = 0;
 
-/** Create a new instance of the Swan VM */
+/** Create a new instance of the Swan VM and make a quick version check before doing it */
 static VM& export create ();
+
+/** Return the version of the Swan VM in use. */
+static uint32_t export getVersion ();
+
+/** Return the version of the Swan VM, as an humanly readable string such as 0.19.4a */
+static std::string export getVersionString ();
 
 /** Return the encoder for a given encoding
 @param name name of the encoding, i.e. ISO-8859-1

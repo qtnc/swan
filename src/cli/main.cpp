@@ -13,13 +13,13 @@ using boost::starts_with;
 void registerIO  (Swan::Fiber& f);
 void registerDate (Swan::Fiber& f);
 
-void printIntro () {
-println("Swan version 0.2.2019.4");
+static void printIntro () {
+println("Swan version %s", Swan::VM::getVersionString());
 println("Copyright (c) 2019, QuentinC ");
 println("For more info, go to http://github.com/qtnc/qscript");
 }
 
-void printHelp (const std::string& argv0) {
+static void printHelp (const std::string& argv0) {
 printIntro();
 println("Synopsis: %s [options] [script] [args...]", argv0);
 println("Where [script] is the script to execute");
@@ -33,19 +33,19 @@ println("-m: import the following given module");
 println("-o: output compiled bytecode to specified file");
 }
 
-void printStackTrace (Swan::RuntimeException& e) {
+static void printCLIHelp () {
+println("Type any Swan code to see the result, or one of these commands: ");
+println("clear:\t clear a possibly incomplete code input buffer");
+println("exit:\t exits from the Swan CLI REPL");
+println("quit:\t synonym for 'exit'");
+}
+
+static void printStackTrace (Swan::RuntimeException& e) {
 println(std::cerr, "ERROR: %s", e.what());
 println(std::cerr, "%s", e.getStackTraceAsString());
 }
 
-void repl (Swan::VM& vm, Swan::Fiber& fiber) {
-vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
-string code, line;
-printIntro();
-println("Type 'exit', 'quit' or press Ctrl+Z to quit");
-print("?>>");
-while(getline(cin, line)) {
-if (line=="exit" || line=="quit") break;
+static void replEval (Swan::Fiber& fiber, string& code, const string& line) {
 code.append(line);
 code.push_back('\n');
 try {
@@ -65,6 +65,19 @@ catch (Swan::RuntimeException& e) {
 printStackTrace(e);
 code.clear();
 }
+}
+
+static void repl (Swan::VM& vm, Swan::Fiber& fiber) {
+string code, line;
+vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
+printIntro();
+println("Type 'exit', 'quit' or press Ctrl+Z to quit; type 'help' for other commands.");
+print("?>>");
+while(getline(cin, line)) {
+if (line=="exit" || line=="quit") break;
+else if (line=="clear") code.clear(); 
+else if (line=="help") printCLIHelp(); 
+else replEval(fiber, code, line);
 print(code.empty()? "?>>" : " ?..");
 line.clear();
 }}

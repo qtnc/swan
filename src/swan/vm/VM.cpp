@@ -1,4 +1,6 @@
 #include "VM.hpp"
+#include "../../include/cpprintf.hpp"
+using namespace std;
 
 void* vm_alloc (QVM& vm, size_t n) {
 return vm.allocate(n);
@@ -10,6 +12,15 @@ vm.deallocate(p, n);
 
 Swan::VM& Swan::VM::create () {
 return *new QVM();
+}
+
+uint32_t Swan::VM::getVersion () { 
+return SWAN_VERSION; 
+}
+
+string Swan::VM::getVersionString () {
+auto version = getVersion(), patch = version&0xFF;
+return format("%d.%d.%d%s", (version>>24)&0xFF, (version>>16)&0xFF, (version>>8)&0xFF, patch? string(1, patch+96) : string() );
 }
 
 int QVM::getOption (QVM::Option opt) {
