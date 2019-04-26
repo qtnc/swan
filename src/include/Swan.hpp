@@ -150,7 +150,7 @@ export Handle (Handle&&);
 Handle& operator= (const Handle&) = default;
 Handle& export operator= (Handle&&);
 export ~Handle ();
-private: uint64_t value;
+uint64_t value;
 };
 
 /** 

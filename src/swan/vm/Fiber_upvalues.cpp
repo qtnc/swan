@@ -2,15 +2,15 @@
 #include "VM.hpp"
 #include "Upvalue.hpp"
 #include<string>
+#include "../../include/cpprintf.hpp"
 using namespace std;
 
 void QFiber::closeUpvalues (int startSlot) {
-QFiber* _this=this;
-const void *ptrBeg = &stack[startSlot], *ptrEnd = &stack[stack.size() -1];
+const QV *ptrBeg = &stack[startSlot], *ptrEnd = &stack[stack.size()];
 auto newEnd = remove_if(openUpvalues.begin(), openUpvalues.end(), [&](auto upvalue){
 QV v0 = upvalue->value;
-const void* ptr = v0.asPointer<char>();
-if (upvalue->fiber==_this
+const QV *ptr = v0.asPointer<QV>();
+if (upvalue->fiber==this
 && upvalue->value.isOpenUpvalue() 
 && ptr >= ptrBeg
 && ptr < ptrEnd
