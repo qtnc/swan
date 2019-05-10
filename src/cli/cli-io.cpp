@@ -103,12 +103,6 @@ Swan::ScopeUnlocker<Swan::VM> unlocker(f.getVM());
 io.out->write(buffer, length);
 }}
 
-static void ioIterate (Swan::Fiber& f) {
-IO& io = f.getUserObject<IO>(0);
-if (io.in && *io.in) f.setBool(0, true);
-else f.setNull(0);
-}
-
 static void ioRead (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 int num = f.getOptionalNum(1, -1);
@@ -219,10 +213,10 @@ f.registerStaticMethod("create", STATIC_METHOD(ioCreate));
 f.registerStaticMethod("of", ioOf);
 f.registerMethod("read", ioRead);
 f.registerMethod("readLine", ioReadLine);
+f.registerMethod("next", ioReadLine);
 f.registerMethod("!", METHOD(IO, operator!));
 f.registerMethod("?", METHOD(IO, operator bool));
-f.registerMethod("iterate", ioIterate);
-f.registerMethod("iteratorValue", ioReadLine);
+f.registerMethod("hasNext", METHOD(IO, operator bool));
 f.registerMethod("write", ioWrite);
 f.registerMethod("flush", METHOD(IO, flush));
 f.registerMethod("seek", METHOD(IO, seek));
