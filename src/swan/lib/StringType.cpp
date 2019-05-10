@@ -211,14 +211,15 @@ void stringFormat (QFiber& f) {
 QString& fmt = *f.ensureString(0);
 ostringstream out;
 auto cur = fmt.begin(), end = fmt.end(), last = cur;
-while((cur = find_if(last, end, boost::is_any_of("%$"))) < end) {
+while((cur = find_if(last, end, boost::is_any_of("%${"))) < end) {
+QV val;
+char delim = *cur;
 if (cur>last) out.write(last, cur-last);
-if (++cur==end) out << cur[-1];
+if (++cur==end) out << delim;
 else if (isDigit(*cur)) {
 int i = strtoul(cur, &cur, 10);
 if (i<f.getArgCount()) {
-QString* s = f.ensureString(i);
-out.write(s->data, s->length);
+val = f.at(i);
 }}
 else if (isName(*cur)) {
 auto endName = find_if_not(cur, end, isName);
@@ -227,14 +228,40 @@ f.push(QV(QString::create(f.vm, cur, endName), QV_TAG_STRING));
 f.pushCppCallFrame();
 f.callSymbol(f.vm.findMethodSymbol("[]"), 2);
 f.popCppCallFrame();
-if (!f.isNull(-1)) {
-QString* s = f.ensureString(-1);
-f.pop();
-out.write(s->data, s->length);
-}
+val = f.at(-1);
 cur = endName;
 }
-else out << *cur;
+else out << delim;
+if (!val.isNull()) {
+if (delim=='{' && *cur==':') {
+auto endfmt = find(++cur, end, '}');
+string fmt = "%" + string(cur, endfmt);
+any_ostreamable_vector arg;
+switch(fmt[fmt.size() -1]){
+case 'd': case 'x': case 'X': case 'o': case 'u': case 'i': case 'h': case 'l': case 'L':
+arg.push_back(static_cast<int64_t>(val.asNum()));
+break;
+case 'f': case 'F': case 'g': case 'G': case 'e': case 'E':
+arg.push_back(val.asNum());
+break;
+case 'p':
+arg.push_back(val.i);
+break;
+default: {
+f.push(val);
+QString* sOut = f.ensureString(-1);
+arg.push_back(string(sOut->data, sOut->length));
+}break;
+}
+print(out, fmt.c_str(), arg);
+}
+else {
+f.push(val);
+QString* sOut = f.ensureString(-1);
+out.write(sOut->data, sOut->length);
+}
+if (delim=='{') cur = find(cur, end, '}') +1;
+}
 last = cur;
 }
 if (last<end) out.write(last, end-last);

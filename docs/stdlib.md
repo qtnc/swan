@@ -444,7 +444,7 @@ Methods:
 - toString: return a string like "(1, 2, 3, 4, 5)"
 
 ## Global functions
-- format(fmt, ...items): create a string where %1, %2, %3, etc. are replaced by the 1st, 2nd, 3rd, etc. parameters after fmt.
+- format(fmt, ...items): create a formatted string from a format string and parameters. See further below for more info.
 - format(fmt, map): create a string where expression $([a-z]+) are replaced by the corresponding value in the map.
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
@@ -460,6 +460,51 @@ By default, both are allowed, but depending on the configuration, only one of th
 - cbrt(n), sqrt(n): cubic and square root
 - ceil(n), floor(n), round(n), trunc(n): rounding functions
 - exp(n), log(n, [base]): exponential and logarithm
+
+## Format(fmt, ...) function
+The format string of the format(fmt, ...) function allow different syntaxes:
+
+- %1, %2, %3, ... or $1, $2, $3, ... or {1}, {2}, {3}, etc. take the nth argument, the first argument is number 1, not 0.
+- %key or $key or {key} looks up *key* in a map passed in last parameter of format
+- {n:fmt} or {key:fmt} formats the value according to the *fmt* format specified.
+
+The format *fmt* in {n:fmt} or {key:fmt} should be composed of zero, one or more format specifiers followed by a type indicator. The type indicator is the final character juste before the ending '}'.
+Only the {...} notation allow formatting options, % and $ don't.
+This fmt is obvious inspired from C printf family. 
+
+The type indicator may be:
+
+- d, i, u, l: a decimal integer
+- x, x: an hexadecimal integer
+- o: an octal integer
+- g: a number with fixed precision
+- f: a number with a fixed number of decimals
+- e, E: a number in exponential notation
+- s: a string
+
+Depending on the type indicator, one or more of these format specifiers can be also specified. They can appear in any order as long as they are before the final type indicator:
+
+- '.n', where n is an integer: precision
+- '$n', where n is an integer: width
+- '0': pad with zeroes instead of spaces
+- '+': always show the sign
+- '#': use alternate notation; '0x' prefix for hexadecimal integers, or always show decimal part for numbers
+
+Given a number 123.45, here are some examples:
+
+- '.3g' => 123
+- '.4g' => 123.5
+- '.1f' => 123.5
+- '.2f' => 123.45
+- '.3f' => 123.450
+- '.4f' => 123.4500
+- 'e' => 1.2345e+02
+- 'd' => 123
+- 'x' => 7b
+- 'X' => 7B
+- '0$5X' => 0007B
+- '0$5#x' => 0x7b
+- '+d' => +123
 
 ## Reflection/metaclass functions
 This family of global functions is used to dynamically create classes, or access fields and global variables with their names. They may be disabled by configuration.
