@@ -1741,7 +1741,7 @@ QToken& name =  vars[i].first;
 QToken index = { T_NAME, name.start, name.length, destructuring==T_RIGHT_BRACE? QV(QString::create(vm, name.start, name.length), QV_TAG_STRING) : QV(static_cast<double>(i)) };
 vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
 auto subscript = make_shared<SubscriptExpression>(source, indices);
-vars[i].second = createBinaryOperation(subscript, T_QUESTQUESTEQ, vars[i].second);
+vars[i].second = createBinaryOperation(subscript, T_QUESTQUEST, vars[i].second);
 }}
 return make_shared<VariableDeclaration>(vars, isConst? VD_CONST : 0);
 }
