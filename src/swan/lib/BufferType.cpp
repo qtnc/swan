@@ -205,9 +205,19 @@ f.returnValue(convertBufferToString(b, enc->asString()));
 else {
 string out = "Buffer:";
 for (uint8_t x: b) {
+switch(x){
+case 0: out += "\\0"; break;
+case '\b': out += "\\b"; break;
+case 0x1B: out += "\\e"; break;
+case '\f': out += "\\f"; break;
+case '\n': out += "\\n"; break;
+case '\r': out += "\\r"; break;
+case '\t': out += "\\t"; break;
+default: 
 if (x<32 || x>=127) out += format("\\x%0$2X", static_cast<int>(x));
 else out += static_cast<char>(x);
-}
+break;
+}}
 f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
 }}
 

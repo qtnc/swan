@@ -148,6 +148,26 @@ while(in >> b[0] >> b[1]) {
 c = strtol(b, nullptr, 16);
 out << c;
 }}
+
+static void urlenc (istream& in, ostream& out, int mode) {
+string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/,;&?!@";
+char c=0;
+while(in.read(&c,1)) {
+if (c==' ') out << '+';
+else if (string::npos!=chars.find(c)) out << c;
+else out << '%' << format("%0$2X", static_cast<uint16_t>(c&0xFF));
+}}
+
+static void urldec (istream& in, ostream& out) {
+char c=0, b[3] = {0};
+while (in.read(&c,1)) {
+if (c=='%') {
+in >> b[0] >> b[1];
+c = strtol(b, nullptr, 16);
+}
+else if (c=='+') c=' ';
+out << c;
+}}
 #endif
 
 unordered_map<string, Swan::VM::EncodingConversionFn> QVM::stringToBufferConverters = {
@@ -160,7 +180,8 @@ unordered_map<string, Swan::VM::EncodingConversionFn> QVM::stringToBufferConvert
 { "native", u8ToBinary }
 #ifndef NO_BUFFER
 , { "base64", b64dec },
-{ "hex", hexdec }
+{ "hex", hexdec },
+{ "url", urldec }
 #endif
 };
 
@@ -174,7 +195,8 @@ unordered_map<string, Swan::VM::DecodingConversionFn>  QVM::bufferToStringConver
 { "native", binaryToU8 }
 #ifndef NO_BUFFER
 , { "base64", b64enc },
-{ "hex", hexenc }
+{ "hex", hexenc },
+{ "url", urlenc }
 #endif
 };
 
