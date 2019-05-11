@@ -133,7 +133,7 @@ else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findC
 }
 };
 
-struct LiteralSequenceExpression: Expression {
+struct LiteralSequenceExpression: Expression, Assignable {
 QToken type;
 vector<shared_ptr<Expression>> items;
 LiteralSequenceExpression (const QToken& t, const vector<shared_ptr<Expression>>& p = {}): type(t), items(p) {}
@@ -141,6 +141,8 @@ const QToken& nearestToken () { return type; }
 shared_ptr<Expression> optimize () { for (auto& item: items) item = item->optimize(); return shared_this(); }
 bool isVararg () { return any_of(items.begin(), items.end(), isUnpack); }
 bool isSingleSequence ();
+virtual bool isAssignable () override;
+virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
 };
 
 struct LiteralListExpression: LiteralSequenceExpression {
@@ -1544,7 +1546,11 @@ skipNewlines();
 if (match(T_CASE)) {
 clearStatements();
 activeCase = parseExpression();
-match(T_COLON);
+while(match(T_COMMA)) {
+clearStatements();
+activeCase = parseExpression();
+}
+matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
 }
 else if (matchOneOf(T_DEFAULT, T_ELSE)) {
 clearStatements();
@@ -1665,7 +1671,7 @@ return make_shared<TryStatement>(tryPart, catchPart, finallyPart, catchVar);
 shared_ptr<Statement> QParser::parseWith () {
 QToken varToken = cur, catchVar = cur;
 skipNewlines();
-shared_ptr<Expression> openExpr = parseExpression();
+shared_ptr<Expression> openExpr = parseExpression(P_COMPREHENSION);
 shared_ptr<Statement> catchSta = nullptr;
 if (!openExpr) { result=CR_INCOMPLETE; return nullptr; }
 if (match(T_AS)) {
@@ -1897,7 +1903,7 @@ parseError(("Setter methods must take exactly one argument"));
 }
 if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
 shared_ptr<Statement> body;
-match(T_COLON);
+matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
 if (match(T_SEMICOLON)) body = make_shared<SimpleStatement>(cur);
 else body = parseStatement();
 body = concatStatements(prebody, body);
@@ -1935,7 +1941,7 @@ if (matchOneOf(T_DOLLAR, T_UND)) flags |= FD_METHOD;
 if (match(T_STAR)) flags |= FD_FIBER;
 vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(flags&FD_METHOD);
 shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
-match(T_COLON);
+matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
 shared_ptr<Statement> body = parseStatement();
 body = concatStatements(prebody, body);
 if (!body) body = make_shared<SimpleStatement>(cur);
@@ -2535,6 +2541,30 @@ return;
 int slot = cls->findStaticField(string(token.start, token.length));
 assignedValue->compile(compiler);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, slot);
+}
+
+bool LiteralSequenceExpression::isAssignable () {
+if (items.size()<1) return false;
+for (auto& item: items) if (!dynamic_pointer_cast<Assignable>(item)) return false;
+return true;
+}
+
+void LiteralSequenceExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
+compiler.pushScope();
+QToken tmpToken = { T_NAME, ("#tmp"), 4, QV()};
+int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+auto tmpVar = make_shared<NameExpression>(tmpToken);
+createBinaryOperation(tmpVar, T_EQ, assignedValue) ->compile(compiler);
+for (int i=0, n=items.size(); i<n; i++) {
+auto& item = items[i];
+auto assignable = dynamic_pointer_cast<Assignable>(item);
+if (!assignable || !assignable->isAssignable()) continue;
+QToken index = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
+vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
+auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
+assignable->compileAssignment(compiler, subscript);
+}
+compiler.popScope();
 }
 
 shared_ptr<Expression> UnaryOperation::optimize () { 
