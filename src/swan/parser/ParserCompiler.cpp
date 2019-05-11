@@ -1220,9 +1220,9 @@ if (in[-1]=='.') in--;
 return d;
 }
 
-static void skipComment (const char*& in, const char* end) {
+static void skipComment (const char*& in, const char* end, char delim) {
 int c = utf8::peek_next(in, end);
-if (isSpace(c) || isName(c)) {
+if (isSpace(c) || isName(c) || c==delim) {
 while(c && in<end && !isLine(c)) c=utf8::next(in, end);
 return;
 }
@@ -1230,11 +1230,11 @@ int opening = c, closing = c, nesting = 1;
 if (opening=='[' || opening=='{' || opening=='<') closing = opening+2; 
 else if (opening=='(') closing=')';
 while(c = utf8inc(in, end)){
-if (c=='#') {
+if (c==delim) {
 if (utf8inc(in, end)==opening) nesting++;
 }
 else if (c==closing) {
-if (utf8inc(in, end)=='#' && --nesting<=0) { utf8::next(in, end); break; }
+if (utf8inc(in, end)==delim && --nesting<=0) { utf8::next(in, end); break; }
 }}}
 
 static int parseCodePointValue (const char*& in, const char* end, int n, int base) {
@@ -1333,10 +1333,14 @@ if (utf8::peek_next(in, end)==']') {
 utf8::next(in, end);
 RET2('=')
 }break;
+case '/': 
+switch (utf8::peek_next(in, end)) {
+case '/': case '*': skipComment(in, end, '/'); return nextNameToken(eatEq);
+default: RET
+}
 case '+': RET2('+')
-case '-': RET3('-', '>')
+case '-': RET2('-')
 case '*': RET2('*')
-case '/': RET
 case '\\': RET
 case '%': RET
 case '|': RET
@@ -1344,11 +1348,11 @@ case '&': RET
 case '^': RET
 case '~': RET
 case '@': RET
-case '!': RET3('=', '~')
-case '=': RET4('=', '~', '>')
+case '!': RET2('=')
+case '=': RET2('=')
 case '<': RET3('<', '=')
 case '>': RET3('>', '=')
-case '#': skipComment(in, end); return nextNameToken(eatEq);
+case '#': skipComment(in, end, '#'); return nextNameToken(eatEq);
 }
 if (isName(c)) {
 while(in<end && (c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8::next(in, end);
@@ -1403,7 +1407,6 @@ case '$': RET(T_DOLLAR)
 case '+': RET3('+', T_PLUSPLUS, '=', T_PLUSEQ, T_PLUS)
 case '-': RET4('-', T_MINUSMINUS, '=', T_MINUSEQ, '>', T_MINUSGT, T_MINUS)
 case '*': RET22('*', '=', T_STARSTAREQ, T_STARSTAR, T_STAREQ, T_STAR)
-case '/': RET2('=', T_SLASHEQ, T_SLASH)
 case '\\': RET2('=', T_BACKSLASHEQ, T_BACKSLASH)
 case '%': RET2('=', T_PERCENTEQ, T_PERCENT)
 case '|': RET22('|', '=', T_BARBAREQ, T_BARBAR, T_BAREQ, T_BAR)
@@ -1416,6 +1419,11 @@ case '=': RET3('=', T_EQEQ, '>', T_EQGT, T_EQ)
 case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
 case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) 
+case '/': 
+switch (utf8::peek_next(in, end)) {
+case '/': case '*': skipComment(in, end, '/'); return nextToken();
+default: RET2('=', T_SLASHEQ, T_SLASH)
+}
 case '.':
 if (utf8::peek_next(in, end)=='?') { utf8::next(in, end); RET(T_DOTQUEST) } 
 else if (utf8::peek_next(in, end)=='.') { utf8::next(in, end); RET2('.', T_DOTDOTDOT, T_DOTDOT) }
@@ -1426,7 +1434,7 @@ case 146: case 147: case 171: case 8216: case 8217: case 8220:
 QV str = parseString(vm, in, end, getStringEndingChar(c));
 RETV(T_STRING, str)
 }
-case '#': skipComment(in, end); return nextToken();
+case '#': skipComment(in, end, '#'); return nextToken();
 }
 if (isDigit(c)) {
 double d = parseNumber(--in);
@@ -2280,16 +2288,17 @@ return make_shared<LiteralRegexExpression>(cur, pattern, options);
 }
 
 shared_ptr<Expression> QParser::parseGroupOrTuple () {
-if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(cur, vector<shared_ptr<Expression>>() );
+auto initial = cur;
+if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, vector<shared_ptr<Expression>>() );
 shared_ptr<Expression> expr = parseExpression();
 if (match(T_COMMA)) {
 vector<shared_ptr<Expression>> items = { expr };
-if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(cur, items );
+if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
 do {
 items.push_back(parseExpression());
 } while(match(T_COMMA));
 consume(T_RIGHT_PAREN, ("Expected ')' to close tuple"));
-return make_shared<LiteralTupleExpression>(cur, items);
+return make_shared<LiteralTupleExpression>(initial, items);
 }
 else {
 skipNewlines();
