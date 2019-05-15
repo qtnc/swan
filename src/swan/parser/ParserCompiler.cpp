@@ -214,12 +214,14 @@ return s;
 }};
 
 
-struct LiteralMapExpression: Expression {
+struct LiteralMapExpression: Expression, Assignable {
 QToken type;
 vector<pair<shared_ptr<Expression>, shared_ptr<Expression>>> items;
 LiteralMapExpression (const QToken& t): type(t) {}
 const QToken& nearestToken () { return type; }
 shared_ptr<Expression> optimize () { for (auto& p: items) { p.first = p.first->optimize(); p.second = p.second->optimize(); } return shared_this(); }
+virtual bool isAssignable () override;
+virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
 void compile (QCompiler& compiler) {
 vector<shared_ptr<Expression>> unpacks;
 int mapSymbol = compiler.vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
@@ -2204,7 +2206,14 @@ return make_shared<GenericMethodSymbolExpression>(cur);
 }
 
 shared_ptr<Expression> QParser::parseLiteral () {
-return make_shared<ConstantExpression>(cur);
+auto literal = make_shared<ConstantExpression>(cur);
+if (cur.type==T_NUM && matchOneOf(T_NAME, T_LEFT_PAREN)) {
+shared_ptr<Expression> expr = nullptr;
+if (cur.type==T_NAME) expr = parseName();
+else if (cur.type==T_LEFT_PAREN) expr = parseGroupOrTuple();
+return createBinaryOperation(expr, T_STAR, literal);
+}
+return literal;
 }
 
 shared_ptr<Expression> QParser::parseLiteralList () {
@@ -2570,6 +2579,28 @@ auto assignable = dynamic_pointer_cast<Assignable>(item);
 if (!assignable || !assignable->isAssignable()) continue;
 QToken index = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
 vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
+auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
+assignable->compileAssignment(compiler, subscript);
+}
+compiler.popScope();
+}
+
+bool LiteralMapExpression::isAssignable () {
+if (items.size()<1) return false;
+for (auto& item: items) if (!dynamic_pointer_cast<Assignable>(item.second)) return false;
+return true;
+}
+
+void LiteralMapExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
+compiler.pushScope();
+QToken tmpToken = { T_NAME, ("#tmp"), 4, QV()};
+int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+auto tmpVar = make_shared<NameExpression>(tmpToken);
+createBinaryOperation(tmpVar, T_EQ, assignedValue) ->compile(compiler);
+for (auto& item: items) {
+auto assignable = dynamic_pointer_cast<Assignable>(item.second);
+if (!assignable || !assignable->isAssignable()) continue;
+vector<shared_ptr<Expression>> indices = { item.first };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
 assignable->compileAssignment(compiler, subscript);
 }
