@@ -2209,7 +2209,10 @@ shared_ptr<Expression> QParser::parseLiteral () {
 auto literal = make_shared<ConstantExpression>(cur);
 if (cur.type==T_NUM && matchOneOf(T_NAME, T_LEFT_PAREN)) {
 shared_ptr<Expression> expr = nullptr;
-if (cur.type==T_NAME) expr = parseName();
+if (cur.type==T_NAME) {
+prevToken();
+expr = parseExpression(P_FACTOR);
+}
 else if (cur.type==T_LEFT_PAREN) expr = parseGroupOrTuple();
 return createBinaryOperation(expr, T_STAR, literal);
 }
