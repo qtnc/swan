@@ -187,8 +187,32 @@ BIND_F(hasNext, fiberHasNext)
 BIND_N(iterator)
 ;
 
+classClass->type
+->copyParentMethods()
+;
+
+objectClass->type
+->copyParentMethods()
+;
+
+boolClass ->type
+->copyParentMethods()
+;
+
+functionClass ->type
+->copyParentMethods()
+;
+
 fiberClass ->type
 ->copyParentMethods()
 BIND_F( (), fiberInstantiate)
+;
+
+iterableClass ->type
+->copyParentMethods()
+;
+
+iteratorClass ->type
+->copyParentMethods()
 ;
 }

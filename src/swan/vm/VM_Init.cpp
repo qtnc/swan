@@ -66,22 +66,32 @@ importHook(defaultImportHook)
 GCLocker gcLocker(*this);
 objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);
 classClass = QClass::create(*this, nullptr, objectClass, "Class", 0, -1);
+
+auto boolMetaClass = QClass::create(*this, classClass, classClass, "BoolMetaClass", 0, -1);
+auto classMetaClass = QClass::create(*this, classClass, classClass, "ClassMetaClass", 0, -1);
 auto fiberMetaClass = QClass::create(*this, classClass, classClass, "FiberMetaClass", 0, -1);
+auto functionMetaClass = QClass::create(*this, classClass, classClass, "FunctionMetaClass", 0, -1);
+auto iterableMetaClass = QClass::create(*this, classClass, classClass, "IterableMetaClass", 0, -1);
+auto iteratorMetaClass = QClass::create(*this, classClass, classClass, "IteratorMetaClass", 0, -1);
 auto listMetaClass = QClass::create(*this, classClass, classClass, "ListMetaClass", 0, -1);
 auto mapMetaClass = QClass::create(*this, classClass, classClass, "MapMetaClass", 0, -1);
+auto mappingMetaClass = QClass::create(*this, classClass, classClass, "MappingMetaClass", 0, -1);
 auto numMetaClass = QClass::create(*this, classClass, classClass, "NumMetaClass", 0, -1);
+auto objectMetaClass = QClass::create(*this, classClass, classClass, "ObjectMetaClass", 0, -1);
 auto rangeMetaClass = QClass::create(*this, classClass, classClass, "RangeMetaClass", 0, -1);
 auto setMetaClass = QClass::create(*this, classClass, classClass, "SetMetaClass", 0, -1);
 auto stringMetaClass = QClass::create(*this, classClass, classClass, "StringMetaClass", 0, -1);
 auto systemMetaClass = QClass::create(*this, classClass, classClass, "SystemMetaClass", 0, -1);
 auto tupleMetaClass = QClass::create(*this, classClass, classClass, "TupleMetaClass", 0, -1);
-boolClass = QClass::create(*this, classClass, objectClass, "Bool", 0, -1);
-functionClass = QClass::create(*this, classClass, objectClass, "Function", 0, -1);
-iterableClass = QClass::create(*this, classClass, objectClass, "Iterable", 0, 0);
-iteratorClass = QClass::create(*this, classClass, objectClass, "Iterator", 0, 0);
+
+boolClass = QClass::create(*this, boolMetaClass, objectClass, "Bool", 0, -1);
+functionClass = QClass::create(*this, functionMetaClass, objectClass, "Function", 0, -1);
+iterableClass = QClass::create(*this, iterableMetaClass, objectClass, "Iterable", 0, 0);
+iteratorClass = QClass::create(*this, iteratorMetaClass, objectClass, "Iterator", 0, 0);
 fiberClass = QClass::create(*this, fiberMetaClass, iterableClass, "Fiber", 0, -1);
 listClass = QClass::create(*this, listMetaClass, iterableClass, "List", 0, -1);
-mapClass = QClass::create(*this, mapMetaClass, iterableClass, "Map", 0, -1);
+mappingClass = QClass::create(*this, mappingMetaClass, iterableClass, "Mapping", 0, 0);
+mapClass = QClass::create(*this, mapMetaClass, mappingClass, "Map", 0, -1);
 nullClass = QClass::create(*this, classClass, objectClass, "Null", 0, -1);
 numClass = QClass::create(*this, numMetaClass, objectClass, "Num", 0, -1);
 rangeClass = QClass::create(*this, rangeMetaClass, iterableClass, "Range", 0, -1);
@@ -89,12 +99,14 @@ setClass = QClass::create(*this, setMetaClass, iterableClass, "Set", 0, -1);
 stringClass = QClass::create(*this, stringMetaClass, iterableClass, "String", 0, -1);
 systemClass = QClass::create(*this, systemMetaClass, objectClass, "System", 0, -1);
 tupleClass = QClass::create(*this, tupleMetaClass, iterableClass, "Tuple", 0, -1);
+
 listIteratorClass = QClass::create(*this, classClass, iteratorClass, "ListIterator", 0, -1);
 mapIteratorClass = QClass::create(*this, classClass, iteratorClass, "MapIterator", 0, -1);
 rangeIteratorClass = QClass::create(*this, classClass, iteratorClass, "RangeIterator", 0, -1);
 setIteratorClass = QClass::create(*this, classClass, iteratorClass, "SetIterator", 0, -1);
 stringIteratorClass = QClass::create(*this, classClass, iteratorClass, "StringIterator", 0, -1);
 tupleIteratorClass = QClass::create(*this, classClass, iteratorClass, "TupleIterator", 0, -1);
+
 #ifndef NO_BUFFER
 auto bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass", 0, -1);
 bufferClass = QClass::create(*this, bufferMetaClass, iterableClass, "Buffer", 0, -1);
@@ -109,7 +121,7 @@ regexTokenIteratorClass = QClass::create(*this, classClass, iteratorClass, "Rege
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
 auto dictionaryMetaClass = QClass::create(*this, classClass, classClass, "DictionaryMetaClass", 0, -1);
-dictionaryClass = QClass::create(*this, dictionaryMetaClass, iterableClass, "Dictionary", 0, -1);
+dictionaryClass = QClass::create(*this, dictionaryMetaClass, mappingClass, "Dictionary", 0, -1);
 dictionaryIteratorClass = QClass::create(*this, classClass, iteratorClass, "DictionaryIterator", 0, -1);
 auto linkedListMetaClass = QClass::create(*this, classClass, classClass, "LinkedListMetaClass", 0, -1);
 linkedListClass = QClass::create(*this, linkedListMetaClass, iterableClass, "LinkedList", 0, -1);
@@ -130,8 +142,9 @@ auto gridMetaClass = QClass::create(*this, classClass, classClass, "GridMetaClas
 gridClass = QClass::create(*this, gridMetaClass, iterableClass, "Grid", 0, -1);
 gridIteratorClass = QClass::create(*this, classClass, iteratorClass, "GridIterator", 0, -1);
 #endif
-objectClass->type = classClass;
-classClass->type = classClass;
+
+objectClass->type = objectMetaClass;
+classClass->type = classMetaClass;
 init();
 }
 

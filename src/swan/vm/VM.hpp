@@ -35,7 +35,7 @@ QObject* firstGCObject;
 
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *systemClass;
 QClass *listClass, *mapClass, *rangeClass, *setClass, *stringClass, *tupleClass;
-QClass *iterableClass, *iteratorClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
+QClass *iterableClass, *iteratorClass, *mappingClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
 #ifndef NO_BUFFER
 QClass *bufferClass, *bufferIteratorClass;
 #endif

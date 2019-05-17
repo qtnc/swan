@@ -89,7 +89,7 @@ BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV()); })
 systemClass->copyParentMethods();
 
 QClass* globalClasses[] = { 
-boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
 #ifndef NO_BUFFER
 , bufferClass
 #endif

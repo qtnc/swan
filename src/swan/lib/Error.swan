@@ -1,0 +1,8 @@
+global class Error {
+let message, code
+constructor (_message=this.type.name, _code=-1);
+}
+
+global class RangeError is Error
+global class TypeError is Error
+global class ValueError is Error

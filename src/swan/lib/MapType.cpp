@@ -82,6 +82,10 @@ map.map.erase(it);
 
 
 void QVM::initMapType () {
+mappingClass
+->copyParentMethods()
+;
+
 mapClass
 ->copyParentMethods()
 BIND_L( [], { f.returnValue(f.getObject<QMap>(0) .get(f.at(1))); })

@@ -271,7 +271,7 @@ auto initial = to_ptr(firstGCObject);
 for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
 
 vector<QObject*> roots = { 
-boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
 , listIteratorClass, mapIteratorClass, rangeIteratorClass, setIteratorClass, stringIteratorClass, tupleIteratorClass
 #ifndef NO_REGEX
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass

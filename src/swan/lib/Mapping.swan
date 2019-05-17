@@ -1,0 +1,14 @@
+Mapping::keys = $$: k for k, v in this
+Mapping::values = $$: v for k, v in this
+Mapping::flipped = $$: (v,k) for k, v in this
+
+let fGOrC = $$(k,f) {
+let v = this[k]
+if v==null {
+v = f(k)
+this[k] = v
+}
+return v
+}
+Map::getOrCompute = fGOrC
+Dictionary::getOrCompute = fGOrC
