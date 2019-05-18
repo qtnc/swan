@@ -1,4 +1,5 @@
 #include "SwanLib.hpp"
+#include<iostream>
 using namespace std;
 
 void stringFormat (QFiber& f);
@@ -82,6 +83,14 @@ QClass* cls = f.vm.createNewClass(name, parents, nStaticFields, nFields, false);
 f.returnValue(cls);
 }
 
+static void debugPrint (QFiber& f) {
+for (int i=0, n=f.getArgCount(); i<n; i++) {
+if (i>0) cout << '\t';
+cout << f.ensureString(i)->asString();
+}
+cout << endl;
+}
+
 void QVM::initGlobals () {
 systemClass ->type ->copyParentMethods()
 BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV()); })
@@ -121,4 +130,6 @@ bindGlobal("loadField", loadField);
 bindGlobal("storeField", storeField);
 bindGlobal("createClass", createClass);
 #endif
+
+bindGlobal("dbg", debugPrint);
 }

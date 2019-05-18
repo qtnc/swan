@@ -1,3 +1,4 @@
+#{
 global function zip (...seqs){
 let zipper 
 if seqs.length==0: return ()
@@ -22,3 +23,4 @@ yield re
 }
 }
 }
+}#

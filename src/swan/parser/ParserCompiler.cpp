@@ -834,17 +834,31 @@ s += ("}\r\n");
 return s;
 }};
 
-struct VariableDeclaration: Statement, Decorable {
-vector<pair<QToken,shared_ptr<Expression>>> vars;
+struct Variable {
+shared_ptr<Expression> name, value;
+vector<shared_ptr<Expression>> decorations;
 int flags;
-VariableDeclaration (const vector<pair<QToken,shared_ptr<Expression>>>& vd, int flgs): vars(vd), flags(flgs)   {}
-const QToken& nearestToken () { return vars[0].first; }
-shared_ptr<Statement> optimizeStatement () { for (auto& v: vars) v.second=v.second->optimize(); return shared_this(); }
-virtual bool isDecorable () override { return true; }
-virtual bool isUsingExports () override { return flags&VD_EXPORT; }
+Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
+name(nm), value(val), flags(flgs), decorations(decos) {}
+};
+
+struct VariableDeclaration: Statement {
+vector<shared_ptr<Variable>> vars;
+VariableDeclaration (const vector<shared_ptr<Variable>>& v = {}): vars(v) {}
+const QToken& nearestToken () { return vars[0]->name->nearestToken(); }
+shared_ptr<Statement> optimizeStatement () { 
+for (auto& v: vars) {
+v->name = v->name->optimize();
+v->value = v->value->optimize();
+for (auto& d: v->decorations) d = d->optimize();
+}
+return shared_this(); 
+}
+//virtual bool isDecorable () override { return true; }
+//virtual bool isUsingExports () override { return flags&VD_EXPORT; }
 void compile (QCompiler& compiler);
-string print () {
-string s;
+string print () { return "vardecl"; }
+/*string s;
 if (flags&VD_EXPORT) s+=("export ");
 if (flags&VD_GLOBAL) s+=("global ");
 s += (flags&VD_CONST)? ("const ") : ("var ");
@@ -855,7 +869,8 @@ if (i>0) s+=(", ");
 s += string(var.start, var.length) + (" = ") + val->print();
 }
 return s;
-}};
+}*/
+};
 
 struct ExportDeclaration: Statement  {
 vector<pair<QToken,shared_ptr<Expression>>> exports;
@@ -1710,9 +1725,9 @@ if (!catchSta) { result=CR_INCOMPLETE; return nullptr; }
 }
 QString* closeName = QString::create(vm, ("close"), 5);
 QToken closeToken = { T_NAME, closeName->data, closeName->length, QV(closeName, QV_TAG_STRING) };
-vector<pair<QToken,shared_ptr<Expression>>> varDecls = { make_pair(varToken, openExpr) };
-auto varDecl = make_shared<VariableDeclaration>(varDecls, 0);
 auto varExpr = make_shared<NameExpression>(varToken);
+vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
+auto varDecl = make_shared<VariableDeclaration>(varDecls);
 auto closeExpr = createBinaryOperation(varExpr, T_DOT, make_shared<NameExpression>(closeToken));
 auto trySta = make_shared<TryStatement>(body, catchSta, closeExpr, catchVar);
 vector<shared_ptr<Statement>> statements = { varDecl, trySta };
@@ -1741,32 +1756,42 @@ else parseError("Expression can't be decorated");
 return expr;
 }
 
-shared_ptr<Statement> QParser::parseVarDecl () {
-vector<pair<QToken,shared_ptr<Expression>>> vars;
-bool isConst = cur.type==T_CONST;
-QTokenType destructuring = T_END;
-if (matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring = static_cast<QTokenType>(cur.type +1);
+void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, int defaultFlags) {
 do {
+int flags = defaultFlags;
+auto var = make_shared<Variable>(nullptr, nullptr, defaultFlags);
 skipNewlines();
-consume(T_NAME, ("Expected variable name after 'var'"));
-QToken name = cur;
-shared_ptr<Expression> value;
-if (match(T_EQ)) value = parseExpression();
-else value = make_shared<ConstantExpression>(name);
-vars.push_back(make_pair(name, value));
+while (match(T_AT)) {
+var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
+skipNewlines();
+}
+if (!(flags&VD_CONST) && match(T_CONST)) flags |= VD_CONST;
+if (!(flags&VD_VARARG) && match(T_DOTDOTDOT)) flags |= VD_VARARG;
+switch(nextToken().type){
+case T_NAME: var->name = parseName(); break;
+case T_LEFT_PAREN: var->name = parseGroupOrTuple(); break;
+case T_LEFT_BRACKET: var->name = parseLiteralList(); break;
+case T_LEFT_BRACE:  var->name = parseLiteralMap(); break;
+case T_UND: var->name = parseField(); break;
+case T_UNDUND: var->name = parseStaticField(); break;
+default: parseError("Expecting identifier, '(', '[' or '{' in variable declaration"); break;
+}
+if (!(flags&VD_VARARG) && match(T_DOTDOTDOT)) flags |= VD_VARARG;
+skipNewlines();
+if (match(T_EQ)) var->value = parseExpression();
+else { QToken tk = { T_NULL, nullptr, 0, QV() }; var->value = make_shared<ConstantExpression>(tk); }
+vars.push_back(var);
 } while(match(T_COMMA));
-if (destructuring!=T_END) {
-consume(destructuring, "Expecting close of destructuring variable declaration");
-consume(T_EQ, "Expecting '=' after destructuring variable declaration");
-shared_ptr<Expression> source = parseExpression();
-for (int i=0, n=vars.size(); i<n; i++) {
-QToken& name =  vars[i].first;
-QToken index = { T_NAME, name.start, name.length, destructuring==T_RIGHT_BRACE? QV(QString::create(vm, name.start, name.length), QV_TAG_STRING) : QV(static_cast<double>(i)) };
-vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
-auto subscript = make_shared<SubscriptExpression>(source, indices);
-vars[i].second = createBinaryOperation(subscript, T_QUESTQUEST, vars[i].second);
-}}
-return make_shared<VariableDeclaration>(vars, isConst? VD_CONST : 0);
+}
+
+shared_ptr<Statement> QParser::parseVarDecl () {
+return parseVarDecl(cur.type==T_CONST? VD_CONST : 0);
+}
+
+shared_ptr<Statement> QParser::parseVarDecl (int flags) {
+auto decl = make_shared<VariableDeclaration>();
+parseVarList(decl->vars, flags);
+return decl;
 }
 
 static shared_ptr<Statement> makeMethodPrebody (QParser& parser, vector<shared_ptr<FunctionParameter>>& params) {
@@ -1776,7 +1801,7 @@ while(true){
 auto mapDestr = find_consecutive(params.begin(), params.end(), [](auto p){ return p->flags&(FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING); });
 if (mapDestr.first==params.end()) break;
 int flags = FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING | FP_CONST;
-vector<pair<QToken,shared_ptr<Expression>>> vars;
+vector<shared_ptr<Variable>> vars;
 string mapName = format("$destr%d", ++count);
 QString* mapNameStr = QString::create(parser.vm, mapName);
 QToken mapNameToken = { T_NAME, mapNameStr->data, mapNameStr->length, QV(mapNameStr, QV_TAG_STRING) };
@@ -1791,7 +1816,7 @@ auto subscript = make_shared<SubscriptExpression>(source, indices);
 if (param->defaultValue) param->defaultValue = createBinaryOperation(subscript, T_QUESTQUESTEQ, param->defaultValue);
 else param->defaultValue =  subscript;
 for (auto it = param->decorations.rbegin(), end=param->decorations.rend(); it!=end; ++it) param->defaultValue = make_shared<CallExpression>(*it, vector<shared_ptr<Expression>>({ param->defaultValue }) );
-vars.push_back(make_pair(param->arg, param->defaultValue));
+vars.push_back(make_shared<Variable>(make_shared<NameExpression>(param->arg), param->defaultValue));
 flags &= param->flags;
 }
 shared_ptr<Expression> paramDefaultValue = nullptr;
@@ -1799,7 +1824,7 @@ if (flags&FP_MAP_DESTRUCTURING) paramDefaultValue = make_shared<LiteralMapExpres
 else paramDefaultValue = make_shared<LiteralListExpression>(mapNameToken);
 auto it = params.erase(mapDestr.first, mapDestr.second);
 params.insert(it, make_shared<FunctionParameter>(mapNameToken, paramDefaultValue));
-stats.push_back(make_shared<VariableDeclaration>(vars, (flags&FP_CONST? VD_CONST : 0) ));
+stats.push_back(make_shared<VariableDeclaration>(vars));
 }
 if (stats.empty()) return nullptr;
 else return make_shared<BlockStatement>(stats);
@@ -1974,9 +1999,9 @@ shared_ptr<Statement> QParser::parseFunctionDecl (int flags) {
 consume(T_NAME, "Expected function name after 'function'");
 QToken name = cur;
 auto fnDecl = parseLambda();
-vector<pair<QToken,shared_ptr<Expression>>> vd = {{ name, fnDecl }};
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
-return make_shared<VariableDeclaration>(vd, flags);
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, flags) };
+return make_shared<VariableDeclaration>(vars);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl () {
@@ -2006,16 +2031,14 @@ else { prevToken(); break; }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 }
-vector<pair<QToken,shared_ptr<Expression>>> vd = {{ classDecl->name, classDecl }};
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
-return make_shared<VariableDeclaration>(vd, flags);
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, flags) };
+return make_shared<VariableDeclaration>(vars);
 }
 
 shared_ptr<Statement> QParser::parseGlobalDecl () {
 if (matchOneOf(T_VAR, T_CONST)) {
-shared_ptr<VariableDeclaration> vd = static_pointer_cast<VariableDeclaration>(parseVarDecl());
-vd->flags |= VD_GLOBAL;
-return vd;
+return parseVarDecl(VD_GLOBAL);
 }
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_GLOBAL);
@@ -2029,9 +2052,7 @@ return nullptr;
 
 shared_ptr<Statement> QParser::parseExportDecl () {
 if (matchOneOf(T_VAR, T_CONST)) {
-shared_ptr<VariableDeclaration> vd = static_pointer_cast<VariableDeclaration>(parseVarDecl());
-vd->flags |= VD_EXPORT;
-return vd;
+return parseVarDecl(VD_EXPORT);
 }
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_EXPORT);
@@ -2809,41 +2830,66 @@ return;
 compiler.compileError(left->nearestToken(), ("Invalid target for assignment"));
 }
 
+static vector<shared_ptr<NameExpression>>& decompose (shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
+auto name = dynamic_pointer_cast<NameExpression>(expr);
+if (name) {
+names.push_back(name);
+return names;
+}
+auto seq = dynamic_pointer_cast<LiteralSequenceExpression>(expr);
+if (seq) {
+for (auto& item: seq->items) decompose(item, names);
+return names;
+}
+auto map = dynamic_pointer_cast<LiteralMapExpression>(expr);
+if (map) {
+for (auto& item: map->items) decompose(item.second, names);
+return names;
+}
+return names;
+}
+
 void VariableDeclaration::compile (QCompiler& compiler) {
-bool isConst = flags&VD_CONST;
-bool isGlobal = flags&VD_GLOBAL;
-bool exporting = flags&VD_EXPORT;
-if (compiler.parent || compiler.curScope>1) {
-if (isGlobal) compiler.compileError(nearestToken(), "Cannot declare global in a local scope");
-if (exporting) compiler.compileError(nearestToken(), ("Cannot declare export in a local scope"));
+vector<shared_ptr<Variable>> destructured;
+for (auto& var: vars) {
+if (!var->name) continue;
+auto name = dynamic_pointer_cast<NameExpression>(var->name);
+if (!name) {
+destructured.push_back(var);
+vector<shared_ptr<NameExpression>> names;
+for (auto& nm: decompose(var->name, names)) {
+if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_NULL); }
 }
-for (auto& p: vars) {
-int slot = compiler.findLocalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
-compiler.writeDebugLine(p.first);
-for (auto decoration: decorations) decoration->compile(compiler);
-auto vd = p.second;
-auto fd = dynamic_pointer_cast<FunctionDeclaration>(vd);
-if (fd) {
-auto func = fd->compileFunction(compiler);
-func->name = string(p.first.start, p.first.length);
+continue;
 }
-else vd->compile(compiler);
-for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
-if (isGlobal) {
-int globalSlot = compiler.findGlobalVariable(p.first, LV_NEW | (isConst? LV_CONST : 0));
-writeOpLoadLocal(compiler, slot);
+int slot = -1;
+if (!(var->flags&VD_GLOBAL)) slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+for (auto& decoration: var->decorations) decoration->compile(compiler);
+if (var->value) var->value->compile(compiler);
+else compiler.writeOp(OP_LOAD_NULL);
+for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+if (var->flags&VD_GLOBAL) {
+int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, globalSlot);
 compiler.writeOp(OP_POP);
 }
-else if (exporting) {
+else if (var->flags&VD_EXPORT) {
 int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
 int exportsSlot = compiler.findExportsVariable(true);
-writeOpLoadLocal(compiler, exportsSlot);
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, p.first.start, p.first.length), QV_TAG_STRING)));
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, name->token.start, name->token.length), QV_TAG_STRING)));
 writeOpLoadLocal(compiler, slot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_3, subscriptSetterSymbol);
 compiler.writeOp(OP_POP);
-}}}
+}
+}
+for (auto& var: destructured) {
+auto assignable = dynamic_pointer_cast<Assignable>(var->name);
+if (!assignable) continue;
+assignable->compileAssignment(compiler, var->value);
+compiler.writeOp(OP_POP);
+}
+}//end VariableDeclaration::compile
 
 void ClassDeclaration::compile (QCompiler& compiler) {
 for (auto decoration: decorations) decoration->compile(compiler);

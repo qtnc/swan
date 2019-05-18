@@ -73,6 +73,8 @@ std::shared_ptr<Statement> parseThrow ();
 std::shared_ptr<Statement> parseWith ();
 std::shared_ptr<Expression> parseYield ();
 std::shared_ptr<Statement> parseVarDecl ();
+std::shared_ptr<Statement> parseVarDecl (int flags);
+void parseVarList (std::vector<std::shared_ptr<struct Variable>>& vars, int flags);
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();

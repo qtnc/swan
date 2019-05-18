@@ -12,6 +12,9 @@
 #define VD_CONST 2
 #define VD_GLOBAL 4
 #define VD_EXPORT 8
+#define VD_VARARG 16
+#define VD_FIELD_ASSIGN 32
+#define VD_STATIC_FIELD_ASSIGN 64
 #define FP_VARARG 1
 #define FP_CONST 2
 #define FP_FIELD_ASSIGN 4
