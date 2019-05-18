@@ -22,6 +22,7 @@ QParser (QVM& vm0, const std::string& source, const std::string& filename0, cons
 const QToken& nextToken ();
 const QToken& nextNameToken (bool);
 const QToken& prevToken();
+QToken createTempName ();
 std::pair<int,int> getPositionOf (const char*);
 template<class... A> void parseError (const char* fmt, const A&... args);
 

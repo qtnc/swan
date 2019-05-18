@@ -87,6 +87,7 @@ int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
 
 struct ClassDeclaration* getCurClass ();
+inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> void compileError (const QToken& token, const char* fmt, const A&... args);
 void dump ();

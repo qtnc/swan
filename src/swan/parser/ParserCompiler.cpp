@@ -599,8 +599,8 @@ vector<int> jumps;
 compiler.pushLoop();
 compiler.pushScope();
 compiler.writeDebugLine(expr->nearestToken());
-int caseSlot = compiler.findLocalVariable({ T_NAME, ("#caseExpr"), 9, QV()}, LV_NEW | LV_CONST);
-int compSlot = compiler.findLocalVariable({ T_NAME, ("#caseComp"), 9, QV()}, LV_NEW | LV_CONST);
+int caseSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
+int compSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
 expr->compile(compiler);
 if (comparator) comparator->compile(compiler);
 else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.vm.findMethodSymbol("==") | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
@@ -1507,6 +1507,13 @@ void QParser::skipNewlines () {
 while(matchOneOf(T_LINE, T_SEMICOLON));
 }
 
+QToken QParser::createTempName () {
+static int count = 0;
+string name = format("$%d", count++);
+QString* s = QString::create(vm,name);
+return { T_NAME, s->data, s->length, QV(s) };
+}
+
 shared_ptr<Statement> QParser::parseSimpleStatement () {
 return make_shared<SimpleStatement>(cur);
 }
@@ -2382,7 +2389,7 @@ return shared_this();
 
 void ForStatement::compile (QCompiler& compiler) {
 compiler.pushScope();
-int iteratorSlot = compiler.findLocalVariable({ T_NAME, ("#iterator"), 9, QV()}, LV_NEW | LV_CONST);
+int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int hasNextSymbol = compiler.vm.findMethodSymbol(("hasNext"));
@@ -2573,10 +2580,10 @@ return true;
 
 void LiteralSequenceExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 compiler.pushScope();
-QToken tmpToken = { T_NAME, ("#tmp"), 4, QV()};
-int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+QToken tmpToken = compiler.createTempName();
 auto tmpVar = make_shared<NameExpression>(tmpToken);
-createBinaryOperation(tmpVar, T_EQ, assignedValue) ->compile(compiler);
+int slot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+assignedValue->compile(compiler);
 for (int i=0, n=items.size(); i<n; i++) {
 auto& item = items[i];
 auto assignable = dynamic_pointer_cast<Assignable>(item);
@@ -2585,6 +2592,7 @@ QToken index = { T_NUM, item->nearestToken().start, item->nearestToken().length,
 vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
 assignable->compileAssignment(compiler, subscript);
+if (i+1<n) compiler.writeOp(OP_POP);
 }
 compiler.popScope();
 }
@@ -2597,13 +2605,16 @@ return true;
 
 void LiteralMapExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 compiler.pushScope();
-QToken tmpToken = { T_NAME, ("#tmp"), 4, QV()};
+QToken tmpToken = compiler.createTempName();
 int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
-createBinaryOperation(tmpVar, T_EQ, assignedValue) ->compile(compiler);
+assignedValue->compile(compiler);
+bool first = true;
 for (auto& item: items) {
 auto assignable = dynamic_pointer_cast<Assignable>(item.second);
 if (!assignable || !assignable->isAssignable()) continue;
+if (!first) compiler.writeOp(OP_POP);
+first=false;
 vector<shared_ptr<Expression>> indices = { item.first };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
 assignable->compileAssignment(compiler, subscript);
