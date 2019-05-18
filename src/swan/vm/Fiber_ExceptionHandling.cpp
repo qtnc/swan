@@ -2,8 +2,21 @@
 #include "VM.hpp"
 #include "OpCodeInfo.hpp"
 #include "ExtraAlgorithms.hpp"
+#include "../../include/cpprintf.hpp"
 #include<boost/core/demangle.hpp>
 using namespace std;
+
+void pushSwanExceptionFromCppException (QFiber& f, const std::exception& e) {
+string eName = "Error";
+auto& tp = typeid(e);
+boost::core::scoped_demangled_name exceptionType(tp.name());
+if (tp==typeid(std::range_error) || tp==typeid(std::out_of_range) || tp==typeid(std::length_error) || tp==typeid(std::overflow_error) || tp==typeid(std::underflow_error)) eName = "RangeError";
+else if (tp==typeid(std::domain_error) || tp==typeid(std::invalid_argument)) eName = "ValueError";
+else if (tp==typeid(std::bad_cast) || tp==typeid(std::bad_function_call)) eName = "TypeError";
+f.loadGlobal(eName);
+f.pushString(format("%s: %s", exceptionType.get(), e.what()));
+f.call(1);
+}
 
 static void buildStackTraceLine (QCallFrame& frame, std::vector<Swan::StackTraceElement>& stackTrace) {
 if (!frame.closure) return;

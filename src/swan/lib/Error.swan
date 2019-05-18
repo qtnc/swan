@@ -1,6 +1,7 @@
 global class Error {
-let message, code
-constructor (_message=this.type.name, _code=-1);
+let message
+constructor (_message=this.type.name);
+toString: type.name + ': ' + _message
 }
 
 global class RangeError is Error

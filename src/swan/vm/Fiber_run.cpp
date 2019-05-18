@@ -7,6 +7,8 @@
 #include "../../include/cpprintf.hpp"
 using namespace std;
 
+void pushSwanExceptionFromCppException (QFiber& f, const std::exception& e);
+
 const char* OPCODE_NAMES[] = {
 #define OP(name, stackEffect, nArgs, argFormat) #name
 #include "OpCodes.hpp"
@@ -341,10 +343,13 @@ stack.resize(newSize);
 }
 BREAK
 
-CASE(OP_THROW)
-handleException(std::runtime_error(ensureString(-1)->asString()));
+CASE(OP_THROW) {
+push(at(-1));
+std::runtime_error e(ensureString(-1)->asString());
+pop();
+handleException(e);
 frame = callFrames.back();
-BREAK
+}BREAK
 
 CASE(OP_TRY)
 arg1 = frame.read<uint32_t>();
@@ -398,9 +403,7 @@ state = FiberState::FAILED;
 throw;
 }
 catch (std::exception& e) {
-boost::core::scoped_demangled_name exceptionType(typeid(e).name());
-string s = format("%s: %s", exceptionType.get(), e.what());
-pushString(s);
+pushSwanExceptionFromCppException(*this, e);
 handleException(e);
 frame = callFrames.back();
 goto begin;

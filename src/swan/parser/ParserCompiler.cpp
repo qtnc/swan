@@ -1986,7 +1986,7 @@ consume(T_NAME, ("Expected class name after 'is'"));
 classDecl->parents.push_back(cur);
 } while (match(T_COMMA));
 else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV() });
-consume(T_LEFT_BRACE, ("Expected '{' to begin class body"));
+if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
 bool isStatic = nextToken().type==T_STATIC;
@@ -1998,6 +1998,7 @@ else { prevToken(); break; }
 }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
+}
 vector<pair<QToken,shared_ptr<Expression>>> vd = {{ classDecl->name, classDecl }};
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 return make_shared<VariableDeclaration>(vd, flags);
