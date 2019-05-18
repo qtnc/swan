@@ -53,7 +53,7 @@ std::shared_ptr<Expression> parseSuper ();
 std::shared_ptr<Expression> parseUnpack ();
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
 std::shared_ptr<Expression> parseDecoratedExpression ();
-std::vector<std::shared_ptr<struct FunctionParameter>> parseFunctionParameters (bool implicitThis);
+void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func);
 
 std::shared_ptr<Statement> parseStatement ();
 std::shared_ptr<Statement> parseStatements ();
@@ -74,7 +74,7 @@ std::shared_ptr<Statement> parseWith ();
 std::shared_ptr<Expression> parseYield ();
 std::shared_ptr<Statement> parseVarDecl ();
 std::shared_ptr<Statement> parseVarDecl (int flags);
-void parseVarList (std::vector<std::shared_ptr<struct Variable>>& vars, int flags);
+void parseVarList (std::vector<std::shared_ptr<struct Variable>>& vars, int flags = 0);
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();

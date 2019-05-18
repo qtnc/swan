@@ -274,7 +274,7 @@ return s;
 }};
 
 struct LiteralTupleExpression: LiteralSequenceExpression {
-LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p): LiteralSequenceExpression(t, p) {}
+LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p = {}): LiteralSequenceExpression(t, p) {}
 void compile (QCompiler& compiler) {
 int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
@@ -840,36 +840,24 @@ vector<shared_ptr<Expression>> decorations;
 int flags;
 Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
 name(nm), value(val), flags(flgs), decorations(decos) {}
-};
+void optimize () {
+name = name->optimize();
+if (value) value = value->optimize();
+for (auto& d: decorations) d = d->optimize();
+}};
 
 struct VariableDeclaration: Statement {
 vector<shared_ptr<Variable>> vars;
 VariableDeclaration (const vector<shared_ptr<Variable>>& v = {}): vars(v) {}
 const QToken& nearestToken () { return vars[0]->name->nearestToken(); }
 shared_ptr<Statement> optimizeStatement () { 
-for (auto& v: vars) {
-v->name = v->name->optimize();
-v->value = v->value->optimize();
-for (auto& d: v->decorations) d = d->optimize();
-}
+for (auto& v: vars) v->optimize();
 return shared_this(); 
 }
 //virtual bool isDecorable () override { return true; }
 //virtual bool isUsingExports () override { return flags&VD_EXPORT; }
 void compile (QCompiler& compiler);
 string print () { return "vardecl"; }
-/*string s;
-if (flags&VD_EXPORT) s+=("export ");
-if (flags&VD_GLOBAL) s+=("global ");
-s += (flags&VD_CONST)? ("const ") : ("var ");
-for (int i=0, n=vars.size(); i<n; i++) {
-QToken& var = vars[i].first;
-shared_ptr<Expression> val = vars[i].second;
-if (i>0) s+=(", ");
-s += string(var.start, var.length) + (" = ") + val->print();
-}
-return s;
-}*/
 };
 
 struct ExportDeclaration: Statement  {
@@ -923,43 +911,26 @@ compiler.writeOp(OP_POP);
 if (imports.size()>1) compiler.writeOp(OP_POP);
 }};
 
-struct FunctionParameter: Expression, Decorable {
-QToken arg;
-shared_ptr<Expression> defaultValue;
-shared_ptr<Expression> typeCheck;
-int flags;
-FunctionParameter (const QToken& a, shared_ptr<Expression> dv = nullptr, shared_ptr<Expression> tc = nullptr, int fl=0): arg(a), defaultValue(dv), typeCheck(tc), flags(fl) {}
-const QToken& nearestToken () { return arg; }
-void compile (QCompiler& fc);
-virtual bool isDecorable () { return true; }
-shared_ptr<Expression> optimize () { if (defaultValue) defaultValue=defaultValue->optimize(); if (typeCheck) typeCheck=typeCheck->optimize(); return shared_this(); }
-string print () {
-string s = "";
-if (flags&FP_CONST) s += "const ";
-if (flags&FP_FIELD_ASSIGN) s+="_";
-else if (flags&FP_STATIC_FIELD_ASSIGN) s+="__";
-s += string(arg.start, arg.length);
-if (typeCheck) s += (" is ") + typeCheck->print();
-if (defaultValue) s += (" = ") + defaultValue->print();
-return s;
-}};
-
 struct FunctionDeclaration: Expression, Decorable {
 QToken name;
-vector<shared_ptr<FunctionParameter>> params;
+vector<shared_ptr<Variable>> params;
 shared_ptr<Statement> body;
 int flags;
-FunctionDeclaration (const QToken& nm, const vector<shared_ptr<FunctionParameter>>& fp, shared_ptr<Statement> b, int fl): name(nm), params(fp), body(b), flags(fl)     {}
+FunctionDeclaration (const QToken& nm, int fl = 0, const vector<shared_ptr<Variable>>& fp = {}, shared_ptr<Statement> b = nullptr): name(nm), params(fp), body(b), flags(fl)     {}
 const QToken& nearestToken () { return name; }
+void compileParams (QCompiler& compiler);
 QFunction* compileFunction (QCompiler& compiler);
 void compile (QCompiler& compiler) { compileFunction(compiler); }
-shared_ptr<Statement> optimizeStatement () { body=body->optimizeStatement(); for (auto& fp: params) fp=static_pointer_cast<FunctionParameter>(fp->optimize()); return shared_this(); }
+shared_ptr<Statement> optimizeStatement () { 
+body=body->optimizeStatement(); 
+for (auto& param: params) param->optimize();
+return shared_this(); 
+}
 virtual bool isDecorable () { return true; }
 string print () {
 string s = string(name.start, name.length) + (" (");
 for (int i=0, n=params.size(); i<n; i++) {
 if (i>0) s+=(", ");
-s += params[i]->print();
 }
 s += (" ) ");
 s += body->print();
@@ -1756,30 +1727,28 @@ else parseError("Expression can't be decorated");
 return expr;
 }
 
-void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, int defaultFlags) {
+void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, int flags) {
 do {
-int flags = defaultFlags;
-auto var = make_shared<Variable>(nullptr, nullptr, defaultFlags);
+auto var = make_shared<Variable>(nullptr, nullptr, flags);
 skipNewlines();
 while (match(T_AT)) {
 var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
 skipNewlines();
 }
-if (!(flags&VD_CONST) && match(T_CONST)) flags |= VD_CONST;
-if (!(flags&VD_VARARG) && match(T_DOTDOTDOT)) flags |= VD_VARARG;
+if (!(var->flags&VD_CONST) && match(T_CONST)) var->flags |= VD_CONST;
+if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 switch(nextToken().type){
 case T_NAME: var->name = parseName(); break;
-case T_LEFT_PAREN: var->name = parseGroupOrTuple(); break;
-case T_LEFT_BRACKET: var->name = parseLiteralList(); break;
-case T_LEFT_BRACE:  var->name = parseLiteralMap(); break;
+case T_LEFT_PAREN: var->name = parseGroupOrTuple(); var->value=make_shared<LiteralTupleExpression>(cur); break;
+case T_LEFT_BRACKET: var->name = parseLiteralList(); var->value=make_shared<LiteralListExpression>(cur); break;
+case T_LEFT_BRACE:  var->name = parseLiteralMap(); var->value=make_shared<LiteralMapExpression>(cur); break;
 case T_UND: var->name = parseField(); break;
 case T_UNDUND: var->name = parseStaticField(); break;
 default: parseError("Expecting identifier, '(', '[' or '{' in variable declaration"); break;
 }
-if (!(flags&VD_VARARG) && match(T_DOTDOTDOT)) flags |= VD_VARARG;
+if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
 if (match(T_EQ)) var->value = parseExpression();
-else { QToken tk = { T_NULL, nullptr, 0, QV() }; var->value = make_shared<ConstantExpression>(tk); }
 vars.push_back(var);
 } while(match(T_COMMA));
 }
@@ -1794,105 +1763,20 @@ parseVarList(decl->vars, flags);
 return decl;
 }
 
-static shared_ptr<Statement> makeMethodPrebody (QParser& parser, vector<shared_ptr<FunctionParameter>>& params) {
-vector<shared_ptr<Statement>> stats;
-int count = 0;
-while(true){
-auto mapDestr = find_consecutive(params.begin(), params.end(), [](auto p){ return p->flags&(FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING); });
-if (mapDestr.first==params.end()) break;
-int flags = FP_MAP_DESTRUCTURING | FP_ARRAY_DESTRUCTURING | FP_CONST;
-vector<shared_ptr<Variable>> vars;
-string mapName = format("$destr%d", ++count);
-QString* mapNameStr = QString::create(parser.vm, mapName);
-QToken mapNameToken = { T_NAME, mapNameStr->data, mapNameStr->length, QV(mapNameStr, QV_TAG_STRING) };
-auto mapNameExpr = make_shared<NameExpression>(mapNameToken);
-auto source = mapNameExpr;
-for (auto it=mapDestr.first; it!=mapDestr.second; ++it) {
-auto param = *it;
-QToken& name =  param->arg;
-QToken index = { T_NAME, name.start, name.length, param->flags&FP_MAP_DESTRUCTURING? QV(QString::create(parser.vm, name.start, name.length), QV_TAG_STRING) : QV(static_cast<double>(it-mapDestr.first)) };
-vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
-auto subscript = make_shared<SubscriptExpression>(source, indices);
-if (param->defaultValue) param->defaultValue = createBinaryOperation(subscript, T_QUESTQUESTEQ, param->defaultValue);
-else param->defaultValue =  subscript;
-for (auto it = param->decorations.rbegin(), end=param->decorations.rend(); it!=end; ++it) param->defaultValue = make_shared<CallExpression>(*it, vector<shared_ptr<Expression>>({ param->defaultValue }) );
-vars.push_back(make_shared<Variable>(make_shared<NameExpression>(param->arg), param->defaultValue));
-flags &= param->flags;
-}
-shared_ptr<Expression> paramDefaultValue = nullptr;
-if (flags&FP_MAP_DESTRUCTURING) paramDefaultValue = make_shared<LiteralMapExpression>(mapNameToken);
-else paramDefaultValue = make_shared<LiteralListExpression>(mapNameToken);
-auto it = params.erase(mapDestr.first, mapDestr.second);
-params.insert(it, make_shared<FunctionParameter>(mapNameToken, paramDefaultValue));
-stats.push_back(make_shared<VariableDeclaration>(vars));
-}
-if (stats.empty()) return nullptr;
-else return make_shared<BlockStatement>(stats);
-}
-
-shared_ptr<Statement> concatStatements (shared_ptr<Statement> s1, shared_ptr<Statement> s2) {
-if (!s1) return s2;
-else if (!s2) return s1;
-auto b1 = dynamic_pointer_cast<BlockStatement>(s1), b2 = dynamic_pointer_cast<BlockStatement>(s2);
-if (b1&&b2) {
-b1->statements.insert(b1->statements.end(), b2->statements.begin(), b2->statements.end());
-return b1;
-}
-else if (b1) {
-b1->statements.push_back(s2);
-return b1;
-}
-else if (b2) {
-b2->statements.insert(b2->statements.begin(), s1);
-return b2;
-}
-else {
-vector<shared_ptr<Statement>> v = { s1, s2 };
-return make_shared<BlockStatement>(v);
-}}
-
-vector<shared_ptr<FunctionParameter>> QParser::parseFunctionParameters (bool implicitThis) {
-vector<shared_ptr<FunctionParameter>> params;
-vector<shared_ptr<Expression>> decorations;
-int  destructuring = 0;
-if (implicitThis) {
+void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func) {
+if (func->flags&FD_METHOD) {
 QToken thisToken = { T_NAME, THIS, 4, QV() };
-params.push_back(make_shared<FunctionParameter>(thisToken, nullptr, nullptr, FP_CONST));
+func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
-do {
-int flags = 0;
-skipNewlines();
-if (!destructuring && match(T_LEFT_BRACE)) destructuring=FP_MAP_DESTRUCTURING;
-else if (!destructuring && matchOneOf(T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring =  FP_ARRAY_DESTRUCTURING; 
-while(match(T_AT)) decorations.push_back(parseExpression(P_PREFIX));
-if (match(T_CONST)) flags |= FP_CONST;
-else if (match(T_VAR)) flags &= ~FP_CONST;
-if (!destructuring) {
-if (match(T_DOTDOTDOT)) flags |= FP_VARARG;
-if (match(T_UND)) flags |= FP_FIELD_ASSIGN;
-else if (match(T_UNDUND)) flags |= FP_STATIC_FIELD_ASSIGN;
-}
-consume(T_NAME, ("Expected parameter name"));
-QToken arg = cur;
-shared_ptr<Expression> defaultValue = nullptr, typeCheck = nullptr;
-if (!destructuring && !(flags&FP_VARARG) && match(T_DOTDOTDOT)) flags |= FP_VARARG;
-if (!(flags&FP_VARARG)) {
-if (match(T_EQ)) defaultValue = parseExpression();
-if (!destructuring && match(T_AS)) typeCheck = parseExpression();
-}
-params.push_back(make_shared<FunctionParameter>(arg, defaultValue, typeCheck, flags | destructuring));
-params.back()->decorations = decorations;
-decorations.clear();
-if (flags&FP_VARARG) break;
-if (destructuring && matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN, T_GT)) destructuring=0;
-} while(match(T_COMMA));
-skipNewlines();
-if (destructuring && !matchOneOf(T_RIGHT_BRACE, T_RIGHT_BRACKET, T_RIGHT_PAREN)) parseError("Expected '}', ']' or ')' to close parameter destructuration");
+parseVarList(func->params);
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
-else if (match(T_NAME)) params.push_back(make_shared<FunctionParameter>(cur));
-return params;
+else if (match(T_NAME)) {
+prevToken();
+parseVarList(func->params);
+}
+if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
 
 void QParser::parseDecoratedDecl (ClassDeclaration& cls, bool isStatic) {
@@ -1928,30 +1812,25 @@ for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++i
 void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
 prevToken();
 QToken name = nextNameToken(true);
-vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(true);
-shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
-int flags = FD_METHOD;
-if (isStatic) flags |= FD_STATIC;
-if (*name.start=='[' && params.size()<=0) {
+auto func = make_shared<FunctionDeclaration>(name, FD_METHOD);
+parseFunctionParameters(func);
+if (isStatic) func->flags |= FD_STATIC;
+if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
 return;
 }
-if (*name.start=='[' && name.start[name.length -1]=='=' && params.size()<=1) {
+if (*name.start=='[' && name.start[name.length -1]=='=' && func->params.size()<=2) {
 parseError(("Subscript operator setter must take at least two arguments"));
 return;
 }
-if (*name.start!='[' && name.start[name.length -1]=='=' && params.size()!=1) {
+if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=2) {
 parseError(("Setter methods must take exactly one argument"));
 }
-if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
-shared_ptr<Statement> body;
 matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
-if (match(T_SEMICOLON)) body = make_shared<SimpleStatement>(cur);
-else body = parseStatement();
-body = concatStatements(prebody, body);
-if (!body) body = make_shared<SimpleStatement>(cur);
-shared_ptr<FunctionDeclaration> funcdecl = make_shared<FunctionDeclaration>(name, params, body, flags);
-cls.methods.push_back(funcdecl);
+if (match(T_SEMICOLON)) func->body = make_shared<SimpleStatement>(cur);
+else func->body = parseStatement();
+if (!func->body) func->body = make_shared<SimpleStatement>(cur);
+cls.methods.push_back(func);
 }
 
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, bool isStatic) {
@@ -1960,35 +1839,33 @@ consume(T_NAME, ("Expected field name after 'var'"));
 QString* setterName = QString::create(vm, string(cur.start, cur.length) + ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 QToken thisToken = { T_NAME, THIS, 4, QV()};
+shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(thisToken);
 shared_ptr<Expression> field;
 int flags = FD_METHOD;
 if (isStatic) flags |= FD_STATIC;
 if (isStatic) field = make_shared<StaticFieldExpression>(cur);
 else field = make_shared<FieldExpression>(cur);
 shared_ptr<Expression> param = make_shared<NameExpression>(cur);
-shared_ptr<FunctionParameter> thisParam = make_shared<FunctionParameter>(thisToken, nullptr, nullptr, FP_CONST);
-vector<shared_ptr<FunctionParameter>> empty = { thisParam }, params = { thisParam, make_shared<FunctionParameter>(cur) };
+auto thisParam = make_shared<Variable>(thisExpr);
+auto setterParam = make_shared<Variable>(param);
+vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = createBinaryOperation(field, T_EQ, param);
-shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(cur, empty, field, flags);
-shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(setterNameToken, params, assignment, flags);
+shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(cur, flags, empty, field);
+shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(setterNameToken, flags, setterParams, assignment);
 cls.methods.push_back(getter);
 cls.methods.push_back(setter);
 } while (match(T_COMMA));
 }
 
 shared_ptr<Expression> QParser::parseLambda  () {
-QToken name = cur;
-int flags = 0;
-if (matchOneOf(T_DOLLAR, T_UND)) flags |= FD_METHOD;
-if (match(T_STAR)) flags |= FD_FIBER;
-vector<shared_ptr<FunctionParameter>> params = parseFunctionParameters(flags&FD_METHOD);
-shared_ptr<Statement> prebody = makeMethodPrebody(*this, params);
+auto func = make_shared<FunctionDeclaration>(cur);
+if (matchOneOf(T_DOLLAR, T_UND)) func->flags |= FD_METHOD;
+if (match(T_STAR)) func->flags |= FD_FIBER;
+parseFunctionParameters(func);
 matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
-shared_ptr<Statement> body = parseStatement();
-body = concatStatements(prebody, body);
-if (!body) body = make_shared<SimpleStatement>(cur);
-if (params.size()>=1 && (params[params.size() -1]->flags&FP_VARARG)) flags |= FD_VARARG;
-return make_shared<FunctionDeclaration>(name, params, body, flags);
+func->body = parseStatement();
+if (!func->body) func->body = make_shared<SimpleStatement>(cur);
+return func;
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
@@ -2157,7 +2034,9 @@ return compr;
 }
 
 static shared_ptr<Expression> nameExprToConstant (QParser& parser, shared_ptr<Expression> key) {
-shared_ptr<NameExpression> name = dynamic_pointer_cast<NameExpression>(key);
+auto bop = dynamic_pointer_cast<BinaryOperation>(key);
+if (bop && bop->op==T_EQ) key = bop->left;
+auto name = dynamic_pointer_cast<NameExpression>(key);
 if (name) {
 QToken token = name->token;
 token.type = T_STRING;
@@ -2595,7 +2474,11 @@ compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, slot);
 
 bool LiteralSequenceExpression::isAssignable () {
 if (items.size()<1) return false;
-for (auto& item: items) if (!dynamic_pointer_cast<Assignable>(item)) return false;
+for (auto& item: items) {
+if (!dynamic_pointer_cast<Assignable>(item)) {
+auto bop = dynamic_pointer_cast<BinaryOperation>(item);
+if (!bop || bop->op!=T_EQ || !dynamic_pointer_cast<Assignable>(bop->left)) return false;
+}}
 return true;
 }
 
@@ -2608,11 +2491,20 @@ assignedValue->compile(compiler);
 for (int i=0, n=items.size(); i<n; i++) {
 auto& item = items[i];
 auto assignable = dynamic_pointer_cast<Assignable>(item);
+shared_ptr<Expression> defaultValue = nullptr;
+if (!assignable) {
+auto bop = dynamic_pointer_cast<BinaryOperation>(item);
+if (bop && bop->op==T_EQ) {
+assignable = dynamic_pointer_cast<Assignable>(bop->left);
+defaultValue = bop->right;
+}}
 if (!assignable || !assignable->isAssignable()) continue;
 QToken index = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
 vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
-assignable->compileAssignment(compiler, subscript);
+if (defaultValue) defaultValue = createBinaryOperation(subscript, T_QUESTQUEST, defaultValue)->optimize();
+else defaultValue = subscript;
+assignable->compileAssignment(compiler, defaultValue);
 if (i+1<n) compiler.writeOp(OP_POP);
 }
 compiler.popScope();
@@ -2620,7 +2512,11 @@ compiler.popScope();
 
 bool LiteralMapExpression::isAssignable () {
 if (items.size()<1) return false;
-for (auto& item: items) if (!dynamic_pointer_cast<Assignable>(item.second)) return false;
+for (auto& item: items) {
+if (!dynamic_pointer_cast<Assignable>(item.second)) {
+auto bop = dynamic_pointer_cast<BinaryOperation>(item.second);
+if (!bop || bop->op!=T_EQ || !dynamic_pointer_cast<Assignable>(bop->left)) return false;
+}}
 return true;
 }
 
@@ -2633,12 +2529,21 @@ assignedValue->compile(compiler);
 bool first = true;
 for (auto& item: items) {
 auto assignable = dynamic_pointer_cast<Assignable>(item.second);
+shared_ptr<Expression> defaultValue = nullptr;
+if (!assignable) {
+auto bop = dynamic_pointer_cast<BinaryOperation>(item.second);
+if (bop && bop->op==T_EQ) {
+assignable = dynamic_pointer_cast<Assignable>(bop->left);
+defaultValue = bop->right;
+}}
 if (!assignable || !assignable->isAssignable()) continue;
 if (!first) compiler.writeOp(OP_POP);
 first=false;
 vector<shared_ptr<Expression>> indices = { item.first };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
-assignable->compileAssignment(compiler, subscript);
+if (defaultValue) defaultValue = createBinaryOperation(subscript, T_QUESTQUEST, defaultValue)->optimize();
+else defaultValue = subscript;
+assignable->compileAssignment(compiler, defaultValue);
 }
 compiler.popScope();
 }
@@ -2830,7 +2735,7 @@ return;
 compiler.compileError(left->nearestToken(), ("Invalid target for assignment"));
 }
 
-static vector<shared_ptr<NameExpression>>& decompose (shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
+static vector<shared_ptr<NameExpression>>& decompose (QCompiler& compiler, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
 auto name = dynamic_pointer_cast<NameExpression>(expr);
 if (name) {
 names.push_back(name);
@@ -2838,14 +2743,20 @@ return names;
 }
 auto seq = dynamic_pointer_cast<LiteralSequenceExpression>(expr);
 if (seq) {
-for (auto& item: seq->items) decompose(item, names);
+for (auto& item: seq->items) decompose(compiler, item, names);
 return names;
 }
 auto map = dynamic_pointer_cast<LiteralMapExpression>(expr);
 if (map) {
-for (auto& item: map->items) decompose(item.second, names);
+for (auto& item: map->items) decompose(compiler, item.second, names);
 return names;
 }
+auto bop = dynamic_pointer_cast<BinaryOperation>(expr);
+if (bop && bop->op==T_EQ) {
+decompose(compiler, bop->left, names);
+return names;
+}
+if (!dynamic_cast<FieldExpression*>(&*expr) && !dynamic_cast<StaticFieldExpression*>(&*expr)) compiler.compileError(expr->nearestToken(), "Invalid target for assignment in destructuring");
 return names;
 }
 
@@ -2857,7 +2768,7 @@ auto name = dynamic_pointer_cast<NameExpression>(var->name);
 if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
-for (auto& nm: decompose(var->name, names)) {
+for (auto& nm: decompose(compiler, var->name, names)) {
 if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_NULL); }
 }
@@ -2885,7 +2796,7 @@ compiler.writeOp(OP_POP);
 }
 for (auto& var: destructured) {
 auto assignable = dynamic_pointer_cast<Assignable>(var->name);
-if (!assignable) continue;
+if (!assignable || !assignable->isAssignable()) continue;
 assignable->compileAssignment(compiler, var->value);
 compiler.writeOp(OP_POP);
 }
@@ -2932,32 +2843,34 @@ compiler.writeOp(OP_POP);
 if (multi) compiler.writeOp(OP_POP);
 }
 
-void FunctionParameter::compile (QCompiler& fc) {
-int slot = fc.localVariables.size();
-LocalVariable lv = { arg, fc.curScope, false, (flags&FP_CONST)  };
-fc.localVariables.push_back(lv);
-if (defaultValue) {
-fc.writeDebugLine(defaultValue->nearestToken());
-make_shared<AssignmentOperation>(make_shared<NameExpression>(arg), T_QUESTQUESTEQ, defaultValue) ->optimize() ->compile(fc);
-fc.writeOp(OP_POP);
+void FunctionDeclaration::compileParams (QCompiler& compiler) {
+vector<shared_ptr<Variable>> destructured;
+vector<shared_ptr<NameExpression>> newVars;
+for (auto& var: params) {
+auto name = dynamic_pointer_cast<NameExpression>(var->name);
+QToken nameToken = name? name->token : compiler.createTempName();
+int slot = compiler.findLocalVariable(nameToken, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+if (!name) {
+decompose(compiler, var->name, newVars);
+destructured.push_back(var);
 }
-if (decorations.size()) {
-shared_ptr<Expression> nameExpr = make_shared<NameExpression>(arg), argExpr = nameExpr;
-for (auto it=decorations.rbegin(); it!=decorations.rend(); ++it) argExpr = make_shared<CallExpression>(*it, vector<shared_ptr<Expression>>({ argExpr }) );
-make_shared<AssignmentOperation>(nameExpr, T_EQ, argExpr) ->optimize() ->compile(fc);
-fc.writeOp(OP_POP);
+if (var->decorations.size()) {
+for (auto& decoration: var->decorations) decoration->compile(compiler);
+writeOpLoadLocal(compiler, slot);
+for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+writeOpStoreLocal(compiler, slot);
+compiler.writeOp(OP_POP);
 }
-if (typeCheck) {
-//todo
+if (!name) name = make_shared<NameExpression>(nameToken);
+if (var->value) { createBinaryOperation(name, T_QUESTQUESTEQ, var->value)->optimize()->compile(compiler); compiler.writeOp(OP_POP); }
+var->value = name;
 }
-if (flags&(FP_FIELD_ASSIGN|FP_STATIC_FIELD_ASSIGN)) {
-shared_ptr<Expression> field;
-if (flags&FP_FIELD_ASSIGN) field = make_shared<FieldExpression>(arg);
-else if (flags&FP_STATIC_FIELD_ASSIGN) field = make_shared<StaticFieldExpression>(arg);
-shared_ptr<Expression> value = make_shared<NameExpression>(arg);
-shared_ptr<Expression> assignment = createBinaryOperation(field, T_EQ, value);
-assignment->compile(fc);
-fc.writeOp(OP_POP);
+for (auto& name: newVars) compiler.findGlobalVariable(name->token, LV_NEW);
+for (auto& var: destructured) {
+auto assignable = dynamic_pointer_cast<Assignable>(var->name);
+if (!assignable || !assignable->isAssignable()) continue;
+assignable->compileAssignment(compiler, var->value);
+compiler.writeOp(OP_POP);
 }
 }
 
@@ -2965,10 +2878,7 @@ QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
 compiler.parser.curMethodNameToken = name;
-for (int i=0, n=params.size(); i<n; i++) {
-params[i] = static_pointer_cast<FunctionParameter>(params[i]->optimize());
-params[i]->compile(fc);
-}
+compileParams(fc);
 body=body->optimizeStatement();
 fc.writeDebugLine(body->nearestToken());
 body->compile(fc);
