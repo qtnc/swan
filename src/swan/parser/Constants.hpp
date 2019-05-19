@@ -8,19 +8,15 @@
 #define LV_FOR_WRITE 4
 #define LV_ERR_CONST -127
 #define LV_ERR_ALREADY_EXIST -126
-#define VD_LOCAL 1
+
+#define VD_LOCAL 0
+#define VD_VARARG 1
 #define VD_CONST 2
 #define VD_GLOBAL 4
 #define VD_EXPORT 8
-#define VD_VARARG 16
-#define VD_FIELD_ASSIGN 32
-#define VD_STATIC_FIELD_ASSIGN 64
-#define FP_VARARG 1
-#define FP_CONST 2
-#define FP_FIELD_ASSIGN 4
-#define FP_STATIC_FIELD_ASSIGN 8
-#define FP_MAP_DESTRUCTURING 16
-#define FP_ARRAY_DESTRUCTURING 32
+#define VD_SINGLE 0x100
+#define VD_NODEFAULT 0x200
+
 #define FD_VARARG 1
 #define FD_FIBER 2
 #define FD_METHOD 4

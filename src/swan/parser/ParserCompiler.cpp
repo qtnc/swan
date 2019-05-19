@@ -536,6 +536,18 @@ from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
 }};
 
+struct Variable {
+shared_ptr<Expression> name, value;
+vector<shared_ptr<Expression>> decorations;
+int flags;
+Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
+name(nm), value(val), flags(flgs), decorations(decos) {}
+void optimize () {
+name = name->optimize();
+if (value) value = value->optimize();
+for (auto& d: decorations) d = d->optimize();
+}};
+
 struct SimpleStatement: Statement {
 QToken token;
 SimpleStatement (const QToken& t): token(t) {}
@@ -638,18 +650,22 @@ return s;
 }};
 
 struct ForStatement: Statement {
-vector<QToken> loopVariables;
+QToken token;
+vector<shared_ptr<Variable>> loopVariables;
 shared_ptr<Expression> inExpression;
 shared_ptr<Statement> loopStatement;
-bool loopVarIsConst;
-QTokenType destructuring;
-ForStatement (): loopVariables(), inExpression(nullptr), loopStatement(nullptr), loopVarIsConst(false), destructuring(T_END) {}
-shared_ptr<Statement> optimizeStatement () { inExpression=inExpression->optimize(); if (loopStatement) loopStatement=loopStatement->optimizeStatement(); return shared_this(); }
-const QToken& nearestToken () { return loopVariables[0]; }
+ForStatement (const QToken& tk): token(tk), loopVariables(), inExpression(nullptr), loopStatement(nullptr)  {}
+shared_ptr<Statement> optimizeStatement () { 
+if (inExpression) inExpression=inExpression->optimize(); 
+if (loopStatement) loopStatement=loopStatement->optimizeStatement(); 
+for (auto& lv: loopVariables) lv->optimize();
+return shared_this(); 
+}
+const QToken& nearestToken () { return token; }
 void parseHead (QParser& parser);
 void compile (QCompiler& compiler);
 string print () {
-return ("for (") + string(loopVariables[0].start, loopVariables[0].length) + (" in ") + inExpression->print() + (") ") + loopStatement->print();
+return "for loop";
 }};
 
 struct WhileStatement: Statement {
@@ -832,18 +848,6 @@ string s = ("{\r\n");
 for (auto sta: statements) s += sta->print() + ("\r\n");
 s += ("}\r\n");
 return s;
-}};
-
-struct Variable {
-shared_ptr<Expression> name, value;
-vector<shared_ptr<Expression>> decorations;
-int flags;
-Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
-name(nm), value(val), flags(flgs), decorations(decos) {}
-void optimize () {
-name = name->optimize();
-if (value) value = value->optimize();
-for (auto& d: decorations) d = d->optimize();
 }};
 
 struct VariableDeclaration: Statement {
@@ -1571,20 +1575,13 @@ return sw;
 }
 
 void ForStatement::parseHead (QParser& parser) {
-if (parser.match(T_CONST)) loopVarIsConst = true;
-else parser.match(T_VAR);
-if (parser.matchOneOf(T_LEFT_BRACE, T_LEFT_PAREN, T_LEFT_BRACKET)) destructuring = static_cast<QTokenType>(parser.cur.type +1);
-do {
-parser.consume(T_NAME, ("Expected loop variable name after 'for'"));
-loopVariables.push_back(parser.cur);
-} while (parser.match(T_COMMA));
-if (destructuring!=T_END) parser.consume(destructuring, "Expecting close of destructuring variable declaration");
-parser.consume(T_IN, ("Expected 'in' after loop variable name"));
+parser.parseVarList(loopVariables, VD_SINGLE);
+parser.consume(T_IN, "Expecting 'in' after for loop variables");
 inExpression = parser.parseExpression(P_COMPREHENSION);
 }
 
 shared_ptr<Statement> QParser::parseFor () {
-shared_ptr<ForStatement> forSta = make_shared<ForStatement>();
+shared_ptr<ForStatement> forSta = make_shared<ForStatement>(cur);
 forSta->parseHead(*this);
 match(T_COLON);
 forSta->loopStatement = parseStatement();
@@ -1749,7 +1746,9 @@ default: parseError("Expecting identifier, '(', '[' or '{' in variable declarati
 if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
 if (match(T_EQ)) var->value = parseExpression();
+else var->flags |= VD_NODEFAULT;
 vars.push_back(var);
+if (flags&VD_SINGLE) break;
 } while(match(T_COMMA));
 }
 
@@ -1774,7 +1773,7 @@ consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
 else if (match(T_NAME)) {
 prevToken();
-parseVarList(func->params);
+parseVarList(func->params, VD_SINGLE);
 }
 if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
@@ -2025,7 +2024,7 @@ skipNewlines();
 auto compr = make_shared<ComprehensionExpression>(loopExpr);
 do {
 skipNewlines();
-shared_ptr<ForStatement> forSta = make_shared<ForStatement>();
+shared_ptr<ForStatement> forSta = make_shared<ForStatement>(cur);
 forSta->parseHead(*this);
 compr->subCompr.push_back(forSta);
 } while(match(T_FOR));
@@ -2294,14 +2293,15 @@ int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int hasNextSymbol = compiler.vm.findMethodSymbol(("hasNext"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
+shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
+bool destructuring = !loopVariable;
+if (destructuring) loopVariable = make_shared<NameExpression>(compiler.createTempName());
 compiler.writeDebugLine(inExpression->nearestToken());
 inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
 compiler.pushLoop();
 compiler.pushScope();
-vector<int> valueSlots;
-compiler.writeDebugLine(loopVariables[0]);
-for (auto& loopVariable: loopVariables) valueSlots.push_back(compiler.findLocalVariable(loopVariable, LV_NEW | (loopVarIsConst? LV_CONST : 0)));
+int valueSlot = compiler.findLocalVariable(loopVariable->token, LV_NEW);
 int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
 writeOpLoadLocal(compiler, iteratorSlot);
@@ -2309,29 +2309,9 @@ compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, hasNextSymbol);
 compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
 writeOpLoadLocal(compiler, iteratorSlot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, nextSymbol);
-if (destructuring==T_RIGHT_PAREN || destructuring==T_RIGHT_BRACKET || (destructuring==T_END && valueSlots.size()>1)) {
-for (int i=1; i<valueSlots.size(); i++) {
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, i);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-}
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, 0);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-writeOpStoreLocal(compiler, valueSlots[0]);
-compiler.writeOp(OP_POP);
-}
-else if (destructuring==T_RIGHT_BRACE) {
-for (int i=1; i<valueSlots.size() && i<loopVariables.size(); i++) {
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QString::create(compiler.parser.vm, loopVariables[i].start, loopVariables[i].length)));
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-}
-writeOpLoadLocal(compiler, valueSlots[0]);
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QString::create(compiler.parser.vm, loopVariables[0].start, loopVariables[0].length)));
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-writeOpStoreLocal(compiler, valueSlots[0]);
-compiler.writeOp(OP_POP);
+if (destructuring) {
+loopVariables[0]->value = loopVariable;
+make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->compile(compiler);
 }
 compiler.writeDebugLine(loopStatement->nearestToken());
 loopStatement->compile(compiler);
@@ -2846,6 +2826,7 @@ if (multi) compiler.writeOp(OP_POP);
 void FunctionDeclaration::compileParams (QCompiler& compiler) {
 vector<shared_ptr<Variable>> destructured;
 vector<shared_ptr<NameExpression>> newVars;
+compiler.writeDebugLine(nearestToken());
 for (auto& var: params) {
 auto name = dynamic_pointer_cast<NameExpression>(var->name);
 QToken nameToken = name? name->token : compiler.createTempName();
@@ -2854,6 +2835,7 @@ if (!name) {
 decompose(compiler, var->name, newVars);
 destructured.push_back(var);
 }
+else compiler.writeDebugLine(name->nearestToken());
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 writeOpLoadLocal(compiler, slot);

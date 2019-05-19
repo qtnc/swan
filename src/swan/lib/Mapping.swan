@@ -1,6 +1,6 @@
-Mapping::keys = $$: k for k, v in this
-Mapping::values = $$: v for k, v in this
-Mapping::flipped = $$: (v,k) for k, v in this
+Mapping::keys = $$: k for [k, v] in this
+Mapping::values = $$: v for [k, v] in this
+Mapping::flipped = $$: (v,k) for [k, v] in this
 
 let fGOrC = $$(k,f) {
 let v = this[k]
