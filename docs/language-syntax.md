@@ -13,6 +13,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * class
 * const
 * continue
+* def (as a synonym for function)
 * default
 * else
 * export
@@ -406,7 +407,6 @@ print(fibonacci)
 ```
 
 ## Comprehension syntax
-
 You can create simple generators using the by comprhension syntax, similarely with what you can do in python.
 The following also works to construct lists, tuples, sets and maps.
 
@@ -474,6 +474,65 @@ The following elements can be decorated:
 - Lambda expressions
 
 If there are multiple decorators specified for the same element, they are processed in their reverse order, i.e. the original element is passed to the last decorator, then the transformed element to the decorator before the last, etc. up to the first which makes the final transformation.
+
+## Destructuring
+Like in JavaScript ES6/ES2015, you can make destructuring assignments with any indexable collection such as tuples, lists and maps. It works as follows:
+
+```
+let map = {a: 1, b: 2, c: 3}
+let list = [1, 2, 3, 4, 5]
+
+# Creates a=1, b=2 and c=3
+# Equivalent to: let a=map['a'], b=map['b'], c=map['c']
+let {a, b, c} = map
+
+# You may set default values in case the extracted map has no corresponding value
+# This will create a=1, b=2, c=3 and d=true
+let {a=false, b=true, c=false, d=true} = map
+
+# The same is possible with indexable sequences such as tuples or lists
+# This creates a=1, b=2, c=3, d=4 and e=5
+# Equivalent to: let a=list[0], b=list[1], c=list[2], d=list[3], e=list[4]
+let [a, b, c, d, e] = list
+
+# You can use destructuring in function parameters
+let f = $({one=1, two=2, three=3}) {
+return one+two+three
+}
+f(three: 333, two: 222, one: 111) # 666
+
+# You can also use destructuring in for loops and with comprehension syntax
+# The following works because a map yield (key, value) tuples when iterated
+let m1 = {one: 1, two: 2, three: 3}
+for [key, value] in m1: print(key+'='+value) 
+
+# This will produce { oneone: 1, twotwo: 4, threethree: 9 }
+let m2 = Map.of( (k+k, v*v) for [k, v] in m1) 
+
+# You can use destructuring with objects, too
+class Student {
+let name, grade
+constructor (_name, _grade);
+}
+let classroom = [
+Student('Alex', 57),
+Student('Jane', 81),
+Student('Dylan', 69)
+]
+for {::name, ::grade} in classroom {
+print(format("%1 got a grade of %2 out of 100", name, grade))
+}
+
+# Destructuring can also be nested
+let results = [
+{ name: 'John', scores: [6, 3, 5] },
+{ name: 'Jack', scores: [4, 2, 1] },
+{ name: 'Joe', scores: [1, 6, 0] }
+]
+for {name, scores: [first, second, third]} in results {
+print(name, first, second, third)
+}
+```
 
 ## Error handling: try, catch, finally and with
 The familiar *try, catch, finally* construct is available, as well as the *throw* keyword.
@@ -547,39 +606,20 @@ When the last parameter of a function is a map, you can omit the encosing braces
 is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
-This may be used to simulates named function parameters to some extent, in combination with destructuring parameters (see below).
+This may be used to simulates named function parameters to some extent, in combination with destructuring.
 
-### Destructuring variable declaration
-You can declare new variables and destructure them from a map or any numerically indexable sequence, as follows.
-Note that, unlike JavaScript, *recursive destructuration* is impossible; in Swan it is kept simple; anyway, if recursion were possible, it would quickly become difficult to read, so it is anyway better avoided.
+### Implicit multiplication
+In mathematics, the multiplication sign can be omited in certain cases. In Swan too !
+It is possible between a number and an expression starting with a name or a parent. For example:
 
 ```
-let map = {a: 1, b: 2, c: 3}
-let list = [1, 2, 3, 4, 5]
-
-# Creates a=1, b=2 and c=3
-# Equivalent to: let a=map['a'], b=map['b'], c=map['c']
-let {a, b, c} = map
-
-# You may set default values in case the extracted map has no corresponding value
-# This will create a=1, b=2, c=3 and d=true
-let {a=false, b=true, c=false, d=true} = map
-
-# The same is possible with indexable sequences such as tuples or lists
-# This creates a=1, b=2, c=3, d=4 and e=5
-# Equivalent to: let a=list[0], b=list[1], c=list[2], d=list[3], e=list[4]
-let [a, b, c, d, e] = list
-
-# You can use destructuration in function parameters
-let f = $({one=1, two=2, three=3}) {
-return one+two+three
-}
-f(three: 333, two: 222, one: 111) # 666
-
-# You can also use destructuration in for loops and with comprehension syntax
-let m1 = {one: 1, two: 2, three: 3}
-for (key, value) in m1: print(key+'='+value) # It works since a map yield (key, value) tuples when iterated
-let m2 = Map.of( (k+k, v*v) for (k, v) in m1) # This will produce { oneone: 1, twotwo: 4, threethree: 9 }
+let x = 15, s = 'la'
+print(3x) #45
+print(7(x+1)) #42
+print(7x+1) #36
+print(3x**2) #775
+print(3(x**2)%36) #27
+print(3s) # 'lalala'
 ```
 
 ## Comments
@@ -607,3 +647,5 @@ Examples:
 #[ this also, but stay careful
 %# because this, no longer ! ]#
 ```
+
+C-style comments `//` and `/*` are also recognized.

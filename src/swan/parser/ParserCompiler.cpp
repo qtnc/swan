@@ -400,7 +400,9 @@ string print () { return "(::" + string(token.start, token.length) + ")"; }
 void compile (QCompiler& compiler) {
 int symbol = compiler.parser.vm.findMethodSymbol(string(token.start, token.length));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
-}};
+}
+//void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) { make_shared<NameExpression>(token)->compileAssignment(compiler, assignedValue); }
+};
 
 struct BinaryOperation: Expression {
 shared_ptr<Expression> left, right;
@@ -2493,10 +2495,11 @@ compiler.popScope();
 bool LiteralMapExpression::isAssignable () {
 if (items.size()<1) return false;
 for (auto& item: items) {
-if (!dynamic_pointer_cast<Assignable>(item.second)) {
+shared_ptr<Expression> expr = item.second;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item.second);
-if (!bop || bop->op!=T_EQ || !dynamic_pointer_cast<Assignable>(bop->left)) return false;
-}}
+if (bop && bop->op==T_EQ) expr = bop->left;
+if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<GenericMethodSymbolExpression>(expr)) return false;
+}
 return true;
 }
 
@@ -2508,22 +2511,29 @@ auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->compile(compiler);
 bool first = true;
 for (auto& item: items) {
-auto assignable = dynamic_pointer_cast<Assignable>(item.second);
-shared_ptr<Expression> defaultValue = nullptr;
-if (!assignable) {
-auto bop = dynamic_pointer_cast<BinaryOperation>(item.second);
+shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
+auto bop = dynamic_pointer_cast<BinaryOperation>(assigned);
 if (bop && bop->op==T_EQ) {
-assignable = dynamic_pointer_cast<Assignable>(bop->left);
+assigned = bop->left;
 defaultValue = bop->right;
-}}
+}
+auto assignable = dynamic_pointer_cast<Assignable>(assigned);
+if (!assignable) {
+auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned);
+if (mh) assignable = make_shared<NameExpression>(mh->token);
+}
 if (!assignable || !assignable->isAssignable()) continue;
 if (!first) compiler.writeOp(OP_POP);
 first=false;
+shared_ptr<Expression> value = nullptr;
+auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first);
+if (method) value = createBinaryOperation(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+else {
 vector<shared_ptr<Expression>> indices = { item.first };
-auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
-if (defaultValue) defaultValue = createBinaryOperation(subscript, T_QUESTQUEST, defaultValue)->optimize();
-else defaultValue = subscript;
-assignable->compileAssignment(compiler, defaultValue);
+value = make_shared<SubscriptExpression>(tmpVar, indices);
+}
+if (defaultValue) value = createBinaryOperation(value, T_QUESTQUEST, defaultValue)->optimize();
+assignable->compileAssignment(compiler, value);
 }
 compiler.popScope();
 }
@@ -2734,6 +2744,11 @@ return names;
 auto bop = dynamic_pointer_cast<BinaryOperation>(expr);
 if (bop && bop->op==T_EQ) {
 decompose(compiler, bop->left, names);
+return names;
+}
+auto prop = dynamic_pointer_cast<GenericMethodSymbolExpression>(expr);
+if (prop) {
+names.push_back(make_shared<NameExpression>(prop->token));
 return names;
 }
 if (!dynamic_cast<FieldExpression*>(&*expr) && !dynamic_cast<StaticFieldExpression*>(&*expr)) compiler.compileError(expr->nearestToken(), "Invalid target for assignment in destructuring");
