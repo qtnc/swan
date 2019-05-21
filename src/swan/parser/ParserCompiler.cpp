@@ -400,9 +400,7 @@ string print () { return "(::" + string(token.start, token.length) + ")"; }
 void compile (QCompiler& compiler) {
 int symbol = compiler.parser.vm.findMethodSymbol(string(token.start, token.length));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
-}
-//void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) { make_shared<NameExpression>(token)->compileAssignment(compiler, assignedValue); }
-};
+}};
 
 struct BinaryOperation: Expression {
 shared_ptr<Expression> left, right;
@@ -860,8 +858,10 @@ shared_ptr<Statement> optimizeStatement () {
 for (auto& v: vars) v->optimize();
 return shared_this(); 
 }
-//virtual bool isDecorable () override { return true; }
-//virtual bool isUsingExports () override { return flags&VD_EXPORT; }
+virtual bool isUsingExports () override { 
+for (auto& var: vars) if (var->flags&VD_EXPORT) return true;
+return false;
+}
 void compile (QCompiler& compiler);
 string print () { return "vardecl"; }
 };
@@ -1021,7 +1021,7 @@ INFIX_OP(CIRC, InfixOp, ^, BITWISE),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE),
 INFIX_OP(DOTDOT, InfixOp, .., RANGE),
-OPERATOR(DOTDOTDOT, Unpack, InfixOp, ..., ..., RANGE),
+INFIX(DOTDOTDOT, InfixOp, ..., RANGE),
 INFIX(AMPAMP, InfixOp, &&, LOGICAL),
 INFIX(BARBAR, InfixOp, ||, LOGICAL),
 INFIX(QUESTQUEST, InfixOp, ??, LOGICAL),
@@ -2052,7 +2052,7 @@ vector<shared_ptr<Expression>> args;
 shared_ptr<LiteralMapExpression> mapArg = nullptr;
 if (!match(T_RIGHT_PAREN)) {
 do {
-shared_ptr<Expression> arg = parseExpression();
+shared_ptr<Expression> arg = match(T_DOTDOTDOT)? parseUnpack() : parseExpression();
 if (match(T_COLON)) {
 shared_ptr<Expression> val = parseExpression();
 if (!mapArg) { mapArg = make_shared<LiteralMapExpression>(cur); args.push_back(mapArg); }
@@ -2132,7 +2132,7 @@ shared_ptr<Expression> QParser::parseLiteralList () {
 shared_ptr<LiteralListExpression> list = make_shared<LiteralListExpression>(cur);
 if (!match(T_RIGHT_BRACKET)) {
 do {
-list->items.push_back(parseExpression());
+list->items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression());
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close list literal"));
@@ -2144,7 +2144,7 @@ shared_ptr<Expression> QParser::parseLiteralSet () {
 shared_ptr<LiteralSetExpression> list = make_shared<LiteralSetExpression>(cur);
 if (!match(T_GT)) {
 do {
-list->items.push_back(parseExpression(P_COMPARISON));
+list->items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression(P_COMPARISON));
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_GT, ("Expected '>' to close set literal"));
@@ -2160,10 +2160,11 @@ bool computed = false;
 shared_ptr<Expression> key, value;
 if (match(T_LEFT_BRACKET)) {
 computed=true;
-key = parseExpression();
+key =  parseExpression();
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close computed map key"));
 }
+else if (match(T_DOTDOTDOT)) key = parseUnpack();
 else key = parseExpression();
 if (!match(T_COLON)) value = key;
 else value = parseExpression();
@@ -2216,7 +2217,7 @@ if (match(T_COMMA)) {
 vector<shared_ptr<Expression>> items = { expr };
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
 do {
-items.push_back(parseExpression());
+items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression());
 } while(match(T_COMMA));
 consume(T_RIGHT_PAREN, ("Expected ')' to close tuple"));
 return make_shared<LiteralTupleExpression>(initial, items);
@@ -2457,10 +2458,11 @@ compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, slot);
 bool LiteralSequenceExpression::isAssignable () {
 if (items.size()<1) return false;
 for (auto& item: items) {
-if (!dynamic_pointer_cast<Assignable>(item)) {
+shared_ptr<Expression> expr = item;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item);
-if (!bop || bop->op!=T_EQ || !dynamic_pointer_cast<Assignable>(bop->left)) return false;
-}}
+if (bop && bop->op==T_EQ) expr = bop->left;
+if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<UnpackExpression>(expr)) return false;
+}
 return true;
 }
 
@@ -2471,18 +2473,30 @@ auto tmpVar = make_shared<NameExpression>(tmpToken);
 int slot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 assignedValue->compile(compiler);
 for (int i=0, n=items.size(); i<n; i++) {
-auto& item = items[i];
-auto assignable = dynamic_pointer_cast<Assignable>(item);
-shared_ptr<Expression> defaultValue = nullptr;
-if (!assignable) {
+shared_ptr<Expression> item = items[i], defaultValue = nullptr;
+bool unpack = false;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item);
 if (bop && bop->op==T_EQ) {
-assignable = dynamic_pointer_cast<Assignable>(bop->left);
+item = bop->left;
 defaultValue = bop->right;
+}
+auto assignable = dynamic_pointer_cast<Assignable>(item);
+if (!assignable) {
+auto unpackExpr = dynamic_pointer_cast<UnpackExpression>(item);
+if (unpackExpr) {
+assignable = dynamic_pointer_cast<Assignable>(unpackExpr->expr);
+unpack = true;
+if (i+1!=items.size()) compiler.compileError(unpackExpr->nearestToken(), "Unpack expression must appear last in assignment expression");
 }}
 if (!assignable || !assignable->isAssignable()) continue;
-QToken index = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
-vector<shared_ptr<Expression>> indices = { make_shared<ConstantExpression>(index) };
+QToken indexToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
+shared_ptr<Expression> index = make_shared<ConstantExpression>(indexToken);
+if (unpack) {
+QToken minusOneToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(-1)) };
+shared_ptr<Expression> minusOne = make_shared<ConstantExpression>(minusOneToken);
+index = createBinaryOperation(index, T_DOTDOTDOT, minusOne);
+}
+vector<shared_ptr<Expression>> indices = { index };
 auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
 if (defaultValue) defaultValue = createBinaryOperation(subscript, T_QUESTQUEST, defaultValue)->optimize();
 else defaultValue = subscript;
