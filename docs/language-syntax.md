@@ -534,6 +534,14 @@ print(name, first, second, third)
 }
 ```
 
+Difference with JavaScript: in JavaScript, you can use destructuring with any *iterable* element; in Swan, you can use destructuring only with any *indexable* element.
+This means that the following is valid JavaScript, but invalid Swan:
+
+```
+let l = [1, 2, 3]
+let [a, b, c] = l.map(function(x){ return x**2; });
+```
+
 ## Error handling: try, catch, finally and with
 The familiar *try, catch, finally* construct is available, as well as the *throw* keyword.
 
@@ -620,6 +628,33 @@ print(7x+1) #36
 print(3x**2) #775
 print(3(x**2)%36) #27
 print(3s) # 'lalala'
+```
+
+### Unpack operator
+The unpack operator, as known as rest and spread operators in JavaScript ES6/ES2015, can be used to expand an iterable sequence into its elements, or to pack the last elements of an indexable sequence.
+This special operator is also known as stared expression in python.
+
+```
+let l1 = [1, 2, 3], l2 = [4, 5, 6]
+let l3 = [0, ...l1, ...l2, 7]
+print(l3) # [0, 1, 2, 3, 4, 5, 6, 7]
+
+let [a, b, ...c] = l3
+print(a) #0
+print(b) #1
+print(c) #[2, 3, 4, 5, 6, 7]
+
+let m1 = {a: 1, b: 2}, m2 = {c: 3, d: 4}
+let m3 = {...m1, e: 5, ...m2}
+print(m3) #{a: 1, b: 2, c: 3, d: 4, e: 5}
+```
+
+Difference with JavaScript: in Swan, unpack operator is currently not allowed in map assignment. The following is valid JavaScript ES6/2018, but invalid Swan:
+
+```
+let m = {a: 1, b: 2, c: 3, d: 4}
+let {a, b, ...z} = m
+# in JavaScript, z would contain {c: 3, d: 4}
 ```
 
 ## Comments
