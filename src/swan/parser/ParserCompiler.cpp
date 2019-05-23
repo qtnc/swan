@@ -2369,12 +2369,16 @@ if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
 return;
 }
-ClassDeclaration* cls = compiler.getCurClass();
-if (!cls) compiler.compileError(token, ("Undefined variable"));
-else {
-compiler.writeOp(OP_LOAD_THIS);
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
+if (cls) {
+if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV() }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
-}}
+return;
+}
+compiler.compileError(token, ("Undefined variable"));
+}
 
 void NameExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
@@ -2744,6 +2748,12 @@ return s;
 }
 
 void CallExpression::compile (QCompiler& compiler) {
+if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
+if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0) {
+QToken thisToken = { T_NAME, THIS, 4, QV() };
+createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize()->compile(compiler);
+return;
+}}
 bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
@@ -2751,7 +2761,7 @@ QOpCode op = OP_CALL_FUNCTION_0;
 if (compiler.lastOp==OP_LOAD_THIS) op = OP_CALL_METHOD_0;
 compileArgs(compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
-else compiler.writeOp(static_cast<QOpCode>(op+args.size()));
+else writeOpCallFunction(compiler, args.size());
 }
 
 void AssignmentOperation::compile (QCompiler& compiler) {
