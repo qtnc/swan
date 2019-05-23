@@ -4,6 +4,7 @@ constructor (_message=this.type.name);
 toString: type.name + ': ' + _message
 }
 
+global class CallError is Error
 global class RangeError is Error
 global class TypeError is Error
 global class ValueError is Error

@@ -128,12 +128,20 @@ CASE(OP_LOAD_UPVALUE)
 push(frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get());
 BREAK
 
-CASE(OP_LOAD_FIELD)
+CASE(OP_LOAD_THIS_FIELD)
 push(at(0).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
 BREAK
 
-CASE(OP_LOAD_STATIC_FIELD)
+CASE(OP_LOAD_THIS_STATIC_FIELD)
 push( at(0).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
+BREAK
+
+CASE(OP_LOAD_FIELD)
+top() = top().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()];
+BREAK
+
+CASE(OP_LOAD_STATIC_FIELD)
+top() = top().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] ;
 BREAK
 
 CASE(OP_LOAD_METHOD)
@@ -163,12 +171,22 @@ CASE(OP_STORE_UPVALUE)
 frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get() = top();
 BREAK
 
-CASE(OP_STORE_FIELD)
+CASE(OP_STORE_THIS_FIELD)
 at(0).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
 BREAK
 
-CASE(OP_STORE_STATIC_FIELD)
+CASE(OP_STORE_THIS_STATIC_FIELD)
 at(0).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
+BREAK
+
+CASE(OP_STORE_FIELD)
+top().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = at(-2);
+pop();
+BREAK
+
+CASE(OP_STORE_STATIC_FIELD)
+top().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = at(-2);
+pop();
 BREAK
 
 CASE(OP_STORE_METHOD)

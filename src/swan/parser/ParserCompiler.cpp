@@ -2052,7 +2052,7 @@ vector<shared_ptr<Expression>> args;
 shared_ptr<LiteralMapExpression> mapArg = nullptr;
 if (!match(T_RIGHT_PAREN)) {
 do {
-shared_ptr<Expression> arg = match(T_DOTDOTDOT)? parseUnpack() : parseExpression();
+shared_ptr<Expression> arg = parseUnpackOrExpression();
 if (match(T_COLON)) {
 shared_ptr<Expression> val = parseExpression();
 if (!mapArg) { mapArg = make_shared<LiteralMapExpression>(cur); args.push_back(mapArg); }
@@ -2090,8 +2090,9 @@ shared_ptr<Expression> expr = parseExpression();
 return createBinaryOperation(superExpr, T_DOT, expr);
 }
 
-shared_ptr<Expression> QParser::parseUnpack () {
-return make_shared<UnpackExpression>(parseExpression());
+shared_ptr<Expression> QParser::parseUnpackOrExpression (int priority) {
+if (match(T_DOTDOTDOT)) return make_shared<UnpackExpression>(parseExpression(priority));
+else return parseExpression(priority);
 }
 
 shared_ptr<Expression> QParser::parseName () {
@@ -2132,7 +2133,7 @@ shared_ptr<Expression> QParser::parseLiteralList () {
 shared_ptr<LiteralListExpression> list = make_shared<LiteralListExpression>(cur);
 if (!match(T_RIGHT_BRACKET)) {
 do {
-list->items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression());
+list->items.push_back(parseUnpackOrExpression());
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close list literal"));
@@ -2144,7 +2145,7 @@ shared_ptr<Expression> QParser::parseLiteralSet () {
 shared_ptr<LiteralSetExpression> list = make_shared<LiteralSetExpression>(cur);
 if (!match(T_GT)) {
 do {
-list->items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression(P_COMPARISON));
+list->items.push_back(parseUnpackOrExpression(P_COMPARISON));
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_GT, ("Expected '>' to close set literal"));
@@ -2164,8 +2165,7 @@ key =  parseExpression();
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close computed map key"));
 }
-else if (match(T_DOTDOTDOT)) key = parseUnpack();
-else key = parseExpression();
+else key = parseUnpackOrExpression();
 if (!match(T_COLON)) value = key;
 else value = parseExpression();
 if (!computed) key = nameExprToConstant(*this, key);
@@ -2217,7 +2217,7 @@ if (match(T_COMMA)) {
 vector<shared_ptr<Expression>> items = { expr };
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
 do {
-items.push_back(match(T_DOTDOTDOT)? parseUnpack() : parseExpression());
+items.push_back(parseUnpackOrExpression());
 } while(match(T_COMMA));
 consume(T_RIGHT_PAREN, ("Expected ')' to close tuple"));
 return make_shared<LiteralTupleExpression>(initial, items);
@@ -2414,46 +2414,70 @@ compiler.compileError(token, ("Undefined variable"));
 }
 
 void FieldExpression::compile (QCompiler& compiler) {
-ClassDeclaration* cls = compiler.getCurClass();
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
 compiler.compileError(token, ("Can't use field oustide of a class"));
 return;
 }
-int slot = cls->findField(string(token.start, token.length));
-compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, slot);
-}
+int fieldSlot = cls->findField(string(token.start, token.length));
+if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_FIELD, fieldSlot);
+else {
+QToken thisToken = { T_NAME, THIS, 4, QV() };
+int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, fieldSlot);
+}}
 
 void FieldExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
-ClassDeclaration* cls = compiler.getCurClass();
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
 compiler.compileError(token, ("Can't use field oustide of a class"));
 return;
 }
-int slot = cls->findField(string(token.start, token.length));
+int fieldSlot = cls->findField(string(token.start, token.length));
 assignedValue->compile(compiler);
-compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, slot);
-}
+if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
+else {
+QToken thisToken = { T_NAME, THIS, 4, QV() };
+int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, fieldSlot);
+}}
 
 void StaticFieldExpression::compile (QCompiler& compiler) {
-ClassDeclaration* cls = compiler.getCurClass();
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
-int slot = cls->findStaticField(string(token.start, token.length));
-compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, slot);
-}
+int fieldSlot = cls->findStaticField(string(token.start, token.length));
+if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_STATIC_FIELD, fieldSlot);
+else {
+QToken thisToken = { T_NAME, THIS, 4, QV() };
+int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
+}}
 
 void StaticFieldExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
-ClassDeclaration* cls = compiler.getCurClass();
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
-int slot = cls->findStaticField(string(token.start, token.length));
+int fieldSlot = cls->findStaticField(string(token.start, token.length));
 assignedValue->compile(compiler);
-compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, slot);
-}
+if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
+else {
+QToken thisToken = { T_NAME, THIS, 4, QV() };
+int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
+}}
 
 bool LiteralSequenceExpression::isAssignable () {
 if (items.size()<1) return false;
@@ -2908,9 +2932,10 @@ if (fiber) compiler.writeOp(OP_CALL_FUNCTION_1);
 return func;
 }
 
-ClassDeclaration* QCompiler::getCurClass () {
+ClassDeclaration* QCompiler::getCurClass (int* atLevel) {
+if (atLevel) ++(*atLevel);
 if (curClass) return curClass;
-else if (parent) return parent->getCurClass();
+else if (parent) return parent->getCurClass(atLevel);
 else return nullptr;
 }
 

@@ -155,6 +155,8 @@ void adjustFieldOffset (QFunction& func, int offset) {
 for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<end; ) {
 uint8_t op = *bc++;
 switch(op) {
+case OP_LOAD_THIS_FIELD:
+case OP_STORE_THIS_FIELD:
 case OP_LOAD_FIELD:
 case OP_STORE_FIELD:
 *reinterpret_cast<uint_field_index_t*>(const_cast<char*>(bc)) += offset;

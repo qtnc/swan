@@ -86,7 +86,7 @@ int findExportsVariable (bool createIfNotExist=true);
 int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
 
-struct ClassDeclaration* getCurClass ();
+struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> void compileError (const QToken& token, const char* fmt, const A&... args);

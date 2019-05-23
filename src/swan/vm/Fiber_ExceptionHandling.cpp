@@ -14,7 +14,6 @@ if (tp==typeid(std::range_error) || tp==typeid(std::out_of_range) || tp==typeid(
 else if (tp==typeid(std::domain_error) || tp==typeid(std::invalid_argument)) eName = "ValueError";
 else if (tp==typeid(std::bad_cast) || tp==typeid(std::bad_function_call)) eName = "TypeError";
 f.loadGlobal(eName);
-println("Loaded global %s = %s", eName, f.at(-1).print());
 f.pushString(format("%s: %s", exceptionType.get(), e.what()));
 f.call(1);
 }

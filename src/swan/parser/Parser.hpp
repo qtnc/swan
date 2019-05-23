@@ -50,7 +50,7 @@ std::shared_ptr<Expression> parseField ();
 std::shared_ptr<Expression> parseStaticField  ();
 std::shared_ptr<Expression> parseLambda ();
 std::shared_ptr<Expression> parseSuper ();
-std::shared_ptr<Expression> parseUnpack ();
+std::shared_ptr<Expression> parseUnpackOrExpression (int priority = P_LOWEST);
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
 std::shared_ptr<Expression> parseDecoratedExpression ();
 void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func);
