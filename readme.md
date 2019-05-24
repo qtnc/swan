@@ -1,6 +1,7 @@
 # Swan
 
 Swan is a small scripting language designed to be embedded into C++ applications such as games.
+Heavily inspired from the well known JavaScript and Python, its friendly syntax should quickly look familiar to anyone with a little programming experience.
 
 # Language syntax 
 The [language syntax](docs/language-syntax.md) looks like a mix between Python, JavaScript and Ruby, with a few original changes and additions. Example below:
@@ -44,12 +45,10 @@ let v3 = v1 + v2
 print(v3.length)
 
 # WE forgot a toString method in our Vector class ! No problem, let's add it
-Vector::toString = $(this){ "Vector(%1, %2, %3)".format(this.x, this.y, this.z) }
+Vector::toString = def(this){ "Vector(%1, %2, %3)".format(this.x, this.y, this.z) }
 
-# Prints: the length of Vector(7, 8, 9) is 13.93
-let coords = [7, 8, 9]
-let v4 = Vector(...coords)
-print("The length of " + v4 + " is " + v4.length) 
+# Calls our toString and prints "Vector(3, 4, 0)"
+print(v3)
 ```
 
 [>> Language syntax and basic constructs](docs/language-syntax.md)
@@ -59,16 +58,13 @@ print("The length of " + v4 + " is " + v4.length)
 # Features 
 - Loosly typed
 - Class object-oriented
-- Allow functional style
+- Allow functional style with closures and higher order functions
 - Everyting is an object, including numbers, closures, boolean values and null itself
 - Fibers better known as generators or coroutines
 - Operator overloading
 - Extending or redefining classes at runtime (except built-in types)
 
 Core built-in types: Bool, Fiber, Function, List, Map, Null, Number, Set, String, Tuple
-
-In fact, I tried to take the best of JavaScript, Python and Ruby altogether.
-This should make the language usable right out of the box for most programmers.
 
 Other characteristics of this little programming language include:
 
@@ -131,12 +127,13 @@ The CLI also comes with an interactive REPL that let you have a quick code trial
 I have 5 apples and 3 oranges
 ?>> s.replace(/\d+/, def m: m[0].toNumber+5)
 I have 10 apples and 8 oranges
-?>> file = IO.open('test.txt', 'w')
-?>> file.write('It works!')
-?>> file.close
+?>> with IO.open('test.txt', 'w') as file {
+?.. file.write('It works!\r\n')
+?.. }
 ?>> file = IO.open('test.txt', 'r')
 ?>> file.read
 It works!
+?>> file.close
 ```
 
 [>> More about the CLI](docs/cli.md)
@@ -169,7 +166,7 @@ After months and even years of trials with different available libraries, none e
 - [Wren](https://github.com/wren-lang/wren) is really a nice language: quite small, simple, fast, ideal for embedding, nice syntax... but it leaks some important features like call reentrancy, saving/reloading bytecode, relatively curious way to register foreign interfaces, compilation in a single pass make it difficult to customize what I feel missing, and... we are in 2019, why most of the people making scripting languages are always implementing them in C ?
 
 For the implementation as well as most of the syntax, I have been inspired and learned a lot from Wren. It's really a good project.
-I must say a great thank you to them, because they explain very well what is under the hoo of a scripting language. Many things stay an enigma when reading lua implementation, which is much more complex.
-Wren's syntax is mostly inspired from Ruby. As a consequence, Swan has also taken a little of it, although I tried to re-pythonize and re-javascriptize it to my tastes. 
+I must say a great thank you to them, because they explain very well what is under the hood of a scripting language. Many things stay an enigma when reading lua implementation, which is much more complex.
+Wren's syntax is mostly inspired from Ruby. As a consequence, Swan has also taken a little of it, although I tried to pythonize and javascriptize it to my tastes. 
 
 With the hope that you will ahve as much fun using it as I have making it !
