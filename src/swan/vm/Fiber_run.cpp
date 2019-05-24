@@ -208,12 +208,13 @@ BREAK
 CASE(OP_LOAD_CLOSURE) {
 QV& val = frame.closure->func.constants[frame.read<uint_constant_index_t>()];
 QFunction& func = *val.asObject<QFunction>();
-QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+QClosure* curClosure = frame.closure;
 for (int i=0, n=func.upvalues.size(); i<n; i++) {
 auto& upvalue = func.upvalues[i];
-closure->upvalues[i] = upvalue.upperUpvalue? closure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
+newClosure->upvalues[i] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
 }
-push(QV(closure, QV_TAG_CLOSURE));
+push(QV(newClosure, QV_TAG_CLOSURE));
 }
 BREAK
 
