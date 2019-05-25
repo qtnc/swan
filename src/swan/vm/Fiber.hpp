@@ -49,6 +49,7 @@ virtual inline std::string getString (int i) final override { return at(i).asStr
 virtual inline const char* getCString (int i) final override { return at(i).asCString(); }
 virtual inline const Swan::Range& getRange (int i) final override { return at(i).asRange(); }
 virtual const void* getBufferV (int i, int* length = nullptr) final override;
+virtual inline Swan::Fiber& getFiber (int i) final override { return getObject<QFiber>(i); }
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
 virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHandle(); }
 
@@ -74,6 +75,7 @@ virtual inline void setCString  (int i, const char* s) final override;
 virtual inline void setBuffer  (int i, const void* data, int length) final override;
 virtual void setRange  (int i, const Swan::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV(); }
+virtual inline void setFiber (int i, Swan::Fiber& f) final override { at(i) = QV(static_cast<QFiber*>(&f)); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
 virtual void setHandle (int i, const Swan::Handle& h) final override { at(i) = QV(h.value); }
 inline void setObject (int i, QObject* obj) { at(i)=QV(obj); }
@@ -87,6 +89,7 @@ virtual inline void pushBuffer  (const void* data, int length) final override;
 virtual void pushRange (const Swan::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV()); }
 virtual inline void pushNativeFunction (Swan::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
+virtual inline void pushFiber (Swan::Fiber& f) final override { push(QV(static_cast<QFiber*>(&f))); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;
 virtual inline void pushHandle (const Swan::Handle& h) final override { push(QV(h.value)); }
@@ -143,6 +146,7 @@ FiberState run ();
 template<class... A> void runtimeError (const char* msg, const A&... args);
 
 virtual ~QFiber () = default;
+virtual void release () final override;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this); }
 };

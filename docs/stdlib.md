@@ -271,8 +271,8 @@ Object is the base class for all objects.
 
 Methods: 
 
+- class: return the type of the object as Class object
 - toString: return a string representation of this object. If there is no more specific overload, the default toString of all objects return the type and the memory location where the object is, e.g. "Object@0xFFFD000012345678"
-- type: return the type of the object as Class object
 
 ## Range: is Iterable
 A range, as its name says, denotes a range of numbers.

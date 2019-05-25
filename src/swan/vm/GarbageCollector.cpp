@@ -289,8 +289,8 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 #ifndef NO_BUFFER
 , bufferClass, bufferIteratorClass
 #endif
-, activeFiber, rootFiber
 };
+roots.insert(roots.end(), fibers.begin(), fibers.end());
 for (QObject* obj: roots) obj->gcVisit();
 for (QV& gv: globalVariables) gv.gcVisit();
 for (QV& kh: keptHandles) kh.gcVisit();

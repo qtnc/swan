@@ -52,7 +52,6 @@ return false;
 
 QVM::QVM ():
 activeFiber(nullptr),
-rootFiber(nullptr),
 firstGCObject(nullptr),
 gcMemUsage(0),
 gcTreshhold(65536),
@@ -206,8 +205,7 @@ initGridType();
 initGlobals();
 initMathFunctions();
 
-activeFiber = rootFiber = construct<QFiber>(*this);
-auto& f = *rootFiber;
+auto& f = createFiber();
 f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
 f.call(0);
 f.pop();

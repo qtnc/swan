@@ -2,6 +2,13 @@
 #include "Value.hpp"
 #include "Range.hpp"
 
+QFiber& QVM::createFiber () {
+Swan::ScopeLocker locker(*this);
+auto f = construct<QFiber>(*this);
+fibers.push_back(f);
+return *f;
+}
+
 QFiber::QFiber (QVM& vm): 
 QSequence(vm.fiberClass), 
 vm(vm), 
@@ -14,6 +21,11 @@ stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new);
  {
 stack.reserve(8);
 callFrames.reserve(4);
+}
+
+void QFiber::release () {
+Swan::ScopeLocker locker(vm);
+vm.fibers.erase(find(vm.fibers.begin(), vm.fibers.end(), this));
 }
 
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }

@@ -129,7 +129,7 @@ f.returnValue(!re);
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
-BIND_L(type, { f.returnValue(&f.at(0).getClass(f.vm)); })
+BIND_L(class, { f.returnValue(&f.at(0).getClass(f.vm)); })
 BIND_F(toString, objectToString)
 BIND_F(is, objectEquals)
 BIND_F(==, objectEquals)

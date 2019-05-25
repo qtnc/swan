@@ -180,6 +180,9 @@ Fiber& operator= (const Fiber&) = delete;
 /** Fiber is not copiable */
 Fiber& operator= (Fiber&&) = delete;
 
+/** Release this fiber back to the garbage collector for a later destruction. It shouldn't be used anymore after that method is called.  */
+virtual void release () = 0;
+
 /** Return the number of arguments currentely on the stack frame */
 virtual int getArgCount () = 0;
 
@@ -258,6 +261,12 @@ The size isn't stored if length==nullptr. The behavior is undefined in case the 
 @param length a variable where to store the length of the buffer 
 */
 virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
+
+/** Return a fiber stored at the given stack index. 
+The behavior is undefined in case the requested element isn't of the required type.
+@param stackIndex the stack index from which to get the value 
+*/
+virtual Fiber& getFiber (int stackIndex) = 0;
 
 /** Return a pointer to the object at the given stack index, if it is of any registered user-defined type (non built-in Swan type). 
 The behavior is undefined in case the requested element isn't of the required type.
@@ -418,6 +427,12 @@ virtual void setBuffer (int stackIndex, const void* data, int length) = 0;
 */
 virtual void setRange (int stackIndex, const Range& value) = 0;
 
+/** Replace the element at the given stack index by a fiber 
+@param stackIndex the stack index which will be overwritten
+@param value the value to put into that stack index
+*/
+virtual void setFiber (int stackIndex, Fiber& value) = 0;
+
 /** Replace the element at the given stack index by a null value 
 @param stackIndex the stack index which will be overwritten
 */
@@ -467,6 +482,11 @@ virtual void pushBuffer (const void* data, int length) = 0;
 @param value the value to push onto the stack
 */
 virtual void pushRange (const Range& value) = 0;
+
+/** Push a fiber at the back of the stack 
+@param value the value to push onto the stack
+*/
+virtual void pushFiber (Fiber& value) = 0;
 
 /** Push a null value at the back of the stack */
 virtual void pushNull () = 0;
@@ -890,9 +910,9 @@ GC_TRESHHOLD = 3 /// Treshhold memory usage at which to trigger the GC. Minimum:
 };
 
 protected: 
-/** VCreation and destruction of VM objects may not be controleld by the user */
+/** Creation and destruction of VM objects may not be controleld by the user */
 VM () = default;
-/** VCreation and destruction of VM objects may not be controleld by the user */
+/** Creation and destruction of VM objects may not be controleld by the user */
 virtual ~VM () = default;
 
 public: 
@@ -907,6 +927,9 @@ VM& operator= (VM&&) = delete;
 
 /** Return the currently running Fiber on this VM */
 virtual Fiber& getActiveFiber () = 0;
+
+/** Create a new fiber of execution in this VM */
+virtual Fiber& createFiber () = 0;
 
 /** Lock the VM to prevent other threads from using it */
 virtual void lock () = 0;

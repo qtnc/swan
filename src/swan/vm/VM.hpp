@@ -24,7 +24,8 @@ std::unordered_map<std::string, GlobalVariable> globalSymbols;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
 std::vector<QV> keptHandles;
-QFiber *activeFiber, *rootFiber;
+std::vector<QFiber*> fibers;
+QFiber *activeFiber;
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
@@ -58,6 +59,7 @@ bool compileDbgInfo = true;
 QVM ();
 virtual ~QVM ();
 void init ();
+virtual QFiber& createFiber () final override;
 virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 
 int findMethodSymbol (const std::string& name);
