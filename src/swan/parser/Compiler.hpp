@@ -29,8 +29,9 @@ Loop (int sc, int st): scope(sc), startPos(st), condPos(-1), endPos(-1) {}
 struct QCompiler {
 QVM& vm;
 QParser& parser;
-struct ClassDeclaration* curClass;
-QCompiler* parent;
+struct ClassDeclaration* curClass = nullptr;
+struct FunctionDeclaration* curMethod = nullptr;
+QCompiler* parent = nullptr;
 std::ostringstream out;
 std::vector<LocalVariable> localVariables;
 std::vector<QFunction::Upvalue> upvalues;
@@ -87,6 +88,7 @@ int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
+struct FunctionDeclaration* getCurMethod ();
 inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> void compileError (const QToken& token, const char* fmt, const A&... args);

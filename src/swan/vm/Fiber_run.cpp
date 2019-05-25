@@ -141,7 +141,7 @@ top() = top().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()];
 BREAK
 
 CASE(OP_LOAD_STATIC_FIELD)
-top() = top().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] ;
+top() = top().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] ;
 BREAK
 
 CASE(OP_LOAD_METHOD)
@@ -185,7 +185,7 @@ pop();
 BREAK
 
 CASE(OP_STORE_STATIC_FIELD)
-top().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = at(-2);
+top().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] = at(-2);
 pop();
 BREAK
 

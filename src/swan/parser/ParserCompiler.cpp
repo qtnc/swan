@@ -2421,7 +2421,11 @@ void FieldExpression::compile (QCompiler& compiler) {
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
-compiler.compileError(token, ("Can't use field oustide of a class"));
+compiler.compileError(token, ("Can't use field outside of a class"));
+return;
+}
+if (compiler.getCurMethod()->flags&FD_STATIC) {
+compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
 int fieldSlot = cls->findField(string(token.start, token.length));
@@ -2437,7 +2441,11 @@ void FieldExpression::compileAssignment (QCompiler& compiler, shared_ptr<Express
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (!cls) {
-compiler.compileError(token, ("Can't use field oustide of a class"));
+compiler.compileError(token, ("Can't use field outside of a class"));
+return;
+}
+if (compiler.getCurMethod()->flags&FD_STATIC) {
+compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
 int fieldSlot = cls->findField(string(token.start, token.length));
@@ -2457,12 +2465,18 @@ if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
+bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
 int fieldSlot = cls->findStaticField(string(token.start, token.length));
-if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_STATIC_FIELD, fieldSlot);
+if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_STATIC_FIELD, fieldSlot);
+else if (atLevel<=2) {
+compiler.writeOp(OP_LOAD_THIS);
+compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
+}
 else {
 QToken thisToken = { T_NAME, THIS, 4, QV() };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("type"));
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
 }}
 
@@ -2473,13 +2487,19 @@ if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
+bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
 int fieldSlot = cls->findStaticField(string(token.start, token.length));
 assignedValue->compile(compiler);
-if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
+if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
+else if (atLevel<=2) {
+compiler.writeOp(OP_LOAD_THIS);
+compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
+}
 else {
 QToken thisToken = { T_NAME, THIS, 4, QV() };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
+if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("type"));
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
 }}
 
@@ -2858,10 +2878,14 @@ int fieldInfoPos = compiler.writeOpArg<FieldInfo>(OP_NEW_CLASS, fieldInfo);
 for (auto method: methods) {
 int methodSymbol = compiler.vm.findMethodSymbol(string(method->name.start, method->name.length));
 compiler.parser.curMethodNameToken = method->name;
+//println("Compiling %s: flags=%#0$2X", string(name.start, name.length) + "::" + string(method->name.start, method->name.length), method->flags);
+compiler.curMethod = method.get();
 auto func = method->compileFunction(compiler);
+compiler.curMethod = nullptr;
 func->name = string(name.start, name.length) + "::" + string(method->name.start, method->name.length);
 compiler.writeDebugLine(method->name);
-compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
+if (method->flags&FD_STATIC) compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_STATIC_METHOD, methodSymbol);
+else compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
 compiler.writeOp(OP_POP);
 }
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
@@ -2946,6 +2970,12 @@ ClassDeclaration* QCompiler::getCurClass (int* atLevel) {
 if (atLevel) ++(*atLevel);
 if (curClass) return curClass;
 else if (parent) return parent->getCurClass(atLevel);
+else return nullptr;
+}
+
+FunctionDeclaration* QCompiler::getCurMethod () {
+if (curMethod) return curMethod;
+else if (parent) return parent->getCurMethod();
 else return nullptr;
 }
 
