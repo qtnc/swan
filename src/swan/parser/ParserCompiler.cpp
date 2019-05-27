@@ -1624,7 +1624,6 @@ return make_shared<BreakStatement>(bks, count);
 shared_ptr<Statement> QParser::parseReturn () {
 QToken returnToken = cur;
 shared_ptr<Expression> expr = nullptr;
-skipNewlines();
 if (matchOneOf(T_RIGHT_BRACE, T_LINE, T_SEMICOLON)) prevToken();
 else expr = parseExpression();
 return make_shared<ReturnStatement>(returnToken, expr);
@@ -2307,13 +2306,18 @@ compiler.pushScope();
 int valueSlot = compiler.findLocalVariable(loopVariable->token, LV_NEW);
 int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
+compiler.writeDebugLine(inExpression->nearestToken());
 writeOpLoadLocal(compiler, iteratorSlot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, hasNextSymbol);
 compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
+compiler.writeDebugLine(inExpression->nearestToken());
 writeOpLoadLocal(compiler, iteratorSlot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, nextSymbol);
+compiler.writeOp(OP_DUP);
+compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
 if (destructuring) {
 loopVariables[0]->value = loopVariable;
+compiler.writeDebugLine(inExpression->nearestToken());
 make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->compile(compiler);
 }
 compiler.writeDebugLine(loopStatement->nearestToken());
