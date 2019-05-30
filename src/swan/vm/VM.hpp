@@ -31,7 +31,8 @@ FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
 ImportHookFn importHook;
 GIL gil;
-size_t gcMemUsage, gcTreshhold, gcTreshholdFactor, gcLock;
+size_t gcMemUsage, gcTreshhold;
+uint16_t gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
 
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *systemClass;
@@ -120,14 +121,17 @@ inline void* allocate (size_t n) {
 gcMemUsage += n;
 return malloc(n);
 }
+
 inline void deallocate (void* p, size_t n) {
 gcMemUsage -= n;
 free(p);
 }
+
 template<class T, class... A> inline T* construct (A&&... args) {
 gcMemUsage += sizeof(T);
 return new(allocate(sizeof(T)))  T( std::forward<A>(args)... );
 }
+
 template<class T, class U, class... A> inline T* constructVLS (int nU, A&&... args) {
 char* ptr = reinterpret_cast<char*>(allocate(sizeof(T) + nU*sizeof(U)));
 U* uPtr = reinterpret_cast<U*>(ptr + sizeof(T));

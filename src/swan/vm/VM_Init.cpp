@@ -54,7 +54,7 @@ QVM::QVM ():
 activeFiber(nullptr),
 firstGCObject(nullptr),
 gcMemUsage(0),
-gcTreshhold(65536),
+gcTreshhold(1<<16),
 gcTreshholdFactor(200),
 gcLock(false),
 pathResolver(defaultPathResolver),

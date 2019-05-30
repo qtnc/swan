@@ -14,26 +14,8 @@
 #include<algorithm>
 using namespace std;
 
-static inline bool marked (QObject& obj) {
-return reinterpret_cast<uintptr_t>(obj.next) &1;
-}
-
-static inline bool mark (QObject& obj) {
-if (marked(obj)) return true;
-obj.next = reinterpret_cast<QObject*>( reinterpret_cast<uintptr_t>(obj.next) | 1);
-return false;
-}
-
-static inline void unmark (QObject& obj) {
-obj.next = reinterpret_cast<QObject*>( reinterpret_cast<uintptr_t>(obj.next) &~1);
-}
-
-static inline QObject* to_ptr (QObject* p) {
-return reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(p) &~3);
-}
-
 bool QObject::gcVisit () {
-if (mark(*this)) return true;
+if (gcMark()) return true;
 type->gcVisit();
 return false;
 }
@@ -263,12 +245,42 @@ T(QString, QV_TAG_STRING)
 return obj;
 }
 
+static inline void unmarkAll (QObject* initial) {
+for (auto it=initial; it; it = it->gcNext()) it->gcUnmark();
+}
+
+static inline void doSweep (QVM& vm, QObject*& initial) {
+QObject* prev = nullptr;
+size_t used=0, collected=0, total = 0;
+for (QObject* ptr = initial; ptr; ) {
+//QV val = makeqv(&*ptr);
+//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*ptr)?"used":"collectable");
+total++;
+if (ptr->gcMarked()) {
+if (!prev) initial=ptr;
+prev=ptr;
+ptr = ptr->gcNext();
+used++;
+}
+else {
+auto next = ptr->gcNext();
+if (prev) prev->gcNext(next);
+size_t size = ptr->getMemSize();
+ptr->~QObject();
+vm.deallocate(ptr, size);
+ptr = next;
+collected++;
+}
+}
+if (prev) prev->gcNext(nullptr);
+//println(std::cerr, "%d/%d used (%d%%), %d/%d collected (%d%%)", used, total, 100*used/total, collected, total, 100*collected/total);
+}
+
 void QVM::garbageCollect () {
 LOCK_SCOPE(gil)
-//println("Starting GC! mem used = %d, treshhold = %d", gcMemUsage, gcTreshhold);
+//println(std::cerr, "Starting GC! mem used = %d, treshhold = %d", gcMemUsage, gcTreshhold);
 
-auto initial = to_ptr(firstGCObject);
-for (auto it=initial; it; it = to_ptr(it->next)) unmark(*it);
+unmarkAll(firstGCObject);
 
 vector<QObject*> roots = { 
 boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
@@ -296,30 +308,8 @@ for (QV& gv: globalVariables) gv.gcVisit();
 for (QV& kh: keptHandles) kh.gcVisit();
 for (auto& im: imports) im.second.gcVisit();
 
-QObject* prev = nullptr;
-size_t used=0, collectable=0, count = 0;
-for (QObject *it=initial, *ptr=to_ptr(it); ptr; ptr=to_ptr(it)) {
-//QV val = makeqv(&*ptr);
-//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*ptr)?"used":"collectable");
-count++;
-if (marked(*ptr)) {
-if (!prev) initial=ptr;
-prev=ptr;
-it = ptr->next;
-used++;
-}
-else {
-if (prev) prev->next = ptr->next;
-it = ptr->next;
-size_t size = ptr->getMemSize();
-ptr->~QObject();
-deallocate(ptr, size);
-collectable++;
-}
-}
-//println(std::cerr, "GC Stats: %d objects ammong which %d used (%d%%) and %d collectable (%d%%)", count, used, 100*used/count, collectable, 100*collectable/count);
-prev->next = nullptr;
-firstGCObject = initial;
+auto prevMemUsage = gcMemUsage;
+doSweep(*this, firstGCObject);
 gcTreshhold = std::max(gcTreshhold, gcMemUsage * gcTreshholdFactor / 100);
-//println("GC finished. mem usage = %d, new treshhold = %d", gcMemUsage, gcTreshhold);
+//println(std::cerr, "GC finished: %d => %d (%d%%)", prevMemUsage, gcMemUsage, 100 * gcMemUsage / prevMemUsage);
 }
