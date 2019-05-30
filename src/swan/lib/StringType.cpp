@@ -21,9 +21,16 @@ return end && end==s.end()? static_cast<double>(re) : QV();
 }}
 
 static int stringCompare (QFiber& f) {
-QString& s1 = f.getObject<QString>(0);
-QString& s2 = *f.ensureString(1);
+QString& s1 = f.getObject<QString>(0), &s2 = *f.ensureString(1);
 return strnatcmp(s1.data, s2.data);
+}
+
+static bool stringEquals (QFiber& f) {
+if (!f.isString(1)) return false;
+QString& s1 = f.getObject<QString>(0), &s2 = f.getObject<QString>(1);
+if (s1.length!=s2.length) return false;
+for (const char *c1=s1.data, *c2=s2.data; c1!=s1.data+s1.length; c1++, c2++) if (*c1!=*c2) return false;
+return true;
 }
 
 static void stringIterator (QFiber& f) {
@@ -305,9 +312,10 @@ BIND_F(length, stringLength)
 BIND_F( [], stringSubscript)
 BIND_F(iterator, stringIterator)
 BIND_L(compare, { f.returnValue(static_cast<double>(stringCompare(f))); })
-OP(==) OP(!=)
 OP(<) OP(>) OP(<=) OP(>=)
 #undef OP
+BIND_L(==, { f.returnValue(stringEquals(f)); })
+BIND_L(!=, { f.returnValue(!stringEquals(f)); })
 
 BIND_F(indexOf, stringFind)
 BIND_F(lastIndexOf, stringRfind)

@@ -141,9 +141,8 @@ It works!
 [>> Standard library provided by the CLI](docs/cli-stdlib.md)
 
 # Performances
-Swan seem to be about 15-17% faster than python 3.6 and 48% slower than lua 5.1.4.
-This isn't so bad. This places Swan #19 out of 50 in [scriptorium](https://github.com/r-lyeh-archived/scriptorium).
-Be careful though, benchmarks never represent the reality.
+Globally, Swan seems to be relatively slow at the moment, if we compare with other programming languages like python, ruby, lua, etc.
+I'll try to do better but it isn't easy to measure and compare performances.
 
 [>> More on performances](docs/performances.md)
 
