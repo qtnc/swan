@@ -14,6 +14,8 @@
 #include<algorithm>
 using namespace std;
 
+void gcDefragMem ();
+
 bool QObject::gcVisit () {
 if (gcMark()) return true;
 type->gcVisit();
@@ -28,10 +30,8 @@ return false;
 
 bool QClass::gcVisit () {
 if (QObject::gcVisit()) return true;
-if (parent) {
-parent->gcVisit();
-for (int i=0, n=parent->nFields; i<n; i++) staticFields[i].gcVisit();
-}
+if (parent) parent->gcVisit();
+for (int i=0, n=type->nFields; i<n; i++) staticFields[i].gcVisit();
 for (QV& val: methods) val.gcVisit();
 return false;
 }
@@ -311,5 +311,6 @@ for (auto& im: imports) im.second.gcVisit();
 auto prevMemUsage = gcMemUsage;
 doSweep(*this, firstGCObject);
 gcTreshhold = std::max(gcTreshhold, gcMemUsage * gcTreshholdFactor / 100);
+//gcTreshhold = gcTreshholdFactor * gcTreshhold / 100;
 //println(std::cerr, "GC finished: %d => %d (%d%%)", prevMemUsage, gcMemUsage, 100 * gcMemUsage / prevMemUsage);
 }

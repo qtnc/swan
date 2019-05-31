@@ -117,15 +117,8 @@ virtual inline void setImportHook (const ImportHookFn& fn) final override { impo
 virtual void setOption (Option opt, int value) final override;
 virtual int getOption (Option opt) final override;
 
-inline void* allocate (size_t n) {
-gcMemUsage += n;
-return malloc(n);
-}
-
-inline void deallocate (void* p, size_t n) {
-gcMemUsage -= n;
-free(p);
-}
+void* allocate (size_t n);
+void deallocate (void* p, size_t n) ;
 
 template<class T, class... A> inline T* construct (A&&... args) {
 gcMemUsage += sizeof(T);
@@ -136,7 +129,8 @@ template<class T, class U, class... A> inline T* constructVLS (int nU, A&&... ar
 char* ptr = reinterpret_cast<char*>(allocate(sizeof(T) + nU*sizeof(U)));
 U* uPtr = reinterpret_cast<U*>(ptr + sizeof(T));
 new(ptr) T( std::forward<A>(args)... );
-new(uPtr) U[nU];
+//new(uPtr) U[nU];
+std::fill(uPtr, uPtr+nU, U());
 return reinterpret_cast<T*>(ptr);
 }
 

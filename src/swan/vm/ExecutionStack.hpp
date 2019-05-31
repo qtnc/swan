@@ -29,7 +29,12 @@ reserve(newSize);
 top = base + newSize;
 }
 inline void push_back (const T& x) {
-if (top==finish)  reserve(2 * (finish-base));
+if (top==finish)  {
+T y = x;
+reserve(2 * (finish-base));
+*top++ = y;
+return;
+}
 *top++ = x;
 }
 inline T& pop_back () {
