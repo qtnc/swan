@@ -26,7 +26,9 @@ openUpvalues.erase(newEnd, openUpvalues.end());
 void QFiber::adjustUpvaluePointers (const QV* oldPtr, const QV* newPtr) {
 if (!oldPtr) return;
 for (auto& upvalue: openUpvalues) {
-upvalue->value.i += (static_cast<int64_t>(reinterpret_cast<uintptr_t>(newPtr)) - static_cast<int64_t>(reinterpret_cast<uintptr_t>(oldPtr)));
+//print(std::cout, "Move upvalue %s: %#0$16llX ", upvalue->get().print(), upvalue->value.i);
+upvalue->value.i = (upvalue->value.i - reinterpret_cast<uintptr_t>(oldPtr)) + reinterpret_cast<uintptr_t>(newPtr);
+//println(" => %#0$16llX", upvalue->value.i);
 }}
 
 

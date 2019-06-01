@@ -7,6 +7,7 @@ using namespace std;
 
 #include "../lib/builtin-code.h"
 
+void purgeMem ();
 void initPlatformEncodings ();
 
 static void defaultMessageReceiver (const Swan::CompilationMessage& m) {
@@ -54,7 +55,7 @@ QVM::QVM ():
 activeFiber(nullptr),
 firstGCObject(nullptr),
 gcMemUsage(0),
-gcTreshhold(1<<16),
+gcTreshhold(1<<18),
 gcTreshholdFactor(200),
 gcLock(false),
 pathResolver(defaultPathResolver),
@@ -155,14 +156,14 @@ imports.clear();
 stringCache.clear();
 foreignClassIds.clear();
 keptHandles.clear();
-QObject* obj = firstGCObject;
-while(obj){
-QObject* next = reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(obj->next) &~3);
-delete obj;
-obj=next;
+for (QObject* ptr=firstGCObject; ptr; ) {
+size_t size = ptr->getMemSize();
+auto next = ptr->gcNext();
+ptr->~QObject();
+deallocate(ptr, size);
+ptr=next;
 }
-delete classClass;
-delete objectClass;
+purgeMem();
 }
 
 void QVM::init () {

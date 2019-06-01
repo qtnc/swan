@@ -141,8 +141,7 @@ It works!
 [>> Standard library provided by the CLI](docs/cli-stdlib.md)
 
 # Performances
-Globally, Swan seems to be relatively slow at the moment, if we compare with other programming languages like python, ruby, lua, etc.
-I'll try to do better but it isn't easy to measure and compare performances.
+Globally, Swan appears to be a little faster than CPython, but slower than Wren, and a lot slower than Lua.
 
 [>> More on performances](docs/performances.md)
 
