@@ -16,7 +16,7 @@ finish = base+initialCapacity;
 inline ~execution_stack () { allocator.deallocate(base, (finish-base) * sizeof(T)); }
 void reserve (size_t newCapacity) {
 if (newCapacity<=finish-base) return;
-T* newBase = allocator.allocate(newCapacity);
+T* newBase = allocator.allocate(newCapacity * sizeof(T));
 memcpy(newBase, base, (top-base) * sizeof(T));
 callback(base, newBase);
 allocator.deallocate(base, (finish-base) * sizeof(T));
@@ -32,10 +32,12 @@ inline void push_back (const T& x) {
 if (top==finish)  {
 T y = x;
 reserve(2 * (finish-base));
-*top++ = y;
+*top = y;
+++top;
 return;
 }
-*top++ = x;
+*top = x;
+++top;
 }
 inline T& pop_back () {
 return *top--;
