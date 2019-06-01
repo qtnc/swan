@@ -1,0 +1,70 @@
+class Toggle {
+  constructor (startState) {
+    _state = startState
+_ac = 0
+  }
+
+  value { _state }
+  activate {
+    _state = !_state
+    return this
+  }
+
+}
+
+class NthToggle is Toggle {
+  constructor (startState, maxCounter) {
+    super(startState)
+    _countMax = maxCounter
+    _count = 0
+  }
+
+  activate {
+    _count += 1
+    if (_count >= _countMax) {
+      super.activate
+      _count = 0
+    }
+    return this
+  }
+}
+
+var start = System.clock
+var n = 250000
+var val = true
+var toggle = Toggle(val)
+
+for i in 0..n {
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+  val = toggle.activate.value
+}
+
+print(toggle.value)
+
+val = true
+var ntoggle = NthToggle(val, 3)
+
+for i in 0..n {
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+  val = ntoggle.activate.value
+}
+
+print(ntoggle.value)
+
+print("elapsed: " + (System.clock - start))

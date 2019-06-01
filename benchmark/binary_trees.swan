@@ -1,0 +1,47 @@
+// Ported from the Python version.
+
+class Tree {
+  constructor (_item, depth) {
+    if (depth > 0) {
+      var item2 = _item + _item
+      depth -= 1
+      _left = Tree(item2 - 1, depth)
+      _right = Tree(item2, depth)
+    }
+  }
+
+  check {
+    if (_left is null) {
+      return _item
+    }
+    return _item + _left.check - _right.check
+  }
+}
+
+var minDepth = 4
+var maxDepth = 12
+var stretchDepth = maxDepth + 1
+
+var start = System.clock
+
+print("stretch tree of depth " + stretchDepth + " check: " +
+    "" + Tree(0, stretchDepth).check)
+
+var longLivedTree = Tree(0, maxDepth)
+
+var  iterations = 2 ** maxDepth
+
+var depth = minDepth
+while (depth < stretchDepth) {
+  var check = 0
+  for i in 1...iterations {
+    check = check + Tree(i, depth).check + Tree(-i, depth).check
+  }
+
+ print("" + (iterations * 2) + " trees of depth " + depth + " check: " + check)
+  iterations /= 4
+  depth += 2
+}
+
+print(    "long lived tree of depth " + maxDepth + " check: " + longLivedTree.check)
+print("elapsed: " + (System.clock - start))
