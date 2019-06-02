@@ -1,9 +1,9 @@
 # Performances
-I tried to compare Swan with a few other programming languages. Globally I'm a bit faster than python 3.6, but slow than wren, and much slower than lua.
+I tried to compare Swan with a few other programming languages. Globally I'm a bit faster than python 3.6, but slower than wren, and much slower than lua.
 
 I took the scripts that have been used to measure wren's performance with a few minor changes. These scripts are in the benchmark directory.
 
-&nbsp; | Swan | Wren | Python 3.6 |  LuaJIT -joff | LuaJIT
+Script/Language | Swan | Wren | Python 3.6 |  LuaJIT -joff | LuaJIT
 -----|-----|-----|-----|-----|-----
 method_call | 0.978 | 0.503 | 3.622 | 0.833 | 0.030
 binary_trees | 0.768 | 0.543 | 0.770 | 0.224 | 0.216
