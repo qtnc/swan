@@ -41,18 +41,15 @@ auto it = f.vm.construct<QMapIterator>(f.vm, map);
 f.returnValue(it);
 }
 
-static void mapIteratorHasNext (QFiber& f) {
-QMapIterator& li = f.getObject<QMapIterator>(0);
-f.returnValue(li.iterator != li.map.map.end() );
-}
-
 static void mapIteratorNext (QFiber& f) {
 QMapIterator& mi = f.getObject<QMapIterator>(0);
+if (mi.iterator==mi.map.map.end()) f.returnValue(QV::UNDEFINED);
+else {
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 ++mi.iterator;
 f.returnValue(tuple);
-}
+}}
 
 static void mapToString (QFiber& f) {
 bool first = true;
@@ -74,7 +71,7 @@ static void mapRemove (QFiber& f) {
 QMap& map = f.getObject<QMap>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 auto it = map.map.find(f.at(i));
-if (it==map.map.end()) f.returnValue(QV());
+if (it==map.map.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(it->second);
 map.map.erase(it);
@@ -101,7 +98,6 @@ BIND_F(remove, mapRemove)
 mapIteratorClass
 ->copyParentMethods()
 BIND_F(next, mapIteratorNext)
-BIND_F(hasNext, mapIteratorHasNext)
 ;
 
 mapClass ->type

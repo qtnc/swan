@@ -23,7 +23,7 @@ f.returnValue(fb.state == FiberState::INITIAL || fb.state == FiberState::YIELDED
 static void objectInstantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
-if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNull()) {
+if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined()) {
 f.runtimeError(("This class isn't instantiable"));
 return;
 }
@@ -134,7 +134,7 @@ BIND_F(toString, objectToString)
 BIND_F(is, objectEquals)
 BIND_F(==, objectEquals)
 BIND_F(!=, objectNotEquals)
-->bind(findMethodSymbol("compare"), QV())
+->bind(findMethodSymbol("compare"), QV::UNDEFINED)
 BIND_F(<, objectLess)
 BIND_F(>, objectGreater)
 BIND_F(<=, objectLessEquals)
@@ -168,9 +168,13 @@ BIND_F(hashCode, objectHashCode)
 
 nullClass
 ->copyParentMethods()
-BIND_L(!, { f.returnValue(QV(true)); })
-BIND_L(?, { f.returnValue(QV(false)); })
-BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4)); })
+BIND_L(!, { f.returnValue(QV::TRUE); })
+BIND_L(?, { f.returnValue(QV::FALSE); })
+BIND_L(toString, {
+if (f.isNull(0)) f.returnValue(QV(f.vm, "null", 4)); 
+else f.returnValue(QV(f.vm, "undefined", 9)); 
+})
+BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;
 

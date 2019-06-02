@@ -13,7 +13,7 @@ using namespace std;
 static void instantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
-if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNull()) {
+if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined()) {
 f.runtimeError(("This class isn't instantiable"));
 return;
 }
@@ -25,7 +25,7 @@ f.returnValue(instance);
 
 void QVM::bindGlobal (const string& name, const QV& value, bool isConst) {
 int symbol = findGlobalSymbol(name, 1 | (isConst?2:0));
-insert_n(globalVariables, 1+symbol-globalVariables.size(), QV());
+insert_n(globalVariables, 1+symbol-globalVariables.size(), QV::UNDEFINED);
 globalVariables.at(symbol) = value;
 }
 
@@ -80,7 +80,7 @@ if (f.at(-1).isInstanceOf(f.vm.mapClass)) {
 QMap& map = f.getObject<QMap>(-1);
 return map.get(QV(f.vm, key));
 }
-return QV();
+return QV::UNDEFINED;
 }
 
 double QFiber::getOptionalNum (int stackIndex, const std::string& key, double defaultValue) {
@@ -109,7 +109,7 @@ else return getOptionalUserPointer(stackIndex, classId, defaultValue);
 
 Swan::Handle QFiber::getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) {
 QV value = getItemFromLastArgMap(*this, key);
-if (!value.isNull()) return value.asHandle();
+if (!value.isNullOrUndefined()) return value.asHandle();
 else return getOptionalHandle(stackIndex, defaultValue);
 }
 

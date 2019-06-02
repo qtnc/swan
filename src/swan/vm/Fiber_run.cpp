@@ -41,10 +41,10 @@ QClass& c = *obj.asObject<QClass>();
 if (symbol<c.methods.size() && !c.methods[symbol].isNull()) return c.methods[symbol];
 else if (symbol<cls.methods.size() && !cls.methods[symbol].isNull()) return cls.methods[symbol];
 }
-else if (symbol<cls.methods.size() && !cls.methods[symbol].isNull()) {
+else if (symbol<cls.methods.size() && !cls.methods[symbol].isNullOrUndefined()) {
 return QV(vm.construct<BoundFunction>(vm, obj, cls.methods[symbol]), QV_TAG_BOUND_FUNCTION);
 }
-return QV();
+return QV::UNDEFINED;
 }
 
 
@@ -81,8 +81,12 @@ switch(op){
 #endif
 
 SWITCH 
+CASE(OP_LOAD_UNDEFINED)
+push(QV::UNDEFINED);
+BREAK
+
 CASE(OP_LOAD_NULL)
-push(QV());
+push(QV::Null);
 BREAK
 
 CASE(OP_LOAD_TRUE)
@@ -232,7 +236,7 @@ BREAK
 
 CASE(OP_NULL_COALESCING)
 arg1 = frame.read<uint_jump_offset_t>();
-if (!top().isNull()) frame.bcp += arg1;
+if (!top().isNullOrUndefined()) frame.bcp += arg1;
 else pop();
 BREAK
 
@@ -255,6 +259,12 @@ arg1 = frame.read<uint_jump_offset_t>();
 if (!top().isFalsy()) frame.bcp += arg1;
 pop();
 BREAK
+
+CASE(OP_JUMP_IF_UNDEFINED)
+arg1 = frame.read<uint_jump_offset_t>();
+if (top().isUndefined()) frame.bcp += arg1;
+pop();
+break;
 
 CASE(OP_NEW_CLASS) {
 int nParents = frame.read<uint_field_index_t>();

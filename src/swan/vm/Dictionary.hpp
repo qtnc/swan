@@ -12,7 +12,7 @@ typedef std::multimap<QV, QV, QVBinaryPredicate, trace_allocator<std::pair<const
 typedef map_type::iterator iterator;
 map_type map;
 QV sorter;
-QDictionary (struct QVM& vm, QV& sorter0);
+QDictionary (struct QVM& vm, QV& sorter);
 iterator get (const QV& key);
 iterator getr (const QV& key);
 void set (const QV& key, const QV& value);

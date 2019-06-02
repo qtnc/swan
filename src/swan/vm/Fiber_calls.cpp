@@ -52,7 +52,7 @@ return true;
 }
 else {
 stack.resize(newStackBase);
-push(QV());
+pushUndefined();
 return false;
 }}
 
@@ -97,9 +97,9 @@ uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
 stack.erase(stack.end() -nArgs -1);
 callSymbol(symbol, nArgs);
 }
-else if (method.isNull()) {
+else if (method.isNullOrUndefined()) {
 stack.resize(newStackBase -1);
-push(QV());
+pushUndefined();
 runtimeError("%s isn't callable", method.getClass(vm).name);
 }
 else {
@@ -120,7 +120,7 @@ nArgs = nClosureArgs;
 }
 else {
 while (nArgs<nClosureArgs) {
-push(QV());
+pushUndefined();
 nArgs++;
 }
 if (vararg) {
@@ -154,18 +154,18 @@ if (nArgs>=1) {
 f.push(top());
 stack.erase(stack.end() -nArgs, stack.end());
 }
-else f.push(QV());
+else f.pushUndefined();
 f.parentFiber = this;
 vm.activeFiber = &f;
 f.run();
 vm.activeFiber = this;
 break;
 case FiberState::RUNNING:
-case FiberState::FINISHED:
 case FiberState::FAILED:
 default:
 runtimeError(("Couldn't call a running or finished fiber"));
-push(QV());
+case FiberState::FINISHED:
+pushUndefined();
 return;
 }
 push(f.top());
@@ -174,8 +174,7 @@ f.pop();
 
 Upvalue* QFiber::captureUpvalue (int slot) {
 QV val = QV(QV_TAG_OPEN_UPVALUE | reinterpret_cast<uintptr_t>(&stack.at(callFrames.back().stackBase + slot)));
-QFiber* _this=this;
-auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==_this && x->value.i==val.i; });
+auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==this && x->value.i==val.i; });
 if (it!=openUpvalues.end()) return *it;
 auto upvalue = vm.construct<Upvalue>(*this, slot);
 openUpvalues.push_back(upvalue);

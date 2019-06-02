@@ -23,14 +23,10 @@ QGrid& grid = f.getObject<QGrid>(0);
 f.returnValue(f.vm.construct<QGridIterator>(f.vm, grid));
 }
 
-static void gridIteratorHasNext (QFiber& f) {
-QGridIterator& gi = f.getObject<QGridIterator>(0);
-f.returnValue( gi.iterator < gi.grid.data+gi.grid.width*gi.grid.height);
-}
-
 static void gridIteratorNext (QFiber& f) {
 QGridIterator& gi = f.getObject<QGridIterator>(0);
-f.returnValue(*gi.iterator++);
+if (gi.iterator < gi.grid.data+gi.grid.width*gi.grid.height) f.returnValue(*gi.iterator++);
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void gridSubscript (QFiber& f) {
@@ -39,7 +35,7 @@ if (f.isNum(1) && f.isNum(2)) {
 int x = f.getNum(1), y = f.getNum(2);
 if (x<0) x+=grid.width;
 if (y<0) y+=grid.height;
-f.returnValue(x>=0 && y>=0 && x<grid.width && y<grid.height? grid.at(x,y) : QV());
+f.returnValue(x>=0 && y>=0 && x<grid.width && y<grid.height? grid.at(x,y) : QV::UNDEFINED);
 }
 else if (f.isRange(1) || f.isRange(2)) {
 int startX, startY, endX, endY;
@@ -54,7 +50,7 @@ subgrid->at(i, j) = grid.at(x, y);
 }}
 f.returnValue(subgrid);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void gridSubscriptSetter (QFiber& f) {
@@ -129,7 +125,6 @@ BIND_F(==, gridEquals)
 gridIteratorClass
 ->copyParentMethods()
 BIND_F(next, gridIteratorNext)
-BIND_F(hasNext, gridIteratorHasNext)
 ;
 
 gridClass ->type

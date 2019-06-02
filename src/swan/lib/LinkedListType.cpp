@@ -20,25 +20,17 @@ if (index>0) std::advance(it->iterator, index);
 f.returnValue(it);
 }
 
-static void linkedListIteratorHasNext (QFiber& f) {
-QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
-f.returnValue(li.iterator != li.list.data.end() );
-}
-
-static void linkedListIteratorHasPrevious  (QFiber& f) {
-QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
-f.returnValue(li.iterator != li.list.data.begin() );
-}
-
 static void linkedListIteratorNext (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.list.data.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 li.forward=true;
 }
 
 static void linkedListIteratorPrevious (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
-f.returnValue(*--li.iterator);
+if (li.iterator==li.list.data.begin()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*--li.iterator);
 li.forward=false;
 }
 
@@ -65,7 +57,7 @@ if (n>0) list.data.insert(list.data.end(), &f.at(1), (&f.at(1))+n);
 
 static void linkedListPop (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
-if (list.data.empty()) f.returnValue(QV());
+if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.back());
 list.data.pop_back();
@@ -79,7 +71,7 @@ if (n>0) list.data.insert(list.data.begin(), &f.at(1), (&f.at(1))+n);
 
 static void linkedListShift (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
-if (list.data.empty()) f.returnValue(QV());
+if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.front());
 list.data.pop_front();
@@ -95,7 +87,7 @@ if (it!=list.data.end()) {
 f.returnValue(*it);
 list.data.erase(it);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }}
 
 static void linkedListRemoveIf (QFiber& f) {
@@ -138,9 +130,7 @@ BIND_F(iterator, linkedListIterator)
 linkedListIteratorClass
 ->copyParentMethods()
 BIND_F(next, linkedListIteratorNext)
-BIND_F(hasNext, linkedListIteratorHasNext)
 BIND_F(previous, linkedListIteratorPrevious)
-BIND_F(hasPrevious, linkedListIteratorHasPrevious)
 BIND_F(add, linkedListIteratorInsert)
 BIND_F(insert, linkedListIteratorInsert)
 BIND_F(remove, linkedListIteratorRemove)

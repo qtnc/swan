@@ -32,7 +32,7 @@ static void rangeSubscript (QFiber& f) {
 QRange& r = f.getObject<QRange>(0);
 double n = f.getNum(1);
 double re = r.start + n * r.step;
-f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV());
+f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV::UNDEFINED);
 }
 
 static void rangeIterator (QFiber& f) {
@@ -41,27 +41,31 @@ auto it = f.vm.construct<QRangeIterator>(f.vm, range);
 f.returnValue(it);
 }
 
-static void rangeIteratorHasNext (QFiber& f) {
-QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+static inline bool riHasNext (QRangeIterator& ri) {
 double x = (ri.range.end - ri.range.start) * (ri.range.end - ri.value);
-f.returnValue(x>0 || (x==0 && ri.range.inclusive));
+return x>0 || (x==0 && ri.range.inclusive);
 }
 
-static void rangeIteratorHasPrevious (QFiber& f) {
-QRangeIterator& ri = f.getObject<QRangeIterator>(0);
-f.returnValue(ri.value != ri.range.start);
+static inline bool riHasPrevious (QRangeIterator& ri) {
+return ri.value != ri.range.start;
 }
 
 static void rangeIteratorNext (QFiber& f) {
 QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+if (riHasNext(ri)) {
 f.returnValue(ri.value);
 ri.value+=ri.range.step;
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void rangeIteratorPrevious (QFiber& f) {
 QRangeIterator& ri = f.getObject<QRangeIterator>(0);
+if (riHasPrevious(ri)) {
 ri.value-=ri.range.step;
 f.returnValue(ri.value);
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 QV rangeMake (QVM& vm, double start, double end, bool inclusive) {
@@ -91,9 +95,7 @@ BIND_L(end, { f.returnValue(f.getObject<QRange>(0).end); })
 rangeIteratorClass
 ->copyParentMethods()
 BIND_F(next, rangeIteratorNext)
-BIND_F(hasNext, rangeIteratorHasNext)
 BIND_F(previous, rangeIteratorPrevious)
-BIND_F(hasPrevious, rangeIteratorHasPrevious)
 ;
 
 rangeClass ->type

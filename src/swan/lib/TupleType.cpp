@@ -25,24 +25,16 @@ if (index>0) std::advance(it->iterator, index);
 f.returnValue(it);
 }
 
-static void tupleIteratorHasNext (QFiber& f) {
-QTupleIterator& li = f.getObject<QTupleIterator>(0);
-f.returnValue(li.iterator != li.tuple.end() );
-}
-
-static void tupleIteratorHasPrevious  (QFiber& f) {
-QTupleIterator& li = f.getObject<QTupleIterator>(0);
-f.returnValue(li.iterator > li.tuple.begin() );
-}
-
 static void tupleIteratorNext (QFiber& f) {
 QTupleIterator& li = f.getObject<QTupleIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.tuple.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 }
 
 static void tupleIteratorPrevious (QFiber& f) {
 QTupleIterator& li = f.getObject<QTupleIterator>(0);
-f.returnValue(*--li.iterator);
+if (li.iterator==li.tuple.begin()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*--li.iterator);
 }
 
 static void tupleSubscript (QFiber& f) {
@@ -50,7 +42,7 @@ QTuple& tuple = f.getObject<QTuple>(0);
 if (f.isNum(1)) {
 int i = f.getNum(1);
 if (i<0) i+=tuple.length;
-f.returnValue(i>=0 && i<tuple.length? tuple.at(i) : QV());
+f.returnValue(i>=0 && i<tuple.length? tuple.at(i) : QV::UNDEFINED);
 }
 else if (f.isRange(1)) {
 int start, end;
@@ -58,7 +50,7 @@ f.getRange(1).makeBounds(tuple.length, start, end);
 QTuple* newTuple = QTuple::create(f.vm, end-start, tuple.data+start);
 f.returnValue(newTuple);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 
@@ -145,9 +137,7 @@ BIND_F(compare, tupleCompare)
 tupleIteratorClass
 ->copyParentMethods()
 BIND_F(next, tupleIteratorNext)
-BIND_F(hasNext, tupleIteratorHasNext)
 BIND_F(previous, tupleIteratorPrevious)
-BIND_F(hasPrevious, tupleIteratorHasPrevious)
 ;
 
 tupleClass ->type

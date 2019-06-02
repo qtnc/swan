@@ -19,25 +19,17 @@ if (index>0) std::advance(it->iterator, index);
 f.returnValue(it);
 }
 
-static void listIteratorHasNext (QFiber& f) {
-QListIterator& li = f.getObject<QListIterator>(0);
-f.returnValue(li.iterator != li.list.data.end() );
-}
-
-static void listIteratorHasPrevious  (QFiber& f) {
-QListIterator& li = f.getObject<QListIterator>(0);
-f.returnValue(li.iterator > li.list.data.begin() );
-}
-
 static void listIteratorNext (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.list.data.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 li.forward=true;
 }
 
 static void listIteratorPrevious (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
-f.returnValue(*--li.iterator);
+if (li.iterator==li.list.data.begin()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*--li.iterator);
 li.forward=false;
 }
 
@@ -61,7 +53,7 @@ int length = list.data.size();
 if (f.isNum(1)) {
 int i = f.getNum(1);
 if (i<0) i+=length;
-f.returnValue(i>=0 && i<length? list.data.at(i) : QV());
+f.returnValue(i>=0 && i<length? list.data.at(i) : QV::UNDEFINED);
 }
 else if (f.isRange(1)) {
 int start, end;
@@ -70,7 +62,7 @@ QList* newList = f.vm.construct<QList>(f.vm);
 f.returnValue(newList);
 if (end-start>0) newList->data.insert(newList->data.end(), list.data.begin()+start, list.data.begin()+end);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void listSubscriptSetter (QFiber& f) {
@@ -88,7 +80,7 @@ list.data.erase(list.data.begin()+start, list.data.begin()+end);
 f.getObject<QSequence>(2) .copyInto(f, list.data, start);
 f.returnValue(f.at(2));
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void listPush (QFiber& f) {
@@ -99,7 +91,7 @@ if (n>0) list.data.insert(list.data.end(), &f.at(1), (&f.at(1))+n);
 
 static void listPop (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-if (list.data.empty()) f.returnValue(QV());
+if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.back());
 list.data.pop_back();
@@ -137,7 +129,7 @@ if (it!=list.data.end()) {
 f.returnValue(*it);
 list.data.erase(it);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }}
 
 static void listRemoveIf (QFiber& f) {
@@ -274,9 +266,7 @@ BIND_F(*, listTimes)
 listIteratorClass
 ->copyParentMethods()
 BIND_F(next, listIteratorNext)
-BIND_F(hasNext, listIteratorHasNext)
 BIND_F(previous, listIteratorPrevious)
-BIND_F(hasPrevious, listIteratorHasPrevious)
 BIND_F(remove, listIteratorRemove)
 BIND_F(add, listIteratorInsert)
 BIND_F(insert, listIteratorInsert)

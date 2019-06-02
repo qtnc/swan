@@ -13,7 +13,7 @@ map_type map;
 QMap (QVM& vm);
 inline QV get (const QV& key) {
 auto it = map.find(key);
-if (it==map.end()) return QV();
+if (it==map.end()) return QV::UNDEFINED;
 else return it->second;
 }
 inline QV& set (const QV& key, const QV& value) { return map[key] = value; }

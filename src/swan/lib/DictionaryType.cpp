@@ -27,8 +27,8 @@ if (tuple.size())  map->set(tuple[0], tuple.back());
 }
 
 static void dictionaryFromSequence (QFiber& f) {
-QV sorter = f.getArgCount()>=2? f.at(1) : QV();
-if (sorter.isNull()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+QV sorter = f.getArgCount()>=2? f.at(1) : QV::UNDEFINED;
+if (sorter.isNullOrUndefined()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
 if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
 QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 f.returnValue(map);
@@ -49,33 +49,27 @@ auto it = f.vm.construct<QDictionaryIterator>(f.vm, map);
 f.returnValue(it);
 }
 
-static void dictionaryIteratorHasNext (QFiber& f) {
-QDictionaryIterator& li = f.getObject<QDictionaryIterator>(0);
-f.returnValue(li.iterator != li.map.map.end() );
-}
-
 static void dictionaryIteratorNext (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+if (mi.iterator==mi.map.map.end()) f.returnValue(QV::UNDEFINED);
+else {
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 ++mi.iterator;
 f.returnValue(tuple);
 mi.forward=true;
-}
-
-static void dictionaryIteratorHasPrevious (QFiber& f) {
-QDictionaryIterator& li = f.getObject<QDictionaryIterator>(0);
-f.returnValue(li.iterator != li.map.map.begin() );
-}
+}}
 
 static void dictionaryIteratorPrevious (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+if (mi.iterator==mi.map.map.begin()) f.returnValue(QV::UNDEFINED);
+else {
 --mi.iterator;
 QV data[] = { mi.iterator->first, mi.iterator->second };
 QTuple* tuple = QTuple::create(f.vm, 2, data);
 f.returnValue(tuple);
 mi.forward=false;
-}
+}}
 
 static void dictionaryIteratorRemove (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
@@ -103,7 +97,7 @@ f.returnValue(out);
 static void dictionarySubscript (QFiber& f) {
 QDictionary& d = f.getObject<QDictionary>(0);
 auto it = d.get(f.at(1));
-f.returnValue(it==d.map.end()? QV() : it->second);
+f.returnValue(it==d.map.end()? QV::UNDEFINED : it->second);
 }
 
 static void dictionarySubscriptSetter (QFiber& f) {
@@ -115,7 +109,7 @@ static void dictionaryRemove (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 auto it = map.get(f.at(i));
-if (it==map.map.end()) f.returnValue(QV());
+if (it==map.map.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(it->second);
 map.map.erase(it);
@@ -130,13 +124,13 @@ f.returnValue(f.at(2));
 static void dictionaryLowerBound (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 auto it = map.map.lower_bound(f.at(1));
-f.returnValue(it==map.map.end()? QV() : it->first);
+f.returnValue(it==map.map.end()? QV::UNDEFINED : it->first);
 }
 
 static void dictionaryUpperBound (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 auto it = map.map.upper_bound(f.at(1));
-f.returnValue(it==map.map.end()? QV() : it->first);
+f.returnValue(it==map.map.end()? QV::UNDEFINED : it->first);
 }
 
 void QVM::initDictionaryType () {
@@ -158,9 +152,7 @@ BIND_F(put, dictionaryPut)
 dictionaryIteratorClass
 ->copyParentMethods()
 BIND_F(next, dictionaryIteratorNext)
-BIND_F(hasNext, dictionaryIteratorHasNext)
 BIND_F(previous, dictionaryIteratorPrevious)
-BIND_F(hasPrevious, dictionaryIteratorHasPrevious)
 BIND_F(remove, dictionaryIteratorRemove)
 ;
 

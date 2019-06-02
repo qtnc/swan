@@ -17,24 +17,16 @@ if (index>0) std::advance(it->iterator, index);
 f.returnValue(it);
 }
 
-static void bufferIteratorHasNext (QFiber& f) {
-QBufferIterator& li = f.getObject<QBufferIterator>(0);
-f.returnValue(li.iterator < li.buf.end() );
-}
-
-static void bufferIteratorHasPrevious  (QFiber& f) {
-QBufferIterator& li = f.getObject<QBufferIterator>(0);
-f.returnValue(li.iterator > li.buf.begin() );
-}
-
 static void bufferIteratorNext (QFiber& f) {
 QBufferIterator& li = f.getObject<QBufferIterator>(0);
-f.returnValue(static_cast<double>(*li.iterator++));
+if (li.iterator < li.buf.end()) f.returnValue(static_cast<double>(*li.iterator++));
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void bufferIteratorPrevious (QFiber& f) {
-QStringIterator& li = f.getObject<QStringIterator>(0);
-f.returnValue(static_cast<double>(*--li.iterator));
+QBufferIterator& li = f.getObject<QBufferIterator>(0);
+if (li.iterator > li.buf.begin()) f.returnValue(static_cast<double>(*--li.iterator));
+else f.returnValue(QV::UNDEFINED);
 }
 
 
@@ -78,7 +70,7 @@ QBuffer& b = f.getObject<QBuffer>(0);
 if (f.isNum(1)) {
 int pos = f.getNum(1);
 if (pos<0) pos+=b.length;
-f.returnValue(pos<0||pos>=b.length? QV() : QV(static_cast<double>(b.data[pos])));
+f.returnValue(pos<0||pos>=b.length? QV::UNDEFINED : QV(static_cast<double>(b.data[pos])));
 }
 else if (f.isRange(1)) {
 int start=0, end=0;
@@ -263,9 +255,7 @@ BIND_F(toString, bufferToString)
 bufferIteratorClass
 ->copyParentMethods()
 BIND_F(next, bufferIteratorNext)
-BIND_F(hasNext, bufferIteratorHasNext)
 BIND_F(previous, bufferIteratorPrevious)
-BIND_F(hasPrevious, bufferIteratorHasPrevious)
 ;
 
 

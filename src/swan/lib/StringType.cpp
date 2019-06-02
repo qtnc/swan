@@ -14,10 +14,10 @@ QV stringToNumImpl (QString& s, int base) {
 char* end = nullptr;
 if (base<0 || base>32) {
 double re = strtod_c(s.begin(), &end);
-return end && end==s.end()? re : QV();
+return end && end==s.end()? re : QV::UNDEFINED;
 } else {
 long long re = strtoll(s.begin(), &end, base);
-return end && end==s.end()? static_cast<double>(re) : QV();
+return end && end==s.end()? static_cast<double>(re) : QV::UNDEFINED;
 }}
 
 static int stringCompare (QFiber& f) {
@@ -42,28 +42,24 @@ if (index>0) utf8::advance(it->iterator, index, s.end());
 f.returnValue(it);
 }
 
-static void stringIteratorHasNext (QFiber& f) {
-QStringIterator& li = f.getObject<QStringIterator>(0);
-f.returnValue(li.iterator < li.str.end() );
-}
-
-static void stringIteratorHasPrevious  (QFiber& f) {
-QStringIterator& li = f.getObject<QStringIterator>(0);
-f.returnValue(li.iterator > li.str.begin() );
-}
-
 static void stringIteratorNext (QFiber& f) {
 QStringIterator& li = f.getObject<QStringIterator>(0);
+if (li.iterator < li.str.end()) {
 auto startPos = li.iterator;
 utf8::next(li.iterator, li.str.end());
 f.returnValue(QV( QString::create(f.vm, startPos, li.iterator), QV_TAG_STRING));
 }
+else f.returnValue(QV::UNDEFINED);
+}
 
 static void stringIteratorPrevious (QFiber& f) {
 QStringIterator& li = f.getObject<QStringIterator>(0);
+if (li.iterator > li.str.begin()) {
 auto endPos = li.iterator;
 utf8::previous(li.iterator, li.str.begin());
 f.returnValue(QV( QString::create(f.vm, li.iterator, endPos), QV_TAG_STRING));
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void stringHashCode (QFiber& f) {
@@ -85,7 +81,7 @@ f.returnValue(result);
 static void stringTimes (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int times = f.getNum(1);
-if (times<0) f.returnValue(QV());
+if (times<0) f.returnValue(QV::UNDEFINED);
 else if (times==0) f.returnValue(QString::create(f.vm, nullptr, 0));
 else if (times==1) f.returnValue(&s);
 else {
@@ -106,7 +102,7 @@ static void stringCodePointAt (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int i = f.getNum(1), length = utf8::distance(s.begin(), s.end());
 if (i<0) i+=length;
-if (i<0 || i>=length) { f.returnValue(QV()); return; }
+if (i<0 || i>=length) { f.returnValue(QV::UNDEFINED); return; }
 auto it = s.begin();
 utf8::advance(it, i, s.end());
 f.returnValue( static_cast<double>(utf8::next(it, s.end()) ));
@@ -118,7 +114,7 @@ int start=0, end=0, length = utf8::distance(s.data, s.data+s.length);
 if (f.isNum(1)) {
 start = f.getNum(1);
 if (start<0) start+=length;
-if (start>=length) { f.returnValue(QV()); return; }
+if (start>=length) { f.returnValue(QV::UNDEFINED); return; }
 end = start +1;
 }
 else if (f.isRange(1)) {
@@ -239,7 +235,7 @@ val = f.at(-1);
 cur = endName;
 }
 else out << delim;
-if (!val.isNull()) {
+if (!val.isNullOrUndefined()) {
 if (delim=='{' && *cur==':') {
 auto endfmt = find(++cur, end, '}');
 string fmt = "%" + string(cur, endfmt);
@@ -344,9 +340,7 @@ BIND_F(format, stringFormat)
 stringIteratorClass
 ->copyParentMethods()
 BIND_F(next, stringIteratorNext)
-BIND_F(hasNext, stringIteratorHasNext)
 BIND_F(previous, stringIteratorPrevious)
-BIND_F(hasPrevious, stringIteratorHasPrevious)
 ;
 }
 

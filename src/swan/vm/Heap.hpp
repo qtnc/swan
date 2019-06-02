@@ -14,10 +14,10 @@ typedef std::vector<QV, trace_allocator<QV>> container_type;
 typedef container_type::iterator iterator;
 container_type  data;
 QV sorter;
-QHeap (struct QVM& vm, QV& sorter0):
+QHeap (struct QVM& vm, QV& sorter):
 QSequence(vm.heapClass), 
 data(trace_allocator<QV>(vm)),
-sorter(sorter0)
+sorter(sorter)
 {}
 virtual bool gcVisit () override;
 virtual ~QHeap () = default;
@@ -39,7 +39,7 @@ std::push_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 }
 
 inline QV pop () {
-if (!data.size()) return QV();
+if (!data.size()) return QV::UNDEFINED;
 std::pop_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
 QV re = data.back();
 data.pop_back();

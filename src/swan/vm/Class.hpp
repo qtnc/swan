@@ -18,8 +18,8 @@ QClass* bind (const std::string& methodName, QNativeFunction func);
 QClass* bind (int symbol, const QV& value);
 inline bool isSubclassOf (QClass* cls) { return this==cls || (parent && parent->isSubclassOf(cls)); }
 inline QV findMethod (int symbol) {
-QV re = symbol>=methods.size()? QV() : methods[symbol];
-if (re.isNull() && parent) return parent->findMethod(symbol);
+QV re = symbol>=methods.size()? QV::UNDEFINED : methods[symbol];
+if (re.isNullOrUndefined() && parent) return parent->findMethod(symbol);
 else return re;
 }
 static QClass* create (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nStaticFields=0, int nFields=0);

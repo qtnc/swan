@@ -11,7 +11,7 @@ class Tree {
   }
 
   check {
-    if (_left is null) {
+    if (_left is undefined) {
       return _item
     }
     return _item + _left.check - _right.check

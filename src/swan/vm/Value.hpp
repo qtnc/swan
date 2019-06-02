@@ -11,7 +11,7 @@ double d;
 
 std::string print () const;
 
-inline QV(): i(QV_NULL) {}
+inline explicit QV(): i(QV_UNDEFINED) {}
 inline explicit QV(uint64_t x): i(x) {}
 inline QV(double x): d(x) {}
 inline QV(int x): d(x) {}
@@ -25,10 +25,12 @@ QV (QVM& vm, const std::string& s);
 QV (QVM& vm, const char* s, int length=-1);
 
 inline bool hasTag (uint64_t tag) const { return (i&QV_TAGMASK)==tag; }
+inline bool isUndefined () const { return i==QV_UNDEFINED; }
 inline bool isNull () const { return i==QV_NULL; }
+inline bool isNullOrUndefined () const { return isUndefined() || isNull(); }
 inline bool isTrue () const { return i==QV_TRUE; }
 inline bool isFalse () const { return i==QV_FALSE; }
-inline bool isFalsy () const { return i==QV_FALSE || i==QV_NULL; }
+inline bool isFalsy () const { return isFalse() || isNullOrUndefined(); }
 inline bool isBool () const { return i==QV_TRUE || i==QV_FALSE; }
 inline bool isObject () const { return (i&QV_NEG_NAN)==QV_NEG_NAN && i!=QV_NEG_NAN; }
 inline bool isNum () const { return (i&QV_NAN)!=QV_NAN || i==QV_NAN || i==QV_NEG_NAN; }
@@ -59,6 +61,8 @@ const Swan::Range& asRange () const;
 QClass& getClass (QVM& vm);
 Swan::Handle asHandle ();
 inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
+
+static const QV Null, UNDEFINED, FALSE, TRUE;
 };
 
 #endif

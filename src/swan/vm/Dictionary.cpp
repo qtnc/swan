@@ -26,7 +26,7 @@ else return map.end();
 
 QDictionary::iterator QDictionary::getr (const QV& key) {
 auto it = get(key);
-if (it==map.end()) it = map.insert(make_pair(key, QV()));
+if (it==map.end()) it = map.insert(make_pair(key, QV::UNDEFINED));
 return it;
 }
 

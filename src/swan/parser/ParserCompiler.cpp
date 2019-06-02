@@ -125,7 +125,8 @@ const QToken& nearestToken () { return token; }
 string print () { return token.value.print(); }
 void compile (QCompiler& compiler) {
 QV& value = token.value;
-if (value.isNull()) compiler.writeOp(OP_LOAD_NULL);
+if (value.isUndefined()) compiler.writeOp(OP_LOAD_UNDEFINED);
+else if (value.isNull()) compiler.writeOp(OP_LOAD_NULL);
 else if (value.isFalse()) compiler.writeOp(OP_LOAD_FALSE);
 else if (value.isTrue()) compiler.writeOp(OP_LOAD_TRUE);
 else if (value.isInt8()) compiler.writeOpArg<int8_t>(OP_LOAD_INT8, static_cast<int>(value.d));
@@ -349,7 +350,7 @@ string pattern, options;
 LiteralRegexExpression(const QToken& tk, const string& p, const string& o): tok(tk), pattern(p), options(o) {}
 const QToken& nearestToken () { return tok; }
 void compile (QCompiler& compiler) {
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV() }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, pattern), QV_TAG_STRING)));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, options), QV_TAG_STRING)));
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -514,7 +515,7 @@ const QToken& nearestToken () { return token; }
 shared_ptr<Expression> optimize () { if (expr) expr=expr->optimize(); return shared_this(); }
 void compile (QCompiler& compiler) {
 if (expr) expr->compile(compiler);
-else compiler.writeOp(OP_LOAD_NULL);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_YIELD);
 }
 string print () { 
@@ -530,7 +531,7 @@ const QToken& nearestToken () { return from->nearestToken(); }
 string print () { return "import " + from->print(); }
 void compile (QCompiler& compiler) {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -569,7 +570,7 @@ compiler.pushScope();
 compiler.writeDebugLine(ifPart->nearestToken());
 ifPart->compile(compiler);
 if (ifPart->isExpression()) compiler.writeOp(OP_POP);
-compiler.lastOp = OP_LOAD_NULL;
+compiler.lastOp = OP_LOAD_UNDEFINED;
 compiler.popScope();
 if (elsePart) {
 int skipElseJump = compiler.writeOpJump(OP_JUMP);
@@ -578,7 +579,7 @@ compiler.pushScope();
 compiler.writeDebugLine(elsePart->nearestToken());
 elsePart->compile(compiler);
 if (elsePart->isExpression()) compiler.writeOp(OP_POP);
-compiler.lastOp = OP_LOAD_NULL;
+compiler.lastOp = OP_LOAD_UNDEFINED;
 compiler.popScope();
 compiler.patchJump(skipElseJump);
 }
@@ -758,7 +759,7 @@ shared_ptr<Statement> optimizeStatement () { if (expr) expr=expr->optimize(); re
 void compile (QCompiler& compiler) {
 compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
-else compiler.writeOp(OP_LOAD_NULL);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_RETURN);
 }
 string print () { if (expr) return ("return ") + expr->print(); else return ("return null"); }
@@ -773,7 +774,7 @@ shared_ptr<Statement> optimizeStatement () { if (expr) expr=expr->optimize(); re
 void compile (QCompiler& compiler) {
 compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
-else compiler.writeOp(OP_LOAD_NULL);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_THROW);
 }
 string print () { return "throw " + expr->print(); }
@@ -898,9 +899,9 @@ vector<int> varSlots;
 compiler.writeDebugLine(nearestToken());
 for (auto& p: imports) {
 varSlots.push_back(compiler.findLocalVariable(p.second, LV_NEW | LV_CONST));
-compiler.writeOp(OP_LOAD_NULL);
+compiler.writeOp(OP_LOAD_UNDEFINED);
 }
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV() }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -1084,6 +1085,7 @@ PREFIX(SUPER, Super, super),
 PREFIX(TRUE, Literal, true),
 PREFIX(FALSE, Literal, false),
 PREFIX(NULL, Literal, null),
+PREFIX(UNDEFINED, Literal, undefined),
 PREFIX(NUM, Literal, Num),
 PREFIX(STRING, Literal, String),
 PREFIX(YIELD, Yield, yield),
@@ -1150,6 +1152,7 @@ TOKEN(SWITCH, switch),
 TOKEN(THROW, throw),
 TOKEN(TRUE, true),
 TOKEN(TRY, try),
+TOKEN(UNDEFINED, undefined),
 TOKEN(VAR, var),
 TOKEN(WHILE, while),
 TOKEN(WITH, with),
@@ -1303,7 +1306,7 @@ cur = stackedTokens.front();
 stackedTokens.clear();
 in = cur.start;
 }
-#define RET0(X) { cur = { X, start, static_cast<size_t>(in-start), QV()}; return cur; }
+#define RET0(X) { cur = { X, start, static_cast<size_t>(in-start), QV::UNDEFINED}; return cur; }
 #define RET RET0(T_NAME)
 #define RET2(C) if (utf8::peek_next(in, end)==C) utf8::next(in, end); RET
 #define RET3(C1,C2) if(utf8::peek_next(in, end)==C1 || utf8::peek_next(in, end)==C2) utf8::next(in, end); RET
@@ -1372,7 +1375,7 @@ cur = stackedTokens.back();
 stackedTokens.pop_back();
 return cur;
 }
-#define RET(X) { cur = { X, start, static_cast<size_t>(in-start), QV()}; return cur; }
+#define RET(X) { cur = { X, start, static_cast<size_t>(in-start), QV::UNDEFINED}; return cur; }
 #define RETV(X,V) { cur = { X, start, static_cast<size_t>(in-start), V}; return cur; }
 #define RET2(C,A,B) if (utf8::peek_next(in, end)==C) { utf8::next(in, end); RET(A) } else RET(B)
 #define RET3(C1,A,C2,B,C) if(utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET(A) } else if (utf8::peek_next(in, end)==C2) { utf8::next(in, end); RET(B) } else RET(C)
@@ -1442,6 +1445,8 @@ if (it!=KEYWORDS.end()) type = it->second;
 switch(type){
 case T_TRUE: RETV(type, true)
 case T_FALSE: RETV(type, false)
+case T_NULL: RETV(type, QV::Null)
+case T_UNDEFINED: RETV(type, QV::UNDEFINED)
 default: RET(type)
 }}
 else if (isSpace(c)) RET(T_END)
@@ -1765,7 +1770,7 @@ return decl;
 
 void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func) {
 if (func->flags&FD_METHOD) {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
@@ -1838,7 +1843,7 @@ do {
 consume(T_NAME, ("Expected field name after 'var'"));
 QString* setterName = QString::create(vm, string(cur.start, cur.length) + ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
-QToken thisToken = { T_NAME, THIS, 4, QV()};
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED};
 shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(thisToken);
 shared_ptr<Expression> field;
 int flags = FD_METHOD;
@@ -1894,7 +1899,7 @@ skipNewlines();
 consume(T_NAME, ("Expected class name after 'is'"));
 classDecl->parents.push_back(cur);
 } while (match(T_COMMA));
-else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV() });
+else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
@@ -2253,6 +2258,7 @@ return format("%s (arity=%d, consts=%d, upvalues=%d, bc=%d, file=%s)", func.name
 
 string QV::print () const {
 if (isNull()) return ("null");
+else if (isUndefined()) return "undefined";
 else if (isTrue()) return ("true");
 else if (isFalse()) return ("false");
 else if (isNum()) return format("%.14G", d);
@@ -2293,7 +2299,6 @@ compiler.pushScope();
 int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
-int hasNextSymbol = compiler.vm.findMethodSymbol(("hasNext"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
@@ -2308,13 +2313,9 @@ int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
 compiler.writeDebugLine(inExpression->nearestToken());
 writeOpLoadLocal(compiler, iteratorSlot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, hasNextSymbol);
-compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
-compiler.writeDebugLine(inExpression->nearestToken());
-writeOpLoadLocal(compiler, iteratorSlot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, nextSymbol);
 compiler.writeOp(OP_DUP);
-compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
+compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_UNDEFINED) });
 if (destructuring) {
 loopVariables[0]->value = loopVariable;
 compiler.writeDebugLine(inExpression->nearestToken());
@@ -2377,7 +2378,7 @@ int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV() }, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
 return;
 }
@@ -2435,7 +2436,7 @@ return;
 int fieldSlot = cls->findField(string(token.start, token.length));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_FIELD, fieldSlot);
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, fieldSlot);
@@ -2456,7 +2457,7 @@ int fieldSlot = cls->findField(string(token.start, token.length));
 assignedValue->compile(compiler);
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, fieldSlot);
@@ -2477,7 +2478,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
 }
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
@@ -2500,7 +2501,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
 }
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
@@ -2774,7 +2775,7 @@ return s;
 void CallExpression::compile (QCompiler& compiler) {
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0) {
-QToken thisToken = { T_NAME, THIS, 4, QV() };
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize()->compile(compiler);
 return;
 }}
@@ -2837,7 +2838,7 @@ destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(compiler, var->name, names)) {
 if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_NULL); }
+else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_UNDEFINED); }
 }
 continue;
 }
@@ -2845,7 +2846,7 @@ int slot = -1;
 if (!(var->flags&VD_GLOBAL)) slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 if (var->value) var->value->compile(compiler);
-else compiler.writeOp(OP_LOAD_NULL);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (var->flags&VD_GLOBAL) {
 int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
@@ -3064,7 +3065,7 @@ return parser.vm.findGlobalSymbol(string(name.start, name.length), flags);
 
 static shared_ptr<Statement> addReturnExports (shared_ptr<Statement> sta) {
 if (!sta->isUsingExports()) return sta;
-QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
+QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 auto exs = make_shared<ReturnStatement>(exportsToken, make_shared<NameExpression>(exportsToken));
 auto bs = dynamic_pointer_cast<BlockStatement>(sta);
 if (bs) bs->statements.push_back(exs);
@@ -3073,7 +3074,7 @@ return bs;
 }
 
 int QCompiler::findExportsVariable (bool createIfNotExist) {
-QToken exportsToken = { T_NAME, EXPORTS, 7, QV()};
+QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 int slot = findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
 if (slot<0 && createIfNotExist) {
 int mapSlot = vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
@@ -3117,7 +3118,7 @@ else if (!(flags&LV_NEW) && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return -1;
 else {
 int n = globalSymbols.size();
 globalSymbols[name] = { n, flags&LV_CONST };
-globalVariables.push_back(QV());
+globalVariables.push_back(QV::UNDEFINED);
 return n;
 }}
 
@@ -3199,7 +3200,7 @@ seek(-1);
 writeOp(OP_RETURN);
 }
 else if (lastOp!=OP_RETURN) {
-writeOp(OP_LOAD_NULL);
+writeOp(OP_LOAD_UNDEFINED);
 writeOp(OP_RETURN);
 }
 }

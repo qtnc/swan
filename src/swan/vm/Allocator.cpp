@@ -8,6 +8,7 @@
 using namespace std;
 
 #define POOL_SIZE_MAX 256
+#define RESERVE_SIZE_MAX 1048576
 
 typedef boost::pool<> pool;
 unordered_map<size_t, unique_ptr<pool>> bpools;
@@ -33,11 +34,7 @@ freeList.clear();
 void* QVM::allocate (size_t n) {
 gcMemUsage += n;
 round_upwards(n);
-if (n<=POOL_SIZE_MAX) {
-void* p = getpool(n).malloc();
-//println("Allocated pool %d bytes at %p", n, p);
-return p;
-}
+if (n<=POOL_SIZE_MAX) return getpool(n).malloc();
 else {
 auto it = freeList.find(n);
 if (it!=freeList.end()) {
@@ -51,12 +48,7 @@ return malloc(n);
 void QVM::deallocate (void* p, size_t n) {
 gcMemUsage -= n;
 round_upwards(n);
-if (n<=POOL_SIZE_MAX) {
-//println("Pool free %d bytes at %p", n, p);
-getpool(n).free(p);
+if (n<=POOL_SIZE_MAX) getpool(n).free(p);
+else if (n<=RESERVE_SIZE_MAX) freeList.insert(make_pair(n, p));
+else free(p);
 }
-else {
-freeList.insert(make_pair(n, p));
-//println("Free %d bytes at %p", n, p);
-//delete[] reinterpret_cast<char*>(p);
-}}

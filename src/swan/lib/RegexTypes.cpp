@@ -16,27 +16,21 @@ QRegex* regex = f.vm.construct<QRegex>(f.vm, pattern.begin(), pattern.end(), opt
 f.returnValue(regex);
 }
 
-static void regexIteratorHasNext (QFiber& f) {
-QRegexIterator& r = f.getObject<QRegexIterator>(0);
-f.returnValue(r.it!=r.end);
-}
-
-static void regexTokenIteratorHasNext (QFiber& f) {
-QRegexTokenIterator& r = f.getObject<QRegexTokenIterator>(0);
-f.returnValue(r.it!=r.end);
-}
-
 static void regexIteratorNext (QFiber& f) {
 QRegexIterator& r = f.getObject<QRegexIterator>(0);
+if (r.it==r.end) f.returnValue(QV::UNDEFINED);
+else {
 QRegexMatchResult* mr = f.vm.construct<QRegexMatchResult>(f.vm);
 mr->match = *r.it++;
 f.returnValue(mr);
-}
+}}
 
 static void regexTokenIteratorNext (QFiber& f) {
 QRegexTokenIterator& r = f.getObject<QRegexTokenIterator>(0);
+if (r.it==r.end) f.returnValue(QV::UNDEFINED);
+else {
 f.returnValue(*r.it++);
-}
+}}
 
 static void regexMatchResultStart (QFiber& f) {
 QRegexMatchResult& m = f.getObject<QRegexMatchResult>(0);
@@ -99,7 +93,7 @@ cmatch match;
 if (start<0) start+=s.length;
 if (start>0) options |= regex_constants::match_prev_avail;
 if (regex_search(const_cast<const char*>(s.begin()+start), const_cast<const char*>(s.end()), match, r.regex, r.matchOptions | options)) re = match.position()+start;
-if (full && re<0) f.returnValue(QV());
+if (full && re<0) f.returnValue(QV::UNDEFINED);
 else if (full) f.returnValue(f.vm.construct<QRegexMatchResult>(f.vm, match));
 else f.returnValue(static_cast<double>(re));
 }
@@ -178,14 +172,12 @@ BIND_F(length, regexMatchResultLength)
 regexIteratorClass
 ->copyParentMethods()
 BIND_N(iterator)
-BIND_F(hasNext, regexIteratorHasNext)
 BIND_F(next, regexIteratorNext)
 ;
 
 regexTokenIteratorClass
 ->copyParentMethods()
 BIND_N(iterator)
-BIND_F(hasNext, regexTokenIteratorHasNext)
 BIND_F(next, regexTokenIteratorNext)
 ;
 

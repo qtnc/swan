@@ -34,7 +34,7 @@ QVEqualler eq(f.vm);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 QV x = f.at(i);
 auto it = find_if(heap.data.begin(), heap.data.end(), [&](const QV& y){ return eq(y, x); });
-if (it==heap.data.end()) f.returnValue(QV());
+if (it==heap.data.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 heap.erase(it);
@@ -46,14 +46,10 @@ auto it = f.vm.construct<QHeapIterator>(f.vm, heap);
 f.returnValue(it);
 }
 
-static void heapIteratorHasNext (QFiber& f) {
-QHeapIterator& li = f.getObject<QHeapIterator>(0);
-f.returnValue(li.iterator != li.heap.data.end() );
-}
-
 static void heapIteratorNext (QFiber& f) {
 QHeapIterator& li = f.getObject<QHeapIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.heap.data.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 }
 
 static void heapPop (QFiber& f) {
@@ -63,7 +59,7 @@ f.returnValue(heap.pop());
 
 static void heapFirst (QFiber& f) {
 QHeap& heap = f.getObject<QHeap>(0);
-f.returnValue(heap.data.size()? heap.data[0] : QV());
+f.returnValue(heap.data.size()? heap.data[0] : QV::UNDEFINED);
 }
 
 static void heapToString (QFiber& f) {
@@ -91,7 +87,6 @@ BIND_F(first, heapFirst)
 heapIteratorClass
 ->copyParentMethods()
 BIND_F(next, heapIteratorNext)
-BIND_F(hasNext, heapIteratorHasNext)
 ;
 
 heapClass ->type

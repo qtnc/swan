@@ -83,7 +83,7 @@ static void setRemove (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 auto it = set.set.find(f.at(i));
-if (it==set.set.end()) f.returnValue(QV());
+if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
@@ -105,14 +105,10 @@ auto it = f.vm.construct<QSetIterator>(f.vm, set);
 f.returnValue(it);
 }
 
-static void setIteratorHasNext (QFiber& f) {
-QSetIterator& li = f.getObject<QSetIterator>(0);
-f.returnValue(li.iterator != li.set.set.end() );
-}
-
 static void setIteratorNext (QFiber& f) {
 QSetIterator& li = f.getObject<QSetIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.set.set.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 }
 
 static void setToString (QFiber& f) {
@@ -145,7 +141,6 @@ BIND_F(==, setEquals)
 setIteratorClass
 ->copyParentMethods()
 BIND_F(next, setIteratorNext)
-BIND_F(hasNext, setIteratorHasNext)
 ;
 
 setClass ->type

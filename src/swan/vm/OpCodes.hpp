@@ -1,3 +1,4 @@
+OP(LOAD_UNDEFINED, 1, 0, 0),
 OP(LOAD_NULL, 1, 0, 0),
 OP(LOAD_TRUE, 1, 0, 0),
 OP(LOAD_FALSE, 1, 0, 0),
@@ -33,6 +34,7 @@ OP(OR, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP_IF_FALSY, -1, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP_IF_TRUTY, -1, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
+OP(JUMP_IF_UNDEFINED, -1, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP_BACK, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 
 #define L(N) OP(LOAD_LOCAL_##N, 1, 0, 0)

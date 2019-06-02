@@ -68,7 +68,7 @@ static void setRemove (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) {
 auto it = set.find(f.at(i));
-if (it==set.set.end()) f.returnValue(QV());
+if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
@@ -90,25 +90,17 @@ auto it = f.vm.construct<QSortedSetIterator>(f.vm, set);
 f.returnValue(it);
 }
 
-static void setIteratorHasNext (QFiber& f) {
-QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
-f.returnValue(li.iterator != li.set.set.end() );
-}
-
 static void setIteratorNext (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
-f.returnValue(*li.iterator++);
+if (li.iterator==li.set.set.end()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*li.iterator++);
 li.forward=true;
-}
-
-static void setIteratorHasPrevious (QFiber& f) {
-QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
-f.returnValue(li.iterator != li.set.set.begin() );
 }
 
 static void setIteratorPrevious (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
-f.returnValue(*--li.iterator);
+if (li.iterator==li.set.set.begin()) f.returnValue(QV::UNDEFINED);
+else f.returnValue(*--li.iterator);
 li.forward=false;
 }
 
@@ -122,31 +114,31 @@ mi.set.set.erase(mi.iterator++);
 static void setLowerBound (QFiber& f) {
 QSortedSet &set = f.getObject<QSortedSet>(0);
 auto it = set.set.lower_bound(f.at(1));
-f.returnValue(it==set.set.end()? QV() : *it);
+f.returnValue(it==set.set.end()? QV::UNDEFINED : *it);
 }
 
 static void setUpperBound (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 auto it = set.set.upper_bound(f.at(1));
-f.returnValue(it==set.set.end()? QV() : *it);
+f.returnValue(it==set.set.end()? QV::UNDEFINED : *it);
 }
 
 static void setFirst (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 auto it = set.set.begin();
-f.returnValue(it!=set.set.end()? *it : QV());
+f.returnValue(it!=set.set.end()? *it : QV::UNDEFINED);
 }
 
 static void setLast (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 auto it = set.set.end();
-f.returnValue(set.set.size()? *--it : QV());
+f.returnValue(set.set.size()? *--it : QV::UNDEFINED);
 }
 
 static void setShift (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 auto it = set.set.begin();
-if (it==set.set.end()) f.returnValue(QV());
+if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
@@ -159,7 +151,7 @@ auto it = set.set.end();
 f.returnValue(*--it);
 set.set.erase(it);
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void setToString (QFiber& f) {
@@ -198,9 +190,7 @@ BIND_F(==, setEquals)
 sortedSetIteratorClass
 ->copyParentMethods()
 BIND_F(next, setIteratorNext)
-BIND_F(hasNext, setIteratorHasNext)
 BIND_F(previous, setIteratorPrevious)
-BIND_F(hasPrevious, setIteratorHasPrevious)
 BIND_F(remove, setIteratorRemove)
 ;
 

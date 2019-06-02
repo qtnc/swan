@@ -40,6 +40,8 @@ virtual inline bool isString (int i) final override { return at(i).isString(); }
 virtual bool isRange (int i) final override;
 virtual bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
+virtual inline bool isUndefined  (int i) final override { return at(i).isUndefined(); }
+virtual inline bool isNullOrUndefined (int i) final override { return at(i).isNullOrUndefined(); }
 virtual bool isUserPointer (int i, size_t classId) final override;
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }
@@ -57,7 +59,7 @@ virtual inline double getOptionalNum (int i, double defaultValue) { return getAr
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
 virtual inline std::string getOptionalString  (int i, const std::string& defaultValue) { return getArgCount()>i && isString(i)? getString(i) : defaultValue; }
 virtual inline void* getOptionalUserPointer (int i, size_t classId, void* defaultValue = nullptr) { return getArgCount()>i && isUserPointer(i, classId)? getUserPointer(i) : defaultValue; }
-virtual inline Swan::Handle getOptionalHandle  (int i, const Swan::Handle& defaultValue) { return getArgCount()>i && !isNull(i)? at(i).asHandle() : defaultValue; }
+virtual inline Swan::Handle getOptionalHandle  (int i, const Swan::Handle& defaultValue) { return getArgCount()>i && !isNullOrUndefined(i)? at(i).asHandle() : defaultValue; }
 
 virtual double getOptionalNum (int stackIndex, const std::string& key, double defaultValue) final override;
 virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) final override;
@@ -74,7 +76,8 @@ virtual inline void setString  (int i, const std::string& s) final override;
 virtual inline void setCString  (int i, const char* s) final override;
 virtual inline void setBuffer  (int i, const void* data, int length) final override;
 virtual void setRange  (int i, const Swan::Range& r) final override;
-virtual inline void setNull (int i) final override { at(i) = QV(); }
+virtual inline void setNull (int i) final override { at(i) = QV::Null; }
+virtual inline void setUndefined (int i) final override { at(i) = QV::UNDEFINED; }
 virtual inline void setFiber (int i, Swan::Fiber& f) final override { at(i) = QV(static_cast<QFiber*>(&f)); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
 virtual void setHandle (int i, const Swan::Handle& h) final override { at(i) = QV(h.value); }
@@ -87,7 +90,8 @@ virtual inline void pushString (const std::string& s) final override;
 virtual inline void pushCString (const char* s) final override;
 virtual inline void pushBuffer  (const void* data, int length) final override;
 virtual void pushRange (const Swan::Range& r) final override;
-virtual inline void pushNull  () final override { stack.push_back(QV()); }
+virtual inline void pushNull  () final override { stack.push_back(QV::Null); }
+virtual inline void pushUndefined () final override { stack.push_back(QV::UNDEFINED); }
 virtual inline void pushNativeFunction (Swan::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
 virtual inline void pushFiber (Swan::Fiber& f) final override { push(QV(static_cast<QFiber*>(&f))); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;

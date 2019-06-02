@@ -171,6 +171,7 @@ return QV(closure, QV_TAG_CLOSURE);
 
 static void writeQVBytecode (QV v, ostream& out, unordered_set<void*>& references) {
 if (v.isNull()) out << 'E';
+else if (v.isUndefined()) out << 'U';
 else if (v.isTrue()) out << '1';
 else if (v.isFalse()) out << '0';
 else if (v.isNum()) {
@@ -199,7 +200,8 @@ static QV readQVBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject
 char c;
 in.read(&c,1);
 switch(c){
-case 'E': return QV();
+case 'U': return QV::UNDEFINED;
+case 'E': return QV::Null;
 case '+': return QV(static_cast<double>(readVLN(in)));
 case '-': return QV(static_cast<double>(-static_cast<int64_t>(readVLN(in))));
 case 'D': return read<double>(in);

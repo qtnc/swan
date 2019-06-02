@@ -126,7 +126,7 @@ point src = { static_cast<int>(f.getNum(1)), static_cast<int>(f.getNum(2)) }, de
 g.makeBounds(src.x, src.y);
 g.makeBounds(dest.x, dest.y);
 if (src.x<0 || src.y<0 || dest.x<0 || dest.y<0 || src.x>=g.width || src.y>=g.height || dest.x>=g.width || dest.y>=g.height) {
-f.returnValue(QV());
+f.returnValue(QV::UNDEFINED);
 return;
 }
 QV callback = f.at(5);
@@ -166,7 +166,7 @@ f.call(6);
 QV re = f.at(-1);
 double cost;
 if (re.isNum()) cost = re.asNum();
-else if (re.isFalse() || re.isNull()) cost = 0;
+else if (re.isFalse() || re.isNullOrUndefined()) cost = 0;
 else cost=1;
 f.pop();
 f.popCppCallFrame();
@@ -184,7 +184,7 @@ else { nextInfo.handle = openList.push(next); nextInfo.handleInitialized=true; }
 }//going through neighbors
 }//going through openList
 if (p!=dest) { // No path found
-f.returnValue(QV());
+f.returnValue(QV::UNDEFINED);
 return;
 }
 vector<point> path;

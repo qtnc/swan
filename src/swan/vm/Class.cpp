@@ -22,8 +22,8 @@ return this;
 }
 
 QClass* QClass::mergeMixinMethods (QClass* cls) {
-insert_n(methods, static_cast<int>(cls->methods.size())-static_cast<int>(methods.size()), QV());
-for (int i=0; i<cls->methods.size(); i++) if (!cls->methods[i].isNull()) methods[i] = cls->methods[i];
+insert_n(methods, static_cast<int>(cls->methods.size())-static_cast<int>(methods.size()), QV::UNDEFINED);
+for (int i=0; i<cls->methods.size(); i++) if (!cls->methods[i].isNullOrUndefined()) methods[i] = cls->methods[i];
 return this;
 }
 
@@ -33,7 +33,7 @@ return bind(symbol, QV(func));
 }
 
 QClass* QClass::bind (int symbol, const QV& val) {
-insert_n(methods, 1+symbol-methods.size(), QV());
+insert_n(methods, 1+symbol-methods.size(), QV::UNDEFINED);
 methods[symbol] = val;
 return this;
 }
@@ -44,7 +44,7 @@ return QInstance::create(this, nFields);
 
 
 QClass& QV::getClass (QVM& vm) {
-if (isNull()) return *vm.nullClass;
+if (isNullOrUndefined()) return *vm.nullClass;
 else if (isBool()) return *vm.boolClass;
 else if (isNum()) return *vm.numClass;
 else if (isNativeFunction())  return *vm.functionClass;

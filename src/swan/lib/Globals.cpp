@@ -93,7 +93,7 @@ cout << endl;
 
 void QVM::initGlobals () {
 systemClass ->type ->copyParentMethods()
-BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV()); })
+BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV::UNDEFINED); })
 ;
 systemClass->copyParentMethods();
 

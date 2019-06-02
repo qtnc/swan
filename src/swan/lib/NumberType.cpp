@@ -82,7 +82,7 @@ else if (val.isString()) {
 int base = f.getOptionalNum(2, -1);
 f.returnValue(stringToNumImpl(f.getObject<QString>(1), base));
 }
-else f.returnValue(QV());
+else f.returnValue(QV::UNDEFINED);
 }
 
 

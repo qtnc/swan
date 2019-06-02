@@ -51,7 +51,7 @@ code.push_back('\n');
 try {
 fiber.loadString(code, "<REPL>");
 fiber.call(0);
-if (!fiber.isNull(-1)) {
+if (!fiber.isUndefined(-1)) {
 fiber.callMethod("toString", 1);
 cout << fiber.getCString(-1) << endl;
 }
@@ -129,7 +129,7 @@ fiber.storeGlobal("argv");
 if (!expression.empty()) {
 fiber.loadString(expression, "<cmdline>");
 fiber.call(0);
-if (!fiber.isNull(-1)) {
+if (!fiber.isUndefined(-1)) {
 fiber.callMethod("toString", 1);
 cout << fiber.getCString(-1) << endl;
 }}
