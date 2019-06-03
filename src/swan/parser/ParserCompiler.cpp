@@ -2314,7 +2314,6 @@ compiler.loops.back().condPos = compiler.writePosition();
 compiler.writeDebugLine(inExpression->nearestToken());
 writeOpLoadLocal(compiler, iteratorSlot);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, nextSymbol);
-compiler.writeOp(OP_DUP);
 compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_UNDEFINED) });
 if (destructuring) {
 loopVariables[0]->value = loopVariable;

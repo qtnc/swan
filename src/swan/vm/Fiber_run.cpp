@@ -262,8 +262,10 @@ BREAK
 
 CASE(OP_JUMP_IF_UNDEFINED)
 arg1 = frame.read<uint_jump_offset_t>();
-if (top().isUndefined()) frame.bcp += arg1;
+if (top().isUndefined()) {
+frame.bcp += arg1;
 pop();
+}
 break;
 
 CASE(OP_NEW_CLASS) {
