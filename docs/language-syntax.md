@@ -4,7 +4,7 @@ Here is a description of the language's syntax.
 ## Reserved keywords
 Some people take the number of keywords to grade the complexity of a language.
 
-32 actual keywords currently in use (synonyms aren't counted):
+33 actual keywords currently in use (synonyms aren't counted):
 
 * and (as a synonym for `&&`)
 * as
@@ -36,6 +36,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * throw
 * true
 * try
+* undefined
 * var (as a synonym for let)
 * with
 * while
@@ -46,18 +47,8 @@ Some people take the number of keywords to grade the complexity of a language.
 * async
 * await
 
-## Literal values
-* Boolean values: true, false
-* Null value: null
-* Num: 10, -69, 3.14, 0xFFFD, 0777, 0b111
-* String: `"Hello"`, `'world'`
-* List: `[1, 2, 3, 4, 5]`, `[]`
-* Map: `{one: 1, two: 2, three: 3 }`, `{}`
-* Tuple: `(1, 2, 3, 4, 5)`, `()`, `(single,)`
-* Range: `0..10` (end exclusive), `1...10` (end inclusive)
-* Set: `<1, 2, 3, 4, 5>, <1>, <>`
-- Regular expression: /pattern/options
-
+## Literal values and basic types
+### Numbers: Num
 Numbers are all 64-bit floating point values (C double). Valid number forms include:
 
 * Regular double: 3.14
@@ -65,9 +56,42 @@ Numbers are all 64-bit floating point values (C double). Valid number forms incl
 * Octal: 0o777 or 0777
 * Binary: 0b111
 
+Usual operators are defined on numbers:
+
+- Addition, subtraction, multiplication, division, modulus: `+, -, *, /, %`
+- Exponentiation: `**`
+- Integer division: `\\`
+- Bitwise operators: `|, &, ^, <<, >>`
+
+### Boolean values
+The Bool type only admit two literal values: true and false.
+
+### Strings
 Strings can be quoted using double quotes `"`, single quotes `'` or backtick `\``.
 
+The following escape sequencses are recognized:
+
+- \r, \n: cariage return, line feed
+- \t: tabulation
+- \e, escape
+- \b, \f, \0: backspace, form feed, null character
+- \xHH: ASCII character, with HH two hex digits
+- \uHHHH: unicode character, with HHHH four hex digits
+- \UHHHHHHHH: extended unicode character,  with HHHHHHHH height hex digits
+
+### Regular expressions
 Regular expressions can be literaly written as /pattern/options.
+
+Depending on the compilation options, more or less patterns and options are recognized.
+General syntax follows perl or PCRE. Options includes:
+
+- i: ignore case
+- y: sticky/continous flag
+
+### Null and undefined
+Null is different than undefined. As in JavaScript, null designates the absence of a value, while undefined indicates something that isn't, or not yet defined.
+Undefined is what is returned when indexing a list out of its bounds, when requesting a non-exist key in a map, and it also serves to signal the end of an iterable sequence of values.
+Null is never assigned or returned by anything in the Swan standard library; its use is entirely up to you.
 
 ## Operators and their priority
 Here are all available operators, ordered by priority from highest to lowest:
@@ -140,13 +164,14 @@ Is more or less equivalent to the below code, except that `iterator` aren't effe
 
 ```
 let iterator = iterable.iterator
-while iterator.hasNext {
+while true {
 let item = iterator.next
+if item is undefined: break
 statements...
 }
 ```
 
-The iterator protocol has been inspired by Java.
+Thus, the end of the loop is signaled by returning *undefined* from the next method.
 
 ## Collections: lists, tuples, maps, sets
 ### Lists and tuples
