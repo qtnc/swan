@@ -15,11 +15,6 @@ f.callFiber(f.getObject<QFiber>(0), f.getArgCount() -1);
 f.returnValue(f.at(1)); 
 }
 
-static void fiberHasNext (QFiber& f) {
-QFiber& fb = f.getObject<QFiber>(0);
-f.returnValue(fb.state == FiberState::INITIAL || fb.state == FiberState::YIELDED);
-}
-
 static void objectInstantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
@@ -187,7 +182,6 @@ fiberClass
 ->copyParentMethods()
 BIND_F( (), fiberNext)
 BIND_F(next, fiberNext)
-BIND_F(hasNext, fiberHasNext)
 BIND_N(iterator)
 ;
 

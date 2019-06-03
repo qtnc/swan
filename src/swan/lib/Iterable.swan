@@ -11,9 +11,8 @@ return false;
 Iterable::none = $$f: !this.any(f)
 
 Iterable::find = $$(f,asitr){
-let it = this.iterator
-while it.hasNext {
-let value = it.next
+let it = this.iterator, value
+while !((value = it.next) is undefined) {
 if f(value) return asitr? it : value
 }}
 

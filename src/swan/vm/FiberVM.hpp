@@ -31,28 +31,21 @@ return at(i) .isInstanceOf( vm.foreignClassIds[classId] );
 template<class F> static inline void iterateSequence (QFiber& f, const QV& initial, const F& func) {
 int iteratorSymbol = f.vm.findMethodSymbol(("iterator"));
 int nextSymbol = f.vm.findMethodSymbol(("next"));
-int hasNextSymbol = f.vm.findMethodSymbol(("hasNext"));
 f.push(initial);
 f.pushCppCallFrame();
 f.callSymbol(iteratorSymbol, 1);
 f.popCppCallFrame();
-QV iterable = f.at(-1), key, value;
+QV iterable = f.at(-1), value;
 f.pop();
 while(true){
-f.push(iterable);
-f.pushCppCallFrame();
-f.callSymbol(hasNextSymbol, 1);
-f.popCppCallFrame();
-key = f.at(-1);
-f.pop();
-if (key.isFalsy()) break;
 f.push(iterable);
 f.pushCppCallFrame();
 f.callSymbol(nextSymbol, 1);
 f.popCppCallFrame();
 value = f.at(-1);
 f.pop();
-if (!value.isNull()) func(value);
+if (value.isUndefined()) break;
+func(value);
 }}
 
 #endif
