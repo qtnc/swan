@@ -48,7 +48,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * await
 
 ## Literal values and basic types
-### Numbers: Num
+### Numbers
 Numbers are all 64-bit floating point values (C double). Valid number forms include:
 
 * Regular double: 3.14
@@ -87,6 +87,13 @@ General syntax follows perl or PCRE. Options includes:
 
 - i: ignore case
 - y: sticky/continous flag
+
+### Ranges
+A Range is a simple way to express a range of values with a starting and ending value. It is especially useful in for loops.
+
+- 0..10: Closed range from 0 to 9, or 0 to 10 exclusive, i.e. 10 isn't in the range
+- 1...10: Inclusive range from 1 to 10, i.e. 10 is in the range
+- Range(start, end, step, inclusive): complete constructor. For example Range(1, 10, 2) will generate 1, 3, 5, 7, 9.
 
 ### Null and undefined
 Null is different than undefined. As in JavaScript, null designates the absence of a value, while undefined indicates something that isn't, or not yet defined.

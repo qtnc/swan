@@ -218,7 +218,15 @@ virtual bool isBuffer (int stackIndex) = 0;
 @param stackIndex the stack index to check
 */
 virtual bool isNull (int stackIndex) = 0;
+
+/** Check if the element at stackIndex is undefined
+@param stackIndex the stack index to check
+*/
 virtual bool isUndefined (int stackIndex) = 0;
+
+/** Check if the element at stackIndex is null or undefined
+@param stackIndex the stack index to check
+*/
 virtual bool isNullOrUndefined (int stackIndex) = 0;
 
 /** Check if the element at stackIndex is a pointer to an object of the user-defined type specified by its ID 
@@ -439,6 +447,10 @@ virtual void setFiber (int stackIndex, Fiber& value) = 0;
 @param stackIndex the stack index which will be overwritten
 */
 virtual void setNull (int stackIndex) = 0;
+
+/** Replace the element at the given stack index by undefined
+@param stackIndex the stack index which will be overwritten
+*/
 virtual void setUndefined (int stackIndex) = 0;
 
 /** Replace the element at the specified stack index by a new object of the registered user-defined type given by its ID. 
@@ -493,6 +505,8 @@ virtual void pushFiber (Fiber& value) = 0;
 
 /** Push a null value at the back of the stack */
 virtual void pushNull () = 0;
+
+/** Push undefined at the back of the stack */
 virtual void pushUndefined () = 0;
 
 /** Push a Function object at the back of the stack 
