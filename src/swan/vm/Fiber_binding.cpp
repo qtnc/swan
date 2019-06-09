@@ -181,12 +181,10 @@ return &instance->userData[0];
 }
 
 void QFiber::storeImport (const string& name) {
-LOCK_SCOPE(vm.gil)
 vm.imports[name] = at(-1);
 }
 
 void QFiber::import (const std::string& baseFile, const std::string& requestedFile) {
-LOCK_SCOPE(vm.gil)
 string finalFile = vm.pathResolver(baseFile, requestedFile);
 if (vm.importHook(*this, finalFile, Swan::VM::ImportHookState::IMPORT_REQUEST, 0)) return;
 auto it = vm.imports.find(finalFile);

@@ -25,12 +25,15 @@ QString& s1 = f.getObject<QString>(0), &s2 = *f.ensureString(1);
 return strnatcmp(s1.data, s2.data);
 }
 
+bool stringEquals (QString& s1, QString& s2) {
+if (s1.length!=s2.length) return false;
+return 0==memcmp(s1.data, s2.data, s2.length);
+}
+
 static bool stringEquals (QFiber& f) {
 if (!f.isString(1)) return false;
 QString& s1 = f.getObject<QString>(0), &s2 = f.getObject<QString>(1);
-if (s1.length!=s2.length) return false;
-for (const char *c1=s1.data, *c2=s2.data; c1!=s1.data+s1.length; c1++, c2++) if (*c1!=*c2) return false;
-return true;
+return stringEquals(s1,s2);
 }
 
 static void stringIterator (QFiber& f) {

@@ -129,7 +129,7 @@ virtual void callMethod (const std::string& name, int nArgs) final override;
 
 QFiber (QVM& vm);
 QFiber (QVM& vm0, QClosure& closure): QFiber(vm0) { callFrames.push_back({ &closure,  closure.func.bytecode.data() , 0 }); }
-void adjustArguments (int& nArgs, int nClosureArgs, bool vararg);
+void adjustArguments (int nArgs, int nClosureArgs, bool vararg);
 void storeMethod (int symbol);
 void storeStaticMethod (int symbol);
 QV loadMethod (QV& obj, int symbol);

@@ -3,7 +3,6 @@
 #include "Range.hpp"
 
 QFiber& QVM::createFiber () {
-Swan::ScopeLocker locker(*this);
 auto f = construct<QFiber>(*this);
 fibers.push_back(f);
 return *f;
@@ -24,7 +23,6 @@ callFrames.reserve(4);
 }
 
 void QFiber::release () {
-Swan::ScopeLocker locker(vm);
 vm.fibers.erase(find(vm.fibers.begin(), vm.fibers.end(), this));
 }
 

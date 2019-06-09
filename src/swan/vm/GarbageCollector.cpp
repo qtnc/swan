@@ -277,7 +277,6 @@ if (prev) prev->gcNext(nullptr);
 }
 
 void QVM::garbageCollect () {
-LOCK_SCOPE(gil)
 //println(std::cerr, "Starting GC! mem used = %d, treshhold = %d", gcMemUsage, gcTreshhold);
 
 unmarkAll(firstGCObject);

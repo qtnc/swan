@@ -1,4 +1,3 @@
-#{
 global function zip (...seqs){
 let zipper 
 if seqs.length==0: return ()
@@ -8,19 +7,13 @@ seqs = seqs[0..-1]
 }
 else zipper = $(...x): x
 return $*{
-var iterators = [], keys = [], values = []
-for seq in seqs { iterators.push(seq.iterator); keys.push(null); values.push(null); }
+var iterators = [], values = []
+for seq in seqs { iterators.push(seq.iterator); values.push(undefined); }
 while true {
 for i in 0..iterators.length {
-keys[i] = iterators[i].iterate(keys[i])
-if keys[i]==null {
-return null
+if (values[i] = iterators[i].next) is undefined: return
 }
-values[i] = iterators[i].iteratorValue(keys[i])
-}
-let re = zipper(...values)
-yield re
+yield zipper(...values)
 }
 }
 }
-}#

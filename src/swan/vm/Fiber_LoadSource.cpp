@@ -12,7 +12,6 @@ return loadString(source, filename);
 }
 
 int QFiber::loadString (const string& initialSource, const string& filename) {
-LOCK_SCOPE(vm.gil)
 GCLocker gcLocker(vm);
 string displayName = "<string>";
 if (!filename.empty()) {

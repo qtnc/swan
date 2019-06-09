@@ -11,7 +11,9 @@ vm.deallocate(p, n);
 }
 
 Swan::VM& Swan::VM::create () {
-return *new QVM();
+auto vm = new QVM();
+vm->lock();
+return *vm;
 }
 
 uint32_t Swan::VM::getVersion () { 

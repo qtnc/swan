@@ -559,13 +559,25 @@ string print () { return TOKEN_NAMES[token.type]; }
 struct IfStatement: Statement  {
 shared_ptr<Expression> condition;
 shared_ptr<Statement> ifPart, elsePart;
-IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp, shared_ptr<Statement> ep = nullptr): condition(cond), ifPart(ifp), elsePart(ep) {}
-shared_ptr<Statement> optimizeStatement () { condition=condition->optimize(); ifPart=ifPart->optimizeStatement(); if (elsePart) elsePart=elsePart->optimizeStatement(); return shared_this(); }
+QOpCode jumpType;
+IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp, shared_ptr<Statement> ep = nullptr, QOpCode jt = OP_JUMP_IF_FALSY): condition(cond), ifPart(ifp), elsePart(ep), jumpType(jt) {}
+shared_ptr<Statement> optimizeStatement () { 
+condition=condition->optimize(); 
+ifPart=ifPart->optimizeStatement(); 
+if (elsePart) elsePart=elsePart->optimizeStatement(); 
+if (auto u = dynamic_pointer_cast<UnaryOperation>(condition)) if (u->op==T_EXCL) { jumpType=OP_JUMP_IF_TRUTY; condition = u->expr; }
+if (auto c = dynamic_pointer_cast<ConstantExpression>(condition)) {
+auto singlePart = c->token.value.isFalsy()? elsePart : ifPart;
+if (!singlePart) singlePart = make_shared<SimpleStatement>(c->token);
+return singlePart;
+}
+return shared_this(); 
+}
 const QToken& nearestToken () { return condition->nearestToken(); }
 void compile (QCompiler& compiler) {
 compiler.writeDebugLine(condition->nearestToken());
 condition->compile(compiler);
-int skipIfJump = compiler.writeOpJump(OP_JUMP_IF_FALSY);
+int skipIfJump = compiler.writeOpJump(jumpType);
 compiler.pushScope();
 compiler.writeDebugLine(ifPart->nearestToken());
 ifPart->compile(compiler);
@@ -851,7 +863,7 @@ s += ("}\r\n");
 return s;
 }};
 
-struct VariableDeclaration: Statement {
+struct VariableDeclaration: Statement, Decorable {
 vector<shared_ptr<Variable>> vars;
 VariableDeclaration (const vector<shared_ptr<Variable>>& v = {}): vars(v) {}
 const QToken& nearestToken () { return vars[0]->name->nearestToken(); }
@@ -1168,7 +1180,7 @@ OP(PLUS, +), OP(MINUS, -),
 OP(STAR, *), OP(SLASH, /),
 OP(LT, <), OP(GT, >),
 OP(LTE, <=), OP(GTE, >=),
-OP(EQEQ, ==), OP(EXCLEQ, !=),
+OP(EQEQ, ==), OP(EXCLEQ, !=), OP(IS, ==),
 OPB(BAR, |), OPB(AMP, &), OPB(CIRC, ^),
 OPF(LTLT, dlshift), OPF(GTGT, drshift),
 OPF(PERCENT, fmod), OPF(STARSTAR, pow), OPF(BACKSLASH, dintdiv)
@@ -1234,12 +1246,18 @@ else if (c==closing) {
 if (utf8inc(in, end)==delim && --nesting<=0) { utf8::next(in, end); break; }
 }}}
 
-static int parseCodePointValue (const char*& in, const char* end, int n, int base) {
+static int parseCodePointValue (QParser& parser, const char*& in, const char* end, int n, int base) {
 char buf[n+1];
 memcpy(buf, in, n);
 buf[n]=0;
 in += n;
-return strtoul(buf, nullptr, base);
+auto c = strtoul(buf, nullptr, base);
+if (c>=0x110000) {
+parser.cur = { T_STRING, in -n -2, static_cast<size_t>(n+2), QV::UNDEFINED };
+parser.parseError("Invalid code point");
+return 0xFFFD;
+}
+return c;
 }
 
 static int getStringEndingChar (int c) {
@@ -1250,12 +1268,15 @@ case 8220: return 8221;
 default:  return c;
 }}
 
-static QV parseString (QVM& vm, const char*& in, const char* end, int ending) {
+static QV parseString (QParser& parser, QVM& vm, const char*& in, const char* end, int ending) {
 string re;
 auto out = back_inserter(re);
 int c;
-while((c=utf8::next(in, end))!=ending && c) {
+auto begin = in;
+while(in<end && (c=utf8::next(in, end))!=ending && c) {
+if (c=='\n' && !vm.multilineStrings) break;
 if (c=='\\') {
+const char* ebegin = in -1;
 c = utf8::next(in, end);
 switch(c){
 case 'b': c='\b'; break;
@@ -1264,12 +1285,26 @@ case 'f': c='\f'; break;
 case 'n': c='\n'; break;
 case 'r': c='\r'; break;
 case 't': c='\t'; break;
-case 'u': c = parseCodePointValue(in, end, 4, 16); break;
-case 'U': c = parseCodePointValue(in, end, 8, 16); break;
-case 'x': c = parseCodePointValue(in, end, 2, 16); break;
-case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': c = strtoul(--in, const_cast<char**>(&in), 0); break;
+case 'u': c = parseCodePointValue(parser, in, end, 4, 16); break;
+case 'U': c = parseCodePointValue(parser, in, end, 8, 16); break;
+case 'v': c = '\v'; break;
+case 'x': c = parseCodePointValue(parser, in, end, 2, 16); break;
+case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': 
+c = strtoul(--in, const_cast<char**>(&in), 0); 
+if (c>=0x110000) { parser.cur = { T_STRING, ebegin, static_cast<size_t>(in-ebegin), QV::UNDEFINED }; parser.parseError("Invalid code point"); c=0xFFFD; }
+break;
+default:
+if ((c>='a' && c<='z') || (c>='a' && c<='Z')) {
+parser.cur = { T_STRING, ebegin, static_cast<size_t>(in-ebegin), QV::UNDEFINED };
+parser.parseError("Invalid escape sequence");
+}
+break;
 }}
 utf8::append(c, out);
+}
+if (c!=ending) {
+parser.cur = { T_STRING, begin, static_cast<size_t>(in-begin), QV::UNDEFINED };
+parser.parseError("Unterminated string");
 }
 return QV(vm, re);
 }
@@ -1356,9 +1391,8 @@ while(in<end && (c=utf8::peek_next(in, end)) && (isName(c) || isDigit(c))) utf8:
 if (in<end && utf8::peek_next(in, end)=='=' && eatEq) utf8::next(in, end);
 RET
 }
-auto p = getPositionOf(in);
-int line = p.first, column = p.second;
-println(std::cerr, "Line %d, column %d: unexpected character '%c' (%<#0$2X)", line, column, c);
+cur = { T_END, in, 1, QV::UNDEFINED };
+parseError("Unexpected character (%#0$2X)", c);
 RET0(T_END)
 #undef RET
 #undef RET0
@@ -1428,7 +1462,7 @@ else RET(T_DOT)
 case '"': case '\'': case '`':
 case 146: case 147: case 171: case 8216: case 8217: case 8220: 
 {
-QV str = parseString(vm, in, end, getStringEndingChar(c));
+QV str = parseString(*this, vm, in, end, getStringEndingChar(c));
 RETV(T_STRING, str)
 }
 case '#': skipComment(in, end, '#'); return nextToken();
@@ -1450,9 +1484,8 @@ case T_UNDEFINED: RETV(type, QV::UNDEFINED)
 default: RET(type)
 }}
 else if (isSpace(c)) RET(T_END)
-auto p = getPositionOf(in);
-int line = p.first, column = p.second;
-println(std::cerr, "Line %d, column %d: unexpected character '%c' (%<#0$2X)", line, column, c);
+cur = { T_END, in, 1, QV::UNDEFINED };
+parseError("Unexpected character (%#0$2X)", c);
 RET(T_END)
 #undef RET
 #undef RETV
@@ -1934,7 +1967,7 @@ return nullptr;
 
 shared_ptr<Statement> QParser::parseExportDecl () {
 if (matchOneOf(T_VAR, T_CONST)) {
-return parseVarDecl(VD_EXPORT);
+return parseVarDecl(VD_CONST | VD_EXPORT);
 }
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_EXPORT);
@@ -1971,8 +2004,8 @@ shared_ptr<Statement> QParser::parseImportDecl () {
 bool parent = match(T_LEFT_PAREN);
 shared_ptr<Expression> from = parseExpression(P_COMPREHENSION);
 if (parent) consume(T_RIGHT_PAREN, "Expected ')' to close function call");
-if (!match(T_FOR)) return make_shared<ImportExpression>(from);
 auto im = make_shared<ImportDeclaration>(from);
+if (match(T_FOR)) {
 do {
 consume(T_NAME, "Expected variable name after 'for'");
 QToken t1 = cur, t2 = cur;
@@ -1982,6 +2015,11 @@ t2 = cur;
 }
 im->imports.emplace_back(t1,t2);
 } while(match(T_COMMA));
+}
+else if (auto cst = dynamic_pointer_cast<ConstantExpression>(from)) {
+im->imports.emplace_back(cst->token, cst->token);
+}
+else parseError("Expecting 'for' after non-constant import");
 return im;
 }
 
@@ -2013,7 +2051,9 @@ return make_shared<UnaryOperation>(op, right);
 
 shared_ptr<Expression> QParser::parseInfixOp (shared_ptr<Expression> left) {
 QTokenType op =  cur.type;
-shared_ptr<Expression> right = parseExpression(rules[op].priority);
+auto priority = rules[op].priority;
+if (op>=T_EQ && op<=T_BARBAREQ) priority--;
+shared_ptr<Expression> right = parseExpression(priority);
 return createBinaryOperation(left, op, right);
 }
 
@@ -2614,6 +2654,10 @@ QToken token = cst->token;
 token.value = BASE_NUMBER_UNOPS[op](value.d);
 return make_shared<ConstantExpression>(token);
 }
+else if (op==T_EXCL) {
+cst->token.value = value.isFalsy()? QV::TRUE : QV::FALSE;
+return cst;
+}
 //other operations on non-number
 }
 return shared_this(); 
@@ -2641,6 +2685,9 @@ return make_shared<ConstantExpression>(token);
 }
 //other operations on non-number
 }
+else if (c1 && op==T_BARBAR) return c1->token.value.isFalsy()? right : left;
+else if (c1 && op==T_QUESTQUEST) return c1->token.value.isNullOrUndefined()? right : left;
+else if (c1 && op==T_AMPAMP) return c1->token.value.isFalsy()? left: right;
 return shared_this(); 
 }
 
@@ -2836,17 +2883,19 @@ if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(compiler, var->name, names)) {
-if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_UNDEFINED); }
 }
 continue;
 }
 int slot = -1;
 if (!(var->flags&VD_GLOBAL)) slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 if (var->value) var->value->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+for (auto& decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (var->flags&VD_GLOBAL) {
 int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, globalSlot);

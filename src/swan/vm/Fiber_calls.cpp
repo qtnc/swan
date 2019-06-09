@@ -10,7 +10,6 @@
 using namespace std;
 
 void QFiber::call (int nArgs) {
-LOCK_SCOPE(vm.gil)
 pushCppCallFrame();
 callCallable(nArgs);
 popCppCallFrame();
@@ -57,7 +56,6 @@ return false;
 }}
 
 void QFiber::callMethod (const string& name, int nArgs) {
-LOCK_SCOPE(vm.gil)
 int symbol = vm.findMethodSymbol(name);
 pushCppCallFrame();
 callSymbol(symbol, nArgs);
@@ -108,30 +106,28 @@ QClass& cls = method.getClass(vm);
 callSymbol(symbol, nArgs+1);
 }}
 
-void QFiber::adjustArguments (int& nArgs, int nClosureArgs, bool vararg) {
+void QFiber::adjustArguments (int nArgs, int nClosureArgs, bool vararg) {
+if (!vararg) {
+if (nArgs==nClosureArgs) return;
+else if (nArgs>nClosureArgs) stack.erase(stack.end() +nClosureArgs -nArgs, stack.end()); 
+else while(nArgs++<nClosureArgs) pushUndefined();
+}
+else { // vararg
 if (nArgs>=nClosureArgs) {
-if (vararg) {
 QTuple* tuple = QTuple::create(vm, nArgs+1-nClosureArgs, &stack.at(stack.size() +nClosureArgs -nArgs -1));
 stack.erase(stack.end() +nClosureArgs -nArgs -1, stack.end());
 push(tuple);
 }
-else if (nArgs>nClosureArgs) stack.erase(stack.end() +nClosureArgs -nArgs, stack.end());
-nArgs = nClosureArgs;
-}
 else {
-while (nArgs<nClosureArgs) {
-pushUndefined();
-nArgs++;
-}
-if (vararg) {
-pop();
+while (++nArgs<nClosureArgs) pushUndefined();
 push(QTuple::create(vm, 0, nullptr));
 }}
 }
 
 void QFiber::callClosure (QClosure& closure, int nArgs) {
-adjustArguments(nArgs, closure.func.nArgs, closure.func.vararg);
-uint32_t newStackBase = stack.size() -nArgs;
+int nClosureArgs = closure.func.nArgs;
+adjustArguments(nArgs, nClosureArgs, closure.func.vararg);
+uint32_t newStackBase = stack.size() -nClosureArgs;
 bool doRun = callFrames.back().isCppCallFrame();
 callFrames.push_back({&closure, closure.func.bytecode.data(), newStackBase});
 if (doRun) run();
@@ -150,11 +146,11 @@ f.run();
 vm.activeFiber = this;
 }break;
 case FiberState::YIELDED:
-if (nArgs>=1) {
+if (nArgs==0) f.pushUndefined();
+else {
 f.push(top());
 stack.erase(stack.end() -nArgs, stack.end());
 }
-else f.pushUndefined();
 f.parentFiber = this;
 vm.activeFiber = &f;
 f.run();

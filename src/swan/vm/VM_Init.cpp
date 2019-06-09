@@ -164,10 +164,10 @@ deallocate(ptr, size);
 ptr=next;
 }
 purgeMem();
+unlock();
 }
 
 void QVM::init () {
-LOCK_SCOPE(gil)
 initPlatformEncodings();
 
 initBaseTypes();

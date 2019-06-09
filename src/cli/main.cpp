@@ -49,6 +49,7 @@ static void replEval (Swan::Fiber& fiber, string& code, const string& line) {
 code.append(line);
 code.push_back('\n');
 try {
+Swan::ScopeLocker<Swan::VM>  locker(fiber.getVM());
 fiber.loadString(code, "<REPL>");
 fiber.call(0);
 if (!fiber.isUndefined(-1)) {
@@ -68,6 +69,7 @@ code.clear();
 }
 
 static void repl (Swan::VM& vm, Swan::Fiber& fiber) {
+Swan::ScopeUnlocker<Swan::VM> unlocker(vm);
 string code, line;
 vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
 printIntro();
