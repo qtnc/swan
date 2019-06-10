@@ -19,7 +19,7 @@ static void objectInstantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
 if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined()) {
-f.runtimeError(("This class isn't instantiable"));
+f.runtimeError("%s has no constructor", cls.name);
 return;
 }
 QObject* instance = cls.instantiate();
@@ -121,6 +121,20 @@ f.popCppCallFrame();
 f.returnValue(!re);
 }
 
+static void functionInstantiate (QFiber& f) {
+f.returnValue(QV::UNDEFINED);
+if (f.isString(1)) {
+int symbol = f.vm.findMethodSymbol(f.getString(1));
+f.returnValue(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION));
+}
+else if (f.isNum(1)) {
+int index = f.getNum(1) -1;
+if (index<0 && -index<=f.callFrames.size()) {
+auto cf = f.callFrames.end() +index;
+if (cf->closure) f.returnValue(QV(cf->closure, QV_TAG_CLOSURE));
+}}
+}
+
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
@@ -195,10 +209,12 @@ objectClass->type
 
 boolClass ->type
 ->copyParentMethods()
+BIND_L( (), { f.returnValue(!f.at(1).isFalsy()); })
 ;
 
 functionClass ->type
 ->copyParentMethods()
+BIND_F( (), functionInstantiate)
 ;
 
 fiberClass ->type

@@ -867,6 +867,7 @@ struct VariableDeclaration: Statement, Decorable {
 vector<shared_ptr<Variable>> vars;
 VariableDeclaration (const vector<shared_ptr<Variable>>& v = {}): vars(v) {}
 const QToken& nearestToken () { return vars[0]->name->nearestToken(); }
+bool isDecorable () override { return true; }
 shared_ptr<Statement> optimizeStatement () { 
 for (auto& v: vars) v->optimize();
 return shared_this(); 
@@ -2845,18 +2846,15 @@ compiler.compileError(left->nearestToken(), ("Invalid target for assignment"));
 }
 
 static vector<shared_ptr<NameExpression>>& decompose (QCompiler& compiler, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
-auto name = dynamic_pointer_cast<NameExpression>(expr);
-if (name) {
+if (auto name = dynamic_pointer_cast<NameExpression>(expr)) {
 names.push_back(name);
 return names;
 }
-auto seq = dynamic_pointer_cast<LiteralSequenceExpression>(expr);
-if (seq) {
+if (auto seq = dynamic_pointer_cast<LiteralSequenceExpression>(expr)) {
 for (auto& item: seq->items) decompose(compiler, item, names);
 return names;
 }
-auto map = dynamic_pointer_cast<LiteralMapExpression>(expr);
-if (map) {
+if (auto map = dynamic_pointer_cast<LiteralMapExpression>(expr)) {
 for (auto& item: map->items) decompose(compiler, item.second, names);
 return names;
 }
@@ -2865,9 +2863,12 @@ if (bop && bop->op==T_EQ) {
 decompose(compiler, bop->left, names);
 return names;
 }
-auto prop = dynamic_pointer_cast<GenericMethodSymbolExpression>(expr);
-if (prop) {
+if (auto prop = dynamic_pointer_cast<GenericMethodSymbolExpression>(expr)) {
 names.push_back(make_shared<NameExpression>(prop->token));
+return names;
+}
+if (auto unpack = dynamic_pointer_cast<UnpackExpression>(expr)) {
+decompose(compiler, unpack->expr, names);
 return names;
 }
 if (!dynamic_cast<FieldExpression*>(&*expr) && !dynamic_cast<StaticFieldExpression*>(&*expr)) compiler.compileError(expr->nearestToken(), "Invalid target for assignment in destructuring");

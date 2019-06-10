@@ -62,10 +62,10 @@ f.returnValue(f.at(-1));
 
 static void createClass (QFiber& f) {
 GCLocker gcLocker(f.vm);
-string name = f.getString(0);
+string name = f.getString(1);
 vector<QV> parents;
 int nFields=-1, nStaticFields=-1;
-for (int i=1, n=f.getArgCount(); i<n; i++) {
+for (int i=2, n=f.getArgCount(); i<n; i++) {
 if (f.isNum(i)) {
 int x = f.getNum(i);
 if (nFields<0) nFields=x;
@@ -128,7 +128,9 @@ bindGlobal("loadGlobal", loadGlobal);
 bindGlobal("storeGlobal", storeGlobal);
 bindGlobal("loadField", loadField);
 bindGlobal("storeField", storeField);
-bindGlobal("createClass", createClass);
+
+classClass->type
+BIND_F( (), createClass);
 #endif
 
 bindGlobal("dbg", debugPrint);
