@@ -149,7 +149,7 @@ void handleException (const std::exception& e);
 FiberState run ();
 template<class... A> void runtimeError (const char* msg, const A&... args);
 
-virtual ~QFiber () = default;
+virtual ~QFiber ();
 virtual void release () final override;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this); }

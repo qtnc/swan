@@ -5,9 +5,13 @@ using namespace std;
 
 
 static void fiberInstantiate (QFiber& f) {
+if (f.getArgCount()==1) f.returnValue(QV(&f, QV_TAG_FIBER));
+else if (f.at(1).isClosure()) {
 QClosure& closure = f.getObject<QClosure>(1);
 QFiber* fb = f.vm.construct<QFiber>(f.vm, closure);
 f.returnValue(QV(fb, QV_TAG_FIBER));
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void fiberNext (QFiber& f) {
@@ -179,10 +183,16 @@ nullClass
 ->copyParentMethods()
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(?, { f.returnValue(QV::FALSE); })
-BIND_L(toString, {
-if (f.isNull(0)) f.returnValue(QV(f.vm, "null", 4)); 
-else f.returnValue(QV(f.vm, "undefined", 9)); 
-})
+BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4));  })
+BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
+BIND_F(hashCode, objectHashCode)
+;
+
+undefinedClass
+->copyParentMethods()
+BIND_L(!, { f.returnValue(QV::TRUE); })
+BIND_L(?, { f.returnValue(QV::FALSE); })
+BIND_L(toString, { f.returnValue(QV(f.vm, "undefined", 9));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;

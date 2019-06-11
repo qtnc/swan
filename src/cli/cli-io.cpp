@@ -225,7 +225,8 @@ f.registerMethod("close", METHOD(IO, close));
 f.registerMethod("toBuffer", ioToBuffer);
 f.pop();
 
-f.loadGlobal("System");
+f.pushNewForeignClass("System", 0, 0, 0);
+f.storeGlobal("System");
 f.registerStaticProperty("out", STATIC_METHOD(ioGetStdout), STATIC_METHOD(ioSetStdout));
 f.registerStaticProperty("err", STATIC_METHOD(ioGetStderr), STATIC_METHOD(ioSetStderr));
 f.registerStaticProperty("in", STATIC_METHOD(ioGetStdin), STATIC_METHOD(ioSetStdin));

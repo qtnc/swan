@@ -92,13 +92,8 @@ cout << endl;
 }
 
 void QVM::initGlobals () {
-systemClass ->type ->copyParentMethods()
-BIND_L(gc, { f.vm.garbageCollect(); f.returnValue(QV::UNDEFINED); })
-;
-systemClass->copyParentMethods();
-
 QClass* globalClasses[] = { 
-boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass
 #ifndef NO_BUFFER
 , bufferClass
 #endif

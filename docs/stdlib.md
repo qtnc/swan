@@ -71,13 +71,24 @@ Methods:
 ## Function: is Object
 Class representing all function objects.
 
+- Constructor: Function(name): return a dynamic method symbol, i.e. `Function('xyz')` returns `::xyz`.
+- Constructor: Function(n), with n<0: return the currently running function a the given stack level, i.e. Function(-1) returns the current function, Function(-2) the callee, Function(-3) the callee of the callee, etc.
+
 No specific methods beside () operator.
 
 ## Fiber: is Iterable
-A Fiber represent a paralel execution fiber, as known as generator or coroutine.
+A Fiber represent a paralel execution fiber, as known as coroutine.
 You can iterate a fiber to fetch all yielded values in turn.
 
-NO specific methods beside `()` operator, iterator, next and hasNext.
+- Constructor: Fiber(func): construct a fiber running the given function. The function will actually be called when calling fiber.next for the first time.
+- Constructor: Fiber(): without argument, this returns the current executing fiber
+
+Operator () is the same as next method: it calls the fiber. 
+
+- Arguments passed to operator()/next are passed as function arguments when called for the first time. 
+- For subsequent calls, the argument passed to next is the value returned from the yield expression. 
+- The value returned from next is the yielded or returned value from the fiber.
+
 
 ## Grid: is Iterable
 A grid is a bidimensional structure. It is indexed with two indices x (representing columns) and y (representing rows).

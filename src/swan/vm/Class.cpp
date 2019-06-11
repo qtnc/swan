@@ -44,9 +44,11 @@ return QInstance::create(this, nFields);
 
 
 QClass& QV::getClass (QVM& vm) {
-if (isNullOrUndefined()) return *vm.nullClass;
+if (isUndefined()) return *vm.undefinedClass;
 else if (isBool()) return *vm.boolClass;
 else if (isNum()) return *vm.numClass;
+else if (isString()) return *vm.stringClass;
+else if (isNull()) return *vm.nullClass;
 else if (isNativeFunction())  return *vm.functionClass;
 else if (isGenericSymbolFunction())  return *vm.functionClass;
 else {

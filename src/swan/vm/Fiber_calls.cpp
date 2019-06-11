@@ -13,6 +13,7 @@ void QFiber::call (int nArgs) {
 pushCppCallFrame();
 callCallable(nArgs);
 popCppCallFrame();
+if (state==FiberState::YIELDED) runtimeError("Yielding across C++ call frame");
 }
 
 void QFiber::callSymbol (int symbol, int nArgs) {
@@ -60,6 +61,7 @@ int symbol = vm.findMethodSymbol(name);
 pushCppCallFrame();
 callSymbol(symbol, nArgs);
 popCppCallFrame();
+if (state==FiberState::YIELDED) runtimeError("Yielding across C++ call frame");
 }
 
 void QFiber::callCallable (int nArgs) {
@@ -159,7 +161,7 @@ break;
 case FiberState::RUNNING:
 case FiberState::FAILED:
 default:
-runtimeError(("Couldn't call a running or finished fiber"));
+runtimeError(("Couldn't call a running or finished fiber")); [[fallthrough]];
 case FiberState::FINISHED:
 pushUndefined();
 return;

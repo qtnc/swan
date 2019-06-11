@@ -35,7 +35,7 @@ size_t gcMemUsage, gcTreshhold;
 uint16_t gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
 
-QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *systemClass;
+QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *undefinedClass;
 QClass *listClass, *mapClass, *rangeClass, *setClass, *stringClass, *tupleClass;
 QClass *iterableClass, *iteratorClass, *mappingClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
 #ifndef NO_BUFFER

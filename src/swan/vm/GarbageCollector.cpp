@@ -282,7 +282,7 @@ void QVM::garbageCollect () {
 unmarkAll(firstGCObject);
 
 vector<QObject*> roots = { 
-boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, systemClass, tupleClass
+boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass, undefinedClass
 , listIteratorClass, mapIteratorClass, rangeIteratorClass, setIteratorClass, stringIteratorClass, tupleIteratorClass
 #ifndef NO_REGEX
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass

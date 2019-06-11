@@ -419,7 +419,7 @@ Can be shortened into a simple `var x` inside the class:
 `var x`
 
 ## Fibers
-Fibers are better known under the names generator or coroutine:
+Fibers are better known under the name coroutine:
 
 ```
 let fibonacci = Fiber(${

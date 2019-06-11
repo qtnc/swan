@@ -22,6 +22,8 @@ stack.reserve(8);
 callFrames.reserve(4);
 }
 
+QFiber::~QFiber () { }
+
 void QFiber::release () {
 vm.fibers.erase(find(vm.fibers.begin(), vm.fibers.end(), this));
 }

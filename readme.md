@@ -60,11 +60,11 @@ print(v3)
 - Class object-oriented
 - Allow functional style with closures and higher order functions
 - Everyting is an object, including numbers, closures, boolean values and null itself
-- Fibers better known as generators or coroutines
+- Fibers better known as coroutines
 - Operator overloading
 - Extending or redefining classes at runtime (except built-in types)
 
-Core built-in types: Bool, Fiber, Function, List, Map, Null, Number, Set, String, Tuple
+Core built-in types: Bool, Fiber, Function, List, Map, null, Number, Set, String, Tuple, undefined
 
 Other characteristics of this little programming language include:
 
