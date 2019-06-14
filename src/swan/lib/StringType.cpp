@@ -345,5 +345,9 @@ stringIteratorClass
 BIND_F(next, stringIteratorNext)
 BIND_F(previous, stringIteratorPrevious)
 ;
+
+stringClass->type
+->copyParentMethods()
+;
 }
 

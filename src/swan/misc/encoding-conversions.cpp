@@ -36,6 +36,33 @@ inline bool operator != (const istream_iterator_adapter<T>& x) { return !(*this=
 inline bool operator < (const istream_iterator_adapter<T>& x) { return *this!=x; }
 };
 
+template<class T, class F> struct ostream_iterator_functor_adapter: iterator<output_iterator_tag, T> {
+ostream* out;
+F func;
+ostream_iterator_functor_adapter (ostream& o, const F& f): out(&o), func(f)  {}
+inline ostream_iterator_functor_adapter<T,F>& operator* () { return *this; }
+inline ostream_iterator_functor_adapter<T,F>& operator++ () { return *this; }
+inline ostream_iterator_functor_adapter<T,F>& operator++ (int unused) { return *this; }
+inline ostream_iterator_functor_adapter<T,F>&  operator= (const T& x) { func(*out, x); return *this; }
+};
+
+template<class T, class F> struct istream_iterator_functor_adapter: iterator<input_iterator_tag, T> {
+istream* in;
+F func;
+T cur;
+istream_iterator_functor_adapter (istream& in0, const F& f): in(&in0), cur(0), func(f) { ++*this; }
+istream_iterator_functor_adapter (): in(nullptr), cur(0), func(nullptr)   {}
+inline T operator* () {  return cur;  }
+inline istream_iterator_functor_adapter<T,F>& operator++ () { 
+cur = func(*in);
+return *this; 
+}
+inline istream_iterator_functor_adapter<T,F> operator++ (int unused) { auto copy = *this; ++*this; return copy; }
+inline bool operator == (const istream_iterator_functor_adapter<T,F>& x) { return x.in? in==x.in : !*in; }
+inline bool operator != (const istream_iterator_functor_adapter<T,F>& x) { return !(*this==x); }
+inline bool operator < (const istream_iterator_functor_adapter<T,F>& x) { return *this!=x; }
+};
+
 template<class I> static inline uint32_t u16next (I& in) {
 char b[4] = {0};
 uint16_t a[2] = {0};
@@ -168,6 +195,55 @@ c = strtol(b, nullptr, 16);
 else if (c=='+') c=' ';
 out << c;
 }}
+
+static void jsonenc (istream& in, ostream& out, int mode) {
+auto encfunc = [](ostream& out, uint16_t x) {
+if (x==34) out << "\\\"";
+else if (x==39) out << "\\'";
+else if (x==92) out << "\\\\"; 
+else if (x>=32 && x<127) out << static_cast<char>(x);
+else print(out, "\\u%0$4x", x);
+};
+typedef istream_iterator_adapter<char> incvt;
+typedef ostream_iterator_functor_adapter<uint16_t, std::function<void(ostream&,uint16_t)>> outcvt;
+auto unused = utf8::utf8to16(incvt(in), incvt(), outcvt(out, encfunc));
+}
+
+static void jsondec (istream& in, ostream& out) {
+auto decfunc = [](istream& in) -> uint16_t {
+char c;
+in >> c;
+if (c=='\\') {
+in >> c;
+switch(c){
+case 'b': return '\b'; break;
+case 'f': return '\f'; break;
+case 'n': return '\n'; break;
+case 'r': return '\r'; break;
+case 't': return '\t'; break;
+case 'v': return '\v'; break;
+case 'u': {
+char buf[5] = {0};
+in.read(buf, 4);
+int re = 0;
+sscanf(buf, "%04x", &re);
+return re;
+}break;
+case 'x': {
+char buf[3] = {0};
+in.read(buf, 2);
+int re = 0;
+sscanf(buf, "%02x", &re);
+return re;
+}break;
+default: return static_cast<uint8_t>(c);
+}}
+else return static_cast<uint8_t>(c);
+};
+istream_iterator_functor_adapter<uint16_t, std::function<uint16_t(istream&)>> uIn(in, decfunc), uEnd;
+ostream_iterator_adapter<char> uOut(out);
+utf8::utf16to8( uIn, uEnd, uOut);
+}
 #endif
 
 unordered_map<string, Swan::VM::EncodingConversionFn> QVM::stringToBufferConverters = {
@@ -181,7 +257,8 @@ unordered_map<string, Swan::VM::EncodingConversionFn> QVM::stringToBufferConvert
 #ifndef NO_BUFFER
 , { "base64", b64dec },
 { "hex", hexdec },
-{ "url", urldec }
+{ "urlencoded", urldec },
+{ "json", jsondec }
 #endif
 };
 
@@ -196,7 +273,8 @@ unordered_map<string, Swan::VM::DecodingConversionFn>  QVM::bufferToStringConver
 #ifndef NO_BUFFER
 , { "base64", b64enc },
 { "hex", hexenc },
-{ "url", urlenc }
+{ "urlencoded", urlenc },
+{ "json", jsonenc }
 #endif
 };
 

@@ -180,7 +180,27 @@ QBuffer& b = f.getObject<QBuffer>(1);
 QString* enc = f.ensureString(2);
 f.returnValue(convertBufferToString(b, enc->asString()));
 }
-else f.returnValue(QV( f.ensureString(1), QV_TAG_STRING));
+else if (f.isString(1) && f.getArgCount()==3 && f.isString(2)) {
+QString &b = f.getObject<QString>(1), &enc = f.getObject<QString>(2);
+auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(enc.asString()));
+if (it==QVM::stringToBufferConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", enc.asString(), "UTF-8"));
+istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+ostringstream out;
+(it->second)(in, out);
+f.returnValue(out.str());
+}
+else f.returnValue(QV(f.ensureString(1), QV_TAG_STRING));
+}
+
+static void stringToString (QFiber& f) {
+if (f.getArgCount()==1) return;
+QString &b = f.getObject<QString>(0), &enc = f.getObject<QString>(1);
+auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(enc.asString()));
+if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", "UTF-8", enc.asString() ));
+istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+ostringstream out;
+(it->second)(in, out, 0);
+f.returnValue(out.str());
 }
 
 static void stringToBuffer (QFiber& f) {
@@ -264,6 +284,7 @@ stringClass ->type
 BIND_F( (), stringInstantiate)
 BIND_F( of, stringFromSequence)
 ;
+stringClass BIND_F(toString, stringToString);
 
 bufferClass ->type
 ->copyParentMethods()
