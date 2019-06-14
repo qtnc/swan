@@ -1169,7 +1169,7 @@ default:  return c;
 static QV parseString (QParser& parser, QVM& vm, const char*& in, const char* end, int ending) {
 string re;
 auto out = back_inserter(re);
-int c;
+int c=0;
 auto begin = in;
 while(in<end && (c=utf8::next(in, end))!=ending && c) {
 if (c=='\n' && !vm.multilineStrings) break;

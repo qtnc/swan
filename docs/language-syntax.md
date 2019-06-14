@@ -158,6 +158,21 @@ As in C/C++, Java and all other programming languages having the switch statemen
 To prevent the execution of following cases, use the break keyword.
 But in the contrary of C/C++, Java and others, you can compare anything you want, you aren't restricted to numbers or strings.
 
+Switch can also be used as an expression:
+
+```
+let n = 3
+let r = switch n {
+case 0: -1
+case 1: 2
+case 2: 4
+case 3: 6
+else: 12
+}
+```
+
+When switch is used as an expression, the different cases must be single expressions as well (it is forbidden to have a block of statements).
+
 ## Iteration protocol
 A for loop written as:
 
