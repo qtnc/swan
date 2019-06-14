@@ -381,6 +381,24 @@ return shared_this();
 void compile (QCompiler& compiler)override ;
 };
 
+struct SwitchExpression: Expression {
+shared_ptr<Expression> expr, comparator;
+vector<pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>> cases;
+shared_ptr<Expression> defaultCase;
+const QToken& nearestToken () override { return expr->nearestToken(); }
+shared_ptr<Expression> optimize () override {
+expr=expr->optimize();
+if (comparator) comparator=comparator->optimize();
+if (defaultCase) defaultCase=defaultCase->optimize();
+for (auto& c: cases) {
+for (auto& i: c.first) i=i->optimize();
+c.second=c.second->optimize();
+}
+return shared_this();
+}
+void compile (QCompiler& compiler)override ;
+};
+
 struct ComprehensionExpression: Expression {
 vector<shared_ptr<struct ForStatement>> subCompr;
 shared_ptr<Expression> filterExpression, loopExpression;
@@ -994,7 +1012,7 @@ STATEMENT(IF, If),
 { T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX }},
 STATEMENT(REPEAT, RepeatWhile),
 STATEMENT(RETURN, Return),
-STATEMENT(SWITCH, Switch),
+{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX }},
 STATEMENT(THROW, Throw),
 STATEMENT(TRY, Try),
 { T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
@@ -1455,7 +1473,7 @@ if (!elsePart) result = CR_INCOMPLETE;
 return make_shared<IfStatement>(condition, ifPart, elsePart);
 }
 
-shared_ptr<Statement> QParser::parseSwitch () {
+shared_ptr<Statement> QParser::parseSwitchStatement () {
 auto sw = make_shared<SwitchStatement>();
 shared_ptr<Expression> activeCase;
 vector<shared_ptr<Statement>> statements;
@@ -2002,6 +2020,37 @@ if (arg) args.push_back(arg);
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close subscript"));
 return make_shared<SubscriptExpression>(receiver, args);
+}
+
+shared_ptr<Expression> QParser::parseSwitchExpression () {
+auto sw = make_shared<SwitchExpression>();
+pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>* activeCase;
+shared_ptr<Expression>* activeExpr;
+sw->expr = parseExpression(P_COMPREHENSION);
+if (match(T_WITH)) sw->comparator = parseExpression(P_COMPREHENSION);
+skipNewlines();
+consume(T_LEFT_BRACE, "Expected '{' to begin switch");
+while(true){
+skipNewlines();
+if (match(T_CASE)) {
+sw->cases.emplace_back();
+activeCase = &sw->cases.back();
+activeExpr = &activeCase->second;
+activeCase->first.push_back(parseExpression());
+while(match(T_COMMA)) activeCase->first.push_back(parseExpression());
+matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+}
+else if (matchOneOf(T_DEFAULT, T_ELSE)) {
+activeCase = nullptr;
+activeExpr = &sw->defaultCase;
+matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+}
+else if (match(T_RIGHT_BRACE)) break;
+else {
+*activeExpr = parseExpression();
+if (!*activeExpr) { result=CR_INCOMPLETE; return nullptr; }
+}}
+return sw;
 }
 
 shared_ptr<Expression> QParser::parseSuper () {
@@ -2591,6 +2640,36 @@ int elseJump = compiler.writeOpJump(OP_JUMP);
 compiler.patchJump(ifJump);
 elsePart->compile(compiler);
 compiler.patchJump(elseJump);
+}
+
+void SwitchExpression::compile (QCompiler& compiler) {
+vector<int> endJumps;
+if (comparator) comparator->compile(compiler);
+else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.vm.findMethodSymbol("==") | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
+expr->compile(compiler);
+for (auto& c: cases) {
+bool notFirst=false;
+vector<int> condJumps;
+for (auto& item: c.first) {
+if (notFirst) condJumps.push_back(compiler.writeOpJump(OP_OR));
+notFirst=true;
+compiler.writeDebugLine(item->nearestToken());
+compiler.writeOp(OP_DUP_M2);
+compiler.writeOp(OP_DUP_M2);
+item->compile(compiler);
+writeOpCallFunction(compiler, 2);
+}
+for (auto pos: condJumps) compiler.patchJump(pos);
+int ifJump = compiler.writeOpJump(OP_JUMP_IF_FALSY);
+c.second->compile(compiler);
+endJumps.push_back(compiler.writeOpJump(OP_JUMP));
+compiler.patchJump(ifJump);
+}
+if (defaultCase) defaultCase->compile(compiler);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
+for (auto pos: endJumps) compiler.patchJump(pos);
+compiler.writeOp(OP_POP_M2);
+compiler.writeOp(OP_POP_M2);
 }
 
 void SubscriptExpression::compile  (QCompiler& compiler) {

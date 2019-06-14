@@ -205,8 +205,16 @@ CASE(OP_POP)
 pop();
 BREAK
 
+CASE(OP_POP_M2)
+stack.erase(stack.end() -2);
+BREAK
+
 CASE(OP_DUP)
 push(top());
+BREAK
+
+case OP_DUP_M2:
+push(at(-2));
 BREAK
 
 CASE(OP_LOAD_CLOSURE) {
@@ -214,9 +222,9 @@ QV& val = frame.closure->func.constants[frame.read<uint_constant_index_t>()];
 QFunction& func = *val.asObject<QFunction>();
 QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
 QClosure* curClosure = frame.closure;
-for (int i=0, n=func.upvalues.size(); i<n; i++) {
-auto& upvalue = func.upvalues[i];
-newClosure->upvalues[i] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
+for (arg1=0, arg2=func.upvalues.size(); arg1<arg2; arg1++) {
+auto& upvalue = func.upvalues[arg1];
+newClosure->upvalues[arg1] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
 }
 push(QV(newClosure, QV_TAG_CLOSURE));
 }

@@ -5,6 +5,7 @@ OP(LOAD_FALSE, 1, 0, 0),
 OP(LOAD_INT8, 1, sizeof(uint8_t), sizeof(uint8_t)),
 OP(LOAD_CONSTANT, 1, sizeof(uint_constant_index_t), sizeof(uint_constant_index_t)),
 OP(LOAD_CLOSURE, 1, sizeof(uint_constant_index_t), sizeof(uint_constant_index_t)),
+
 OP(LOAD_THIS, 1, 0, 0),
 OP(LOAD_LOCAL, 1, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 OP(LOAD_UPVALUE, 1, sizeof(uint_upvalue_index_t), sizeof(uint_upvalue_index_t)),
@@ -14,6 +15,7 @@ OP(LOAD_THIS_STATIC_FIELD, 1, sizeof(uint_field_index_t), sizeof(uint_field_inde
 OP(LOAD_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(LOAD_STATIC_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(LOAD_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
+
 OP(STORE_LOCAL, 0, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 OP(STORE_UPVALUE, 0, sizeof(uint_upvalue_index_t), sizeof(uint_upvalue_index_t)),
 OP(STORE_GLOBAL, 0, sizeof(uint_global_symbol_t), sizeof(uint_global_symbol_t)),
@@ -23,14 +25,21 @@ OP(STORE_FIELD, -1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(STORE_STATIC_FIELD, -1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(STORE_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
 OP(STORE_STATIC_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
+
 OP(DUP, 1, 0, 0),
+OP(DUP_M2, 1, 0, 0),
+
 OP(POP, -1, 0, 0),
+OP(POP_M2, -1, 0, 0),
 OP(POP_SCOPE, 0, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
+
 OP(RETURN, 0, 0, 0),
 OP(YIELD, 0, 0, 0),
+
 OP(AND, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(NULL_COALESCING, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(OR, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
+
 OP(JUMP, 0, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP_IF_FALSY, -1, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
 OP(JUMP_IF_TRUTY, -1, sizeof(uint_jump_offset_t), sizeof(uint_jump_offset_t)),
@@ -63,15 +72,20 @@ C(9), C(10), C(11), C(12), C(13), C(14), C(15),
 OP(CALL_METHOD, 255, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | (sizeof(uint_method_symbol_t)<<0)),
 OP(CALL_SUPER, 255, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | (sizeof(uint_method_symbol_t)<<0)),
 OP(CALL_FUNCTION, 255, sizeof(uint8_t), sizeof(uint8_t)),
+
 OP(CALL_METHOD_VARARG, 255, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
 OP(CALL_SUPER_VARARG, 255, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
 OP(CALL_FUNCTION_VARARG, 255, 0, 0),
+
 OP(PUSH_VARARG_MARK, 1, 0, 0),
 OP(UNPACK_SEQUENCE, 255, 0, 0),
+
 OP(TRY, 0, 8, 0x44),
 OP(THROW, 0, 0, 0),
 OP(END_FINALLY, 0, 0, 0),
+
 OP(NEW_CLASS, -1, 3*sizeof(uint_field_index_t), (sizeof(uint_field_index_t)<<8)|(sizeof(uint_field_index_t)<<4)|sizeof(uint_field_index_t) ), // pop name, pop parent, push new class
+
 OP(DEBUG_LINE, 0, sizeof(uint16_t), sizeof(uint16_t)),
 
 /* Not yet used, but reserved. These instructions are going to be faster if we are sure to operate on numbers */
