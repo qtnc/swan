@@ -92,7 +92,6 @@ if (parser.vm.compileDbgInfo) writeOpArg<int16_t>(OP_DEBUG_LINE, parser.getPosit
 
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
-virtual string print() = 0;
 virtual const QToken& nearestToken () = 0;
 virtual bool isExpression () { return false; }
 virtual bool isDecorable () { return false; }
@@ -102,10 +101,10 @@ virtual void compile (QCompiler& compiler) {}
 };
 
 struct Expression: Statement {
-bool isExpression () { return true; }
+bool isExpression () final override { return true; }
 inline shared_ptr<Expression> shared_this () { return static_pointer_cast<Expression>(shared_from_this()); }
 virtual shared_ptr<Expression> optimize () { return shared_this(); }
-shared_ptr<Statement> optimizeStatement () { return optimize(); }
+shared_ptr<Statement> optimizeStatement () override { return optimize(); }
 };
 
 struct Assignable {
@@ -121,9 +120,8 @@ virtual bool isDecorable () { return true; }
 struct ConstantExpression: Expression {
 QToken token;
 ConstantExpression(QToken x): token(x) {}
-const QToken& nearestToken () { return token; }
-string print () { return token.value.print(); }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler) override {
 QV& value = token.value;
 if (value.isUndefined()) compiler.writeOp(OP_LOAD_UNDEFINED);
 else if (value.isNull()) compiler.writeOp(OP_LOAD_NULL);
@@ -148,7 +146,7 @@ virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assi
 
 struct LiteralListExpression: LiteralSequenceExpression {
 LiteralListExpression (const QToken& t): LiteralSequenceExpression(t) {}
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
 if (isSingleSequence()) {
@@ -168,21 +166,11 @@ item->compile(compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, items.size());
 }}
-string print () {
-string s = ("[");
-bool first=true;
-for (auto item: items) {
-if (!first) s += (", ");
-s += item->print();
-first=false;
-}
-s+= ("]");
-return s;
-}};
+};
 
 struct LiteralSetExpression: LiteralSequenceExpression {
 LiteralSetExpression (const QToken& t): LiteralSequenceExpression(t) {}
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 int setSymbol = compiler.vm.findGlobalSymbol(("Set"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
@@ -202,28 +190,18 @@ item->compile(compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, items.size());
 }}
-string print () {
-string s = ("<");
-bool first=true;
-for (auto item: items) {
-if (!first) s += (", ");
-s += item->print();
-first=false;
-}
-s+= (">");
-return s;
-}};
+};
 
 
 struct LiteralMapExpression: Expression, Assignable {
 QToken type;
 vector<pair<shared_ptr<Expression>, shared_ptr<Expression>>> items;
 LiteralMapExpression (const QToken& t): type(t) {}
-const QToken& nearestToken () { return type; }
-shared_ptr<Expression> optimize () { for (auto& p: items) { p.first = p.first->optimize(); p.second = p.second->optimize(); } return shared_this(); }
+const QToken& nearestToken () override { return type; }
+shared_ptr<Expression> optimize () override { for (auto& p: items) { p.first = p.first->optimize(); p.second = p.second->optimize(); } return shared_this(); }
 virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 vector<shared_ptr<Expression>> unpacks;
 int mapSymbol = compiler.vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
 int subscriptSetterSymbol = compiler.vm.findMethodSymbol(("[]="));
@@ -262,21 +240,11 @@ item.second->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_3, subscriptSetterSymbol);
 compiler.writeOp(OP_POP);
 }}
-string print () {
-string s = ("{");
-bool first=true;
-for (auto item: items) {
-if (!first) s += (", ");
-s += item.first->print() + (": ") + item.second->print();
-first=false;
-}
-s+= ("}");
-return s;
-}};
+};
 
 struct LiteralTupleExpression: LiteralSequenceExpression {
 LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p = {}): LiteralSequenceExpression(t, p) {}
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
@@ -296,24 +264,14 @@ item->compile(compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, items.size());
 }}
-string print () {
-string s = ("(");
-bool first=true;
-for (auto item: items) {
-if (!first) s += (", ");
-s += item->print();
-first=false;
-}
-s+= (")");
-return s;
-}};
+};
 
 struct LiteralGridExpression: Expression {
 QToken token;
 vector<vector<shared_ptr<Expression>>> data;
 LiteralGridExpression (const QToken& t, const vector<vector<shared_ptr<Expression>>>& v): token(t), data(v) {}
-const QToken& nearestToken () { return token; }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler) override {
 int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), LV_EXISTING | LV_FOR_READ);
 int size = data.size() * data[0].size();
 compiler.writeDebugLine(nearestToken());
@@ -328,77 +286,57 @@ value->compile(compiler);
 if (size>120) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, size+2);
 }
-string print () {
-string s = "\r\n";
-for (auto& row: data) {
-s += "| ";
-bool first=true;
-for (auto& expr: row) {
-if (!first) s+=", ";
-s += expr->print();
-first=false;
-}
-s += " |\r\n";
-}
-return s;
-}};
-
+};
 
 struct LiteralRegexExpression: Expression {
 QToken tok;
 string pattern, options;
 LiteralRegexExpression(const QToken& tk, const string& p, const string& o): tok(tk), pattern(p), options(o) {}
-const QToken& nearestToken () { return tok; }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return tok; }
+void compile (QCompiler& compiler) override {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, pattern), QV_TAG_STRING)));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, options), QV_TAG_STRING)));
 compiler.writeOp(OP_CALL_FUNCTION_2);
 }
-string print () { return "/" + pattern + "/" + options; }
 };
 
 struct NameExpression: Expression, Assignable  {
 QToken token;
 NameExpression (QToken x): token(x) {}
-const QToken& nearestToken () { return token; }
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
-string print () { return string(token.start, token.length); }
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler) override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct FieldExpression: Expression, Assignable  {
 QToken token;
 FieldExpression (QToken x): token(x) {}
-const QToken& nearestToken () { return token; }
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
-string print () { return ("@")  + string(token.start, token.length); }
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler)override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct StaticFieldExpression: Expression, Assignable  {
 QToken token;
 StaticFieldExpression (QToken x): token(x) {}
-const QToken& nearestToken () { return token; }
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
-string print () { return ("@@") + string(token.start, token.length); }
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler)override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct SuperExpression: Expression {
 QToken superToken;
 SuperExpression (const QToken& t): superToken(t) {}
-const QToken& nearestToken () { return superToken; }
-void compile (QCompiler& compiler) { compiler.writeOp(OP_LOAD_THIS); }
-string print () { return ("super"); }
+const QToken& nearestToken () override { return superToken; }
+void compile (QCompiler& compiler)  override { compiler.writeOp(OP_LOAD_THIS); }
 };
 
 struct GenericMethodSymbolExpression: Expression {
 QToken token;
 GenericMethodSymbolExpression (const QToken& t): token(t) {}
-const QToken& nearestToken () { return token; }
-string print () { return "(::" + string(token.start, token.length) + ")"; }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler) override {
 int symbol = compiler.parser.vm.findMethodSymbol(string(token.start, token.length));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
 }};
@@ -407,60 +345,60 @@ struct BinaryOperation: Expression {
 shared_ptr<Expression> left, right;
 QTokenType op;
 BinaryOperation (shared_ptr<Expression> l, QTokenType o, shared_ptr<Expression> r): left(l), right(r), op(o)  {}
-const QToken& nearestToken () { return left->nearestToken(); }
-shared_ptr<Expression> optimize ();
-void compile (QCompiler& compiler);
-string print();
+const QToken& nearestToken () override { return left->nearestToken(); }
+shared_ptr<Expression> optimize ()override ;
+void compile (QCompiler& compiler)override ;
 };
 
 struct UnaryOperation: Expression {
 shared_ptr<Expression> expr;
 QTokenType op;
 UnaryOperation  (QTokenType op0, shared_ptr<Expression> e0): op(op0), expr(e0) {}
-shared_ptr<Expression> optimize ();
-void compile (QCompiler& compiler);
-const QToken& nearestToken () { return expr->nearestToken(); }
-string print();
+shared_ptr<Expression> optimize ()override ;
+void compile (QCompiler& compiler)override ;
+const QToken& nearestToken () override { return expr->nearestToken(); }
 };
 
 struct ShortCircuitingBinaryOperation: BinaryOperation {
 ShortCircuitingBinaryOperation (shared_ptr<Expression> l, QTokenType o, shared_ptr<Expression> r): BinaryOperation(l,o,r) {}
-void compile (QCompiler& compiler);
+void compile (QCompiler& compiler)override ;
 };
 
 struct ConditionalExpression: Expression {
 shared_ptr<Expression> condition, ifPart, elsePart;
 ConditionalExpression (shared_ptr<Expression> cond, shared_ptr<Expression> ifp, shared_ptr<Expression> ep): condition(cond), ifPart(ifp), elsePart(ep) {}
-const QToken& nearestToken () { return condition->nearestToken(); }
-shared_ptr<Expression> optimize () { condition=condition->optimize(); ifPart=ifPart->optimize(); elsePart=elsePart->optimize(); return shared_this(); }
-void compile (QCompiler& compiler);
-string print () {
-return condition->print() + ("? ") + ifPart->print() + (" : ") + elsePart->print();
-}};
+const QToken& nearestToken () override { return condition->nearestToken(); }
+shared_ptr<Expression> optimize () override { 
+condition=condition->optimize(); 
+ifPart=ifPart->optimize(); 
+elsePart=elsePart->optimize(); 
+if (auto cst = dynamic_pointer_cast<ConstantExpression>(condition)) {
+if (cst->token.value.isFalsy()) return elsePart;
+else return ifPart;
+}
+return shared_this(); 
+}
+void compile (QCompiler& compiler)override ;
+};
 
 struct ComprehensionExpression: Expression {
 vector<shared_ptr<struct ForStatement>> subCompr;
 shared_ptr<Expression> filterExpression, loopExpression;
 ComprehensionExpression (shared_ptr<Expression> lp): filterExpression(nullptr), loopExpression(lp) {}
-shared_ptr<Expression> optimize ();
-const QToken& nearestToken () { return loopExpression->nearestToken(); }
-void compile (QCompiler&);
-string print () {
-string s = loopExpression->print();
-if (filterExpression) s += (" if ") + filterExpression->print();
-return s;
-}};
+shared_ptr<Expression> optimize ()override ;
+const QToken& nearestToken () override { return loopExpression->nearestToken(); }
+void compile (QCompiler&)override ;
+};
 
 struct UnpackExpression: Expression {
 shared_ptr<Expression> expr;
 UnpackExpression   (shared_ptr<Expression> e0): expr(e0) {}
-shared_ptr<Expression> optimize () { expr=expr->optimize(); return shared_this(); }
-void compile (QCompiler& compiler) {
+shared_ptr<Expression> optimize () override { expr=expr->optimize(); return shared_this(); }
+void compile (QCompiler& compiler) override {
 expr->compile(compiler);
 compiler.writeOp(OP_UNPACK_SEQUENCE);
 }
-const QToken& nearestToken () { return expr->nearestToken(); }
-string print() { return "..."+expr->print(); }
+const QToken& nearestToken () override { return expr->nearestToken(); }
 };
 
 struct AbstractCallExpression: Expression {
@@ -468,71 +406,66 @@ shared_ptr<Expression> receiver;
 QTokenType type;
 std::vector<shared_ptr<Expression>> args;
 AbstractCallExpression (shared_ptr<Expression> recv0, QTokenType tp, const std::vector<shared_ptr<Expression>>& args0): receiver(recv0), type(tp), args(args0) {}
-const QToken& nearestToken () { return receiver->nearestToken(); }
-shared_ptr<Expression> optimize () { receiver=receiver->optimize(); for (auto& arg: args) arg=arg->optimize(); return shared_this(); }
+const QToken& nearestToken () override { return receiver->nearestToken(); }
+shared_ptr<Expression> optimize () override { receiver=receiver->optimize(); for (auto& arg: args) arg=arg->optimize(); return shared_this(); }
 bool isVararg () { return isUnpack(receiver) || any_of(args.begin(), args.end(), isUnpack); }
 void compileArgs (QCompiler& compiler) {
 for (auto arg: args) arg->compile(compiler);
 }
-string print();
 };
 
 struct CallExpression: AbstractCallExpression {
 CallExpression (shared_ptr<Expression> recv0, const std::vector<shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_PAREN, args0) {}
-void compile (QCompiler& compiler);
+void compile (QCompiler& compiler)override ;
 };
 
 struct SubscriptExpression: AbstractCallExpression, Assignable  {
 SubscriptExpression (shared_ptr<Expression> recv0, const std::vector<shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_BRACKET, args0) {}
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
+void compile (QCompiler& compiler)override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct MemberLookupOperation: BinaryOperation, Assignable  {
 MemberLookupOperation (shared_ptr<Expression> l, shared_ptr<Expression> r): BinaryOperation(l, T_DOT, r) {}
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
+void compile (QCompiler& compiler)override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct MethodLookupOperation: BinaryOperation, Assignable  {
 MethodLookupOperation (shared_ptr<Expression> l, shared_ptr<Expression> r): BinaryOperation(l, T_COLONCOLON, r) {}
-void compile (QCompiler& compiler);
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue);
+void compile (QCompiler& compiler)override ;
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
 };
 
 struct AssignmentOperation: BinaryOperation {
 bool optimized;
 AssignmentOperation (shared_ptr<Expression> l, QTokenType o, shared_ptr<Expression> r): BinaryOperation(l,o,r), optimized(false)  {}
-shared_ptr<Expression> optimize ();
-void compile (QCompiler& compiler);
+shared_ptr<Expression> optimize ()override ;
+void compile (QCompiler& compiler)override ;
 };
 
 struct YieldExpression: Expression {
 QToken token;
 shared_ptr<Expression> expr;
 YieldExpression (const QToken& tk, shared_ptr<Expression> e): token(tk), expr(e) {}
-const QToken& nearestToken () { return token; }
-shared_ptr<Expression> optimize () { if (expr) expr=expr->optimize(); return shared_this(); }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return token; }
+shared_ptr<Expression> optimize () override { if (expr) expr=expr->optimize(); return shared_this(); }
+void compile (QCompiler& compiler) override {
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_YIELD);
 }
-string print () { 
-if (expr) return ("yield ") + expr->print();
-else return ("yield");
-}};
+};
 
 struct ImportExpression: Expression {
 shared_ptr<Expression> from;
 ImportExpression (shared_ptr<Expression> f): from(f) {}
-shared_ptr<Expression> optimize () { from=from->optimize(); return shared_this(); }
-const QToken& nearestToken () { return from->nearestToken(); }
-string print () { return "import " + from->print(); }
-void compile (QCompiler& compiler) {
+shared_ptr<Expression> optimize () override { from=from->optimize(); return shared_this(); }
+const QToken& nearestToken () override { return from->nearestToken(); }
+void compile (QCompiler& compiler) override {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.parser.vm, compiler.parser.filename)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
 }};
@@ -552,8 +485,7 @@ for (auto& d: decorations) d = d->optimize();
 struct SimpleStatement: Statement {
 QToken token;
 SimpleStatement (const QToken& t): token(t) {}
-const QToken& nearestToken () { return token; }
-string print () { return TOKEN_NAMES[token.type]; }
+const QToken& nearestToken () override { return token; }
 };
 
 struct IfStatement: Statement  {
@@ -561,7 +493,7 @@ shared_ptr<Expression> condition;
 shared_ptr<Statement> ifPart, elsePart;
 QOpCode jumpType;
 IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp, shared_ptr<Statement> ep = nullptr, QOpCode jt = OP_JUMP_IF_FALSY): condition(cond), ifPart(ifp), elsePart(ep), jumpType(jt) {}
-shared_ptr<Statement> optimizeStatement () { 
+shared_ptr<Statement> optimizeStatement () override { 
 condition=condition->optimize(); 
 ifPart=ifPart->optimizeStatement(); 
 if (elsePart) elsePart=elsePart->optimizeStatement(); 
@@ -573,7 +505,7 @@ return singlePart;
 }
 return shared_this(); 
 }
-const QToken& nearestToken () { return condition->nearestToken(); }
+const QToken& nearestToken () override { return condition->nearestToken(); }
 void compile (QCompiler& compiler) {
 compiler.writeDebugLine(condition->nearestToken());
 condition->compile(compiler);
@@ -598,17 +530,13 @@ compiler.patchJump(skipElseJump);
 else {
 compiler.patchJump(skipIfJump);
 }}
-string print () {
-string s = ("if (") + condition->print() + (") ")  + ifPart->print();
-if (elsePart) s+= (" else ") + elsePart->print();
-return s;
-}};
+};
 
 struct SwitchStatement: Statement {
 shared_ptr<Expression> expr, comparator;
 vector<pair<shared_ptr<Expression>, vector<shared_ptr<Statement>>>> cases;
 vector<shared_ptr<Statement>> defaultCase;
-shared_ptr<Statement> optimizeStatement () { 
+shared_ptr<Statement> optimizeStatement () override { 
 expr = expr->optimize();
 for (auto& p: cases) { 
 p.first = p.first->optimize(); 
@@ -618,8 +546,8 @@ for (auto& s: defaultCase) s=s->optimizeStatement();
 if (comparator) comparator = comparator->optimize();
 return shared_this(); 
 }
-const QToken& nearestToken () { return expr->nearestToken(); }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return expr->nearestToken(); }
+void compile (QCompiler& compiler) override {
 vector<int> jumps;
 compiler.pushLoop();
 compiler.pushScope();
@@ -654,13 +582,7 @@ compiler.loops.back().condPos = compiler.writePosition();
 compiler.loops.back().endPos = compiler.writePosition();
 compiler.popLoop();
 }
-string print () {
-string s = "switch(" + expr->print() + ") with(" + comparator->print() + ") {";
-//for (auto& p: cases) s += "case " + p.first->print() + ":\r\n" + p.second->print() + "\r\n";
-//if (defaultCase) s+= "else: \r\n" + defaultCase->print();
-s += "}\r\n";
-return s;
-}};
+};
 
 struct ForStatement: Statement {
 QToken token;
@@ -668,26 +590,29 @@ vector<shared_ptr<Variable>> loopVariables;
 shared_ptr<Expression> inExpression;
 shared_ptr<Statement> loopStatement;
 ForStatement (const QToken& tk): token(tk), loopVariables(), inExpression(nullptr), loopStatement(nullptr)  {}
-shared_ptr<Statement> optimizeStatement () { 
+shared_ptr<Statement> optimizeStatement () override { 
 if (inExpression) inExpression=inExpression->optimize(); 
 if (loopStatement) loopStatement=loopStatement->optimizeStatement(); 
 for (auto& lv: loopVariables) lv->optimize();
 return shared_this(); 
 }
-const QToken& nearestToken () { return token; }
+const QToken& nearestToken () override { return token; }
 void parseHead (QParser& parser);
-void compile (QCompiler& compiler);
-string print () {
-return "for loop";
-}};
+void compile (QCompiler& compiler)override ;
+};
 
 struct WhileStatement: Statement {
 shared_ptr<Expression> condition;
 shared_ptr<Statement> loopStatement;
 WhileStatement (shared_ptr<Expression> cond, shared_ptr<Statement> lst): condition(cond), loopStatement(lst) {}
-shared_ptr<Statement> optimizeStatement () { condition=condition->optimize(); loopStatement=loopStatement->optimizeStatement(); return shared_this(); }
-const QToken& nearestToken () { return condition->nearestToken(); }
-void compile (QCompiler& compiler) {
+shared_ptr<Statement> optimizeStatement () override { 
+condition=condition->optimize(); 
+loopStatement=loopStatement->optimizeStatement(); 
+if (auto cst = dynamic_pointer_cast<ConstantExpression>(condition)) { if (cst->token.value.isFalsy()) return make_shared<SimpleStatement>(nearestToken()); }
+return shared_this(); 
+}
+const QToken& nearestToken () override { return condition->nearestToken(); }
+void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(condition->nearestToken());
 compiler.pushLoop();
 compiler.pushScope();
@@ -703,17 +628,15 @@ compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
 compiler.loops.back().endPos = compiler.writePosition();
 compiler.popLoop();
 }
-string print () {
-return ("while (") + condition->print() + (") ") + loopStatement->print();
-}};
+};
 
 struct RepeatWhileStatement: Statement {
 shared_ptr<Expression> condition;
 shared_ptr<Statement> loopStatement;
 RepeatWhileStatement (shared_ptr<Expression> cond, shared_ptr<Statement> lst): condition(cond), loopStatement(lst) {}
-shared_ptr<Statement> optimizeStatement () { condition=condition->optimize(); loopStatement=loopStatement->optimizeStatement(); return shared_this(); }
-const QToken& nearestToken () { return loopStatement->nearestToken(); }
-void compile (QCompiler& compiler) {
+shared_ptr<Statement> optimizeStatement () override { condition=condition->optimize(); loopStatement=loopStatement->optimizeStatement(); return shared_this(); }
+const QToken& nearestToken () override { return loopStatement->nearestToken(); }
+void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(loopStatement->nearestToken());
 compiler.pushLoop();
 compiler.pushScope();
@@ -729,14 +652,12 @@ compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
 compiler.loops.back().endPos = compiler.writePosition();
 compiler.popLoop();
 }
-string print () {
-return ("repeat ") + loopStatement->print() + (" while ") + condition->print();
-}};
+};
 
 struct ContinueStatement: SimpleStatement {
 int count;
 ContinueStatement (const QToken& tk, int n): SimpleStatement(tk), count(n) {}
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 if (compiler.loops.empty()) compiler.compileError(token, ("Can't use 'continue' outside of a loop"));
 else if (count>compiler.loops.size()) compiler.compileError(token, ("Can't continue on that many loops"));
 else {
@@ -751,7 +672,7 @@ else loop.jumpsToPatch.push_back({ Loop::CONDITION, compiler.writeOpJump(OP_JUMP
 struct BreakStatement: SimpleStatement {
 int count;
 BreakStatement (const QToken& tk, int n): SimpleStatement(tk), count(n) {}
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 if (compiler.loops.empty()) compiler.compileError(token, ("Can't use 'break' outside of a loop"));
 else if (count>compiler.loops.size()) compiler.compileError(token, ("Can't break that many loops"));
 else {
@@ -766,43 +687,41 @@ struct ReturnStatement: Statement {
 QToken returnToken;
 shared_ptr<Expression> expr;
 ReturnStatement (const QToken& retk, shared_ptr<Expression> e0): returnToken(retk), expr(e0) {}
-const QToken& nearestToken () { return expr? expr->nearestToken() : returnToken; }
-shared_ptr<Statement> optimizeStatement () { if (expr) expr=expr->optimize(); return shared_this(); }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return expr? expr->nearestToken() : returnToken; }
+shared_ptr<Statement> optimizeStatement () override { if (expr) expr=expr->optimize(); return shared_this(); }
+void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_RETURN);
 }
-string print () { if (expr) return ("return ") + expr->print(); else return ("return null"); }
 };
 
 struct ThrowStatement: Statement {
 QToken returnToken;
 shared_ptr<Expression> expr;
 ThrowStatement (const QToken& retk, shared_ptr<Expression> e0): returnToken(retk), expr(e0) {}
-const QToken& nearestToken () { return expr? expr->nearestToken() : returnToken; }
-shared_ptr<Statement> optimizeStatement () { if (expr) expr=expr->optimize(); return shared_this(); }
-void compile (QCompiler& compiler) {
+const QToken& nearestToken () override { return expr? expr->nearestToken() : returnToken; }
+shared_ptr<Statement> optimizeStatement () override { if (expr) expr=expr->optimize(); return shared_this(); }
+void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_THROW);
 }
-string print () { return "throw " + expr->print(); }
 };
 
 struct TryStatement: Statement {
 shared_ptr<Statement> tryPart, catchPart, finallyPart;
 QToken catchVar;
 TryStatement (shared_ptr<Statement> tp, shared_ptr<Statement> cp, shared_ptr<Statement> fp, const QToken& cv): tryPart(tp), catchPart(cp), finallyPart(fp), catchVar(cv)  {}
-const QToken& nearestToken () { return tryPart->nearestToken(); }
-shared_ptr<Statement> optimizeStatement () { 
+const QToken& nearestToken () override { return tryPart->nearestToken(); }
+shared_ptr<Statement> optimizeStatement () override { 
 tryPart = tryPart->optimizeStatement();
 if (catchPart) catchPart=catchPart->optimizeStatement();
 if (finallyPart) finallyPart = finallyPart->optimizeStatement();
 return shared_this(); }
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 compiler.pushScope();
 int jumpPos=-1, tryPos = compiler.writeOpArg<uint64_t>(OP_TRY, 0xFFFFFFFFFFFFFFFFULL);
 tryPart->compile(compiler);
@@ -833,21 +752,15 @@ compiler.popScope();
 }
 compiler.writeOp(OP_END_FINALLY);
 }
-string print () {
-string s = "try " + tryPart->print();
-if (catchPart) s += " catch " + catchPart->print();
-if (finallyPart) s+=" finally " + finallyPart->print();
-return s;
-}
 };
 
 struct BlockStatement: Statement {
 vector<shared_ptr<Statement>> statements;
 BlockStatement (const vector<shared_ptr<Statement>>& sta): statements(sta) {}
-shared_ptr<Statement> optimizeStatement () { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
-const QToken& nearestToken () { return statements[0]->nearestToken(); }
+shared_ptr<Statement> optimizeStatement () override { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
+const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override { return any_of(statements.begin(), statements.end(), [&](auto s){ return s && s->isUsingExports(); }); }
-void compile (QCompiler& compiler) {
+void compile (QCompiler& compiler) override {
 compiler.pushScope();
 for (auto sta: statements) {
 compiler.writeDebugLine(sta->nearestToken());
@@ -856,52 +769,35 @@ if (sta->isExpression()) compiler.writeOp(OP_POP);
 }
 compiler.popScope();
 }
-string print () {
-string s = ("{\r\n");
-for (auto sta: statements) s += sta->print() + ("\r\n");
-s += ("}\r\n");
-return s;
-}};
+};
 
 struct VariableDeclaration: Statement, Decorable {
 vector<shared_ptr<Variable>> vars;
 VariableDeclaration (const vector<shared_ptr<Variable>>& v = {}): vars(v) {}
-const QToken& nearestToken () { return vars[0]->name->nearestToken(); }
+const QToken& nearestToken () override { return vars[0]->name->nearestToken(); }
 bool isDecorable () override { return true; }
-shared_ptr<Statement> optimizeStatement () { 
+shared_ptr<Statement> optimizeStatement () override { 
 for (auto& v: vars) v->optimize();
 return shared_this(); 
 }
-void compile (QCompiler& compiler);
-string print () { return "vardecl"; }
+void compile (QCompiler& compiler)override ;
 };
 
 struct ExportDeclaration: Statement  {
 vector<pair<QToken,shared_ptr<Expression>>> exports;
-const QToken& nearestToken () { return exports[0].first; }
-shared_ptr<Statement> optimizeStatement () { for (auto& v: exports) v.second=v.second->optimize(); return shared_this(); }
+const QToken& nearestToken () override { return exports[0].first; }
+shared_ptr<Statement> optimizeStatement () override { for (auto& v: exports) v.second=v.second->optimize(); return shared_this(); }
 bool isUsingExports () override { return true; }
-void compile (QCompiler& compiler);
-string print () { return "export!"; }
+void compile (QCompiler& compiler)override ;
 };
 
 struct ImportDeclaration: Statement {
 shared_ptr<Expression> from;
 vector<pair<QToken,QToken>> imports;
 ImportDeclaration (shared_ptr<Expression> f): from(f) {}
-shared_ptr<Statement> optimizeStatement () { from=from->optimize(); return shared_this(); }
-const QToken& nearestToken () { return from->nearestToken(); }
-string print () {
-string s = "import " + from->print() + " for ";
-bool first=true;
-for (auto& p: imports) {
-if (!first) s+=", ";
-first=false;
-s += string(p.first.start, p.first.length) + " as " + string(p.second.start, p.second.length);
-}
-return s;
-}
-void compile (QCompiler& compiler) {
+shared_ptr<Statement> optimizeStatement () override { from=from->optimize(); return shared_this(); }
+const QToken& nearestToken () override { return from->nearestToken(); }
+void compile (QCompiler& compiler) override {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
 int subscriptSymbol = compiler.parser.vm.findMethodSymbol("[]");
 vector<int> varSlots;
@@ -933,25 +829,17 @@ vector<shared_ptr<Variable>> params;
 shared_ptr<Statement> body;
 int flags;
 FunctionDeclaration (const QToken& nm, int fl = 0, const vector<shared_ptr<Variable>>& fp = {}, shared_ptr<Statement> b = nullptr): name(nm), params(fp), body(b), flags(fl)     {}
-const QToken& nearestToken () { return name; }
+const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 QFunction* compileFunction (QCompiler& compiler);
-void compile (QCompiler& compiler) { compileFunction(compiler); }
-shared_ptr<Statement> optimizeStatement () { 
+void compile (QCompiler& compiler) override { compileFunction(compiler); }
+shared_ptr<Statement> optimizeStatement () override { 
 body=body->optimizeStatement(); 
 for (auto& param: params) param->optimize();
 return shared_this(); 
 }
-virtual bool isDecorable () { return true; }
-string print () {
-string s = string(name.start, name.length) + (" (");
-for (int i=0, n=params.size(); i<n; i++) {
-if (i>0) s+=(", ");
-}
-s += (" ) ");
-s += body->print();
-return s;
-}};
+virtual bool isDecorable () override { return true; }
+};
 
 struct ClassDeclaration: Expression, Decorable  {
 QToken name;
@@ -962,16 +850,11 @@ vector<shared_ptr<FunctionDeclaration>> methods;
 ClassDeclaration (const QToken& name0, int flgs): name(name0), flags(flgs)  {}
 int findField (const string& name) {  return findName(fields, name, true);  }
 int findStaticField (const string& name) { return findName(staticFields, name, true); }
-const QToken& nearestToken () { return name; }
-shared_ptr<Expression> optimize () { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
-void compile (QCompiler&);
-virtual bool isDecorable () { return true; }
-string print () {
-string s = ("class ") + (name.start? string(name.start, name.length) : string(("<anonymous>"))) + (" {\r\n");
-for (auto method: methods) s += method->print() + ("\r\n");
-s += ("}\r\n");
-return s;
-}};
+const QToken& nearestToken () override { return name; }
+shared_ptr<Expression> optimize () override { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
+void compile (QCompiler&)override ;
+virtual bool isDecorable () override { return true; }
+};
 
 bool LiteralSequenceExpression::isSingleSequence () {
 if (items.size()!=1) return false;
@@ -2662,10 +2545,6 @@ return cst;
 return shared_this(); 
 }
 
-string UnaryOperation::print () {
-return ("(") + string(rules[op].prefixOpName) + expr->print() + (")");
-}
-
 void UnaryOperation::compile (QCompiler& compiler) {
 expr->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(rules[op].prefixOpName));
@@ -2688,10 +2567,6 @@ else if (c1 && op==T_BARBAR) return c1->token.value.isFalsy()? right : left;
 else if (c1 && op==T_QUESTQUEST) return c1->token.value.isNullOrUndefined()? right : left;
 else if (c1 && op==T_AMPAMP) return c1->token.value.isFalsy()? left: right;
 return shared_this(); 
-}
-
-string BinaryOperation::print () {
-return ("(") + left->print() +  rules[op].infixOpName + right->print() + (")");
 }
 
 void BinaryOperation::compile  (QCompiler& compiler) {
@@ -2804,17 +2679,6 @@ compiler.writeOp(OP_POP);
 return;
 }
 compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in assignment"));
-}
-
-string AbstractCallExpression::print () {
-const char* ch = rules[type].infixOpName;
-string s = receiver->print() + *ch;
-for (int i=0, n=args.size(); i<n; i++) {
-if (i>0) s += (", ");
-s += args[i]->print();
-}
-s += *++ch;
-return s;
 }
 
 void CallExpression::compile (QCompiler& compiler) {
