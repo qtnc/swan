@@ -83,7 +83,6 @@ int countLocalVariablesInScope (int scope = -1);
 int findLocalVariable (const QToken& name, int flags);
 int findUpvalue (const QToken& name, int flags);
 int findGlobalVariable (const QToken& name, int flags);
-int findExportsVariable (bool createIfNotExist=true);
 int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
 
@@ -92,6 +91,8 @@ struct FunctionDeclaration* getCurMethod ();
 inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> void compileError (const QToken& token, const char* fmt, const A&... args);
+template<class... A> void compileWarn (const QToken& token, const char* fmt, const A&... args);
+template<class... A> void compileInfo (const QToken& token, const char* fmt, const A&... args);
 void dump ();
 
 QCompiler (QParser& p): vm(p.vm), parser(p), parent(nullptr), curClass(nullptr)  {}

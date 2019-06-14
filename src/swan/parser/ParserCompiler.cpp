@@ -872,10 +872,6 @@ shared_ptr<Statement> optimizeStatement () {
 for (auto& v: vars) v->optimize();
 return shared_this(); 
 }
-virtual bool isUsingExports () override { 
-for (auto& var: vars) if (var->flags&VD_EXPORT) return true;
-return false;
-}
 void compile (QCompiler& compiler);
 string print () { return "vardecl"; }
 };
@@ -1967,17 +1963,18 @@ return nullptr;
 }
 
 shared_ptr<Statement> QParser::parseExportDecl () {
-if (matchOneOf(T_VAR, T_CONST)) {
-return parseVarDecl(VD_CONST | VD_EXPORT);
-}
-else if (match(T_CLASS)) {
-return parseClassDecl(VD_CONST | VD_EXPORT);
-}
-else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
-return parseFunctionDecl(VD_CONST | VD_EXPORT);
+auto exportDecl = make_shared<ExportDeclaration>();
+shared_ptr<VariableDeclaration> varDecl;
+if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VD_CONST));
+else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VD_CONST));
+else if (matchOneOf(T_DOLLAR, T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST));
+if (varDecl) {
+auto name = varDecl->vars[0]->name;
+exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
+vector<shared_ptr<Statement>> sta = { varDecl, exportDecl };
+return make_shared<BlockStatement>(sta);
 }
 else {
-auto exportDecl = make_shared<ExportDeclaration>();
 do {
 shared_ptr<Expression> exportExpr = parseExpression();
 if (!exportExpr) { parseError("Expected 'class', 'function', 'var' or expression after 'export'"); return nullptr; }
@@ -1991,8 +1988,9 @@ nameToken = cur;
 }
 exportDecl->exports.push_back(make_pair(nameToken, exportExpr));
 } while (match(T_COMMA));
+}
 return exportDecl;
-}}
+}
 
 shared_ptr<Expression> QParser::parseImportExpression () {
 bool parent = match(T_LEFT_PAREN);
@@ -2902,15 +2900,7 @@ int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, globalSlot);
 compiler.writeOp(OP_POP);
 }
-else if (var->flags&VD_EXPORT) {
-int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
-int exportsSlot = compiler.findExportsVariable(true);
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, name->token.start, name->token.length), QV_TAG_STRING)));
-writeOpLoadLocal(compiler, slot);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_3, subscriptSetterSymbol);
-compiler.writeOp(OP_POP);
-}
-}
+}//for decompose
 for (auto& var: destructured) {
 auto assignable = dynamic_pointer_cast<Assignable>(var->name);
 if (!assignable || !assignable->isAssignable()) continue;
@@ -2950,9 +2940,10 @@ compiler.curClass = oldClassDecl;
 }
 
 void ExportDeclaration::compile (QCompiler& compiler) {
+QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
 bool multi = exports.size()>1;
-int exportsSlot = compiler.findExportsVariable(true);
+int exportsSlot = compiler.findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
 writeOpLoadLocal(compiler, exportsSlot);
 for (auto& p: exports) {
 if (multi) compiler.writeOp(OP_DUP);
@@ -3115,24 +3106,18 @@ return parser.vm.findGlobalSymbol(string(name.start, name.length), flags);
 static shared_ptr<Statement> addReturnExports (shared_ptr<Statement> sta) {
 if (!sta->isUsingExports()) return sta;
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
-auto exs = make_shared<ReturnStatement>(exportsToken, make_shared<NameExpression>(exportsToken));
+QToken exportMTToken = { T_LEFT_BRACE, EXPORTS, 7, QV::UNDEFINED};
+auto exn = make_shared<NameExpression>(exportsToken);
+auto exs = make_shared<ReturnStatement>(exportsToken, exn);
+vector<shared_ptr<Variable>> exv = { make_shared<Variable>(exn, make_shared<LiteralMapExpression>(exportMTToken), VD_CONST) }; 
+auto exvd = make_shared<VariableDeclaration>(exv);
 auto bs = dynamic_pointer_cast<BlockStatement>(sta);
-if (bs) bs->statements.push_back(exs);
-else bs = make_shared<BlockStatement>(vector<shared_ptr<Statement>>({ sta, exs }));
+if (bs) {
+bs->statements.insert(bs->statements.begin(), exvd);
+bs->statements.push_back(exs);
+}
+else bs = make_shared<BlockStatement>(vector<shared_ptr<Statement>>({ exvd, sta, exs }));
 return bs;
-}
-
-int QCompiler::findExportsVariable (bool createIfNotExist) {
-QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
-int slot = findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
-if (slot<0 && createIfNotExist) {
-int mapSlot = vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
-slot = findLocalVariable(exportsToken, LV_NEW);
-writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, mapSlot);
-writeOp(OP_CALL_FUNCTION_0);
-writeOpStoreLocal(*this, slot);
-}
-return slot;
 }
 
 int QCompiler::findConstant (const QV& value) {
@@ -3232,6 +3217,18 @@ auto p = parser.getPositionOf(token.start);
 int line = p.first, column = p.second;
 parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), string(token.start, token.length), parser.displayName, line, column });
 result = CR_FAILED;
+}
+
+template<class... A> void QCompiler::compileWarn (const QToken& token, const char* fmt, const A&... args) {
+auto p = parser.getPositionOf(token.start);
+int line = p.first, column = p.second;
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::WARNING, format(fmt, args...), string(token.start, token.length), parser.displayName, line, column });
+}
+
+template<class... A> void QCompiler::compileInfo (const QToken& token, const char* fmt, const A&... args) {
+auto p = parser.getPositionOf(token.start);
+int line = p.first, column = p.second;
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::INFO, format(fmt, args...), string(token.start, token.length), parser.displayName, line, column });
 }
 
 void QCompiler::compile () {
