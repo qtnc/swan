@@ -38,7 +38,13 @@ runtimeError("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
 bool QFiber::callMethod (QV& method, int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
-if (method.isNativeFunction()) {
+
+if (method.isClosure()) {
+QClosure& closure = *method.asObject<QClosure>();
+callClosure(closure, nArgs);
+return true;
+}
+else if (method.isNativeFunction()) {
 QNativeFunction func = method.asNativeFunction();
 callFrames.push_back({nullptr, nullptr, newStackBase});
 func(*this);
@@ -46,16 +52,32 @@ stack.resize(newStackBase+1);
 callFrames.pop_back();
 return true;
 }
-else if (method.isClosure()) {
-QClosure& closure = *method.asObject<QClosure>();
-callClosure(closure, nArgs);
+else if (method.isGenericSymbolFunction()) {
+uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
+callSymbol(symbol, nArgs);
+return true;
+}
+else if (method.isBoundFunction()) {
+BoundFunction& bf = *method.asObject<BoundFunction>();
+stack.insert(stack.begin() + newStackBase +1, bf.args, bf.args+bf.count);
+stack.insert(stack.begin() + newStackBase, method);
+callCallable(nArgs+bf.count);
+return true;
+}
+else if (method.isStdFunction()) {
+const StdFunction::Func& func = method.asObject<StdFunction>()->func;
+callFrames.push_back({nullptr, nullptr, newStackBase});
+func(*this);
+stack.resize(newStackBase+1);
+callFrames.pop_back();
 return true;
 }
 else {
 stack.resize(newStackBase);
 pushUndefined();
 return false;
-}}
+}
+}
 
 void QFiber::callMethod (const string& name, int nArgs) {
 int symbol = vm.findMethodSymbol(name);
@@ -69,34 +91,47 @@ void QFiber::callCallable (int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;
 QV& method = stack.at(newStackBase -1);
 const QClass& cls = method.getClass(vm);
-if (method.isNativeFunction()) {
+
+
+if (method.isClosure()) {
+QClosure* closure = method.asObject<QClosure>();
+stack.erase(stack.begin() + newStackBase -1);
+callClosure(*closure, nArgs);
+return;
+}
+else if (method.isNativeFunction()) {
 QNativeFunction func = method.asNativeFunction();
 callFrames.push_back({nullptr, nullptr, newStackBase});
 func(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
 callFrames.pop_back();
-}
-else if (method.isClosure()) {
-QClosure* closure = method.asObject<QClosure>();
-stack.erase(stack.begin() + newStackBase -1);
-callClosure(*closure, nArgs);
+return;
 }
 else if (method.isFiber()) {
 QFiber& f = *method.asObject<QFiber>();
 callFiber(f, nArgs);
 stack.erase(stack.begin() + newStackBase -1);
+return;
+}
+else if (method.hasTag(QV_TAG_DATA)) {
+int symbol = vm.findMethodSymbol(("()"));
+QClass& cls = method.getClass(vm);
+callSymbol(symbol, nArgs+1);
+return;
+}
+else if (method.isGenericSymbolFunction()) {
+uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
+stack.erase(stack.end() -nArgs -1);
+callSymbol(symbol, nArgs);
+return;
 }
 else if (method.isBoundFunction()) {
 BoundFunction& bf = *method.asObject<BoundFunction>();
 stack.insert(stack.begin() + newStackBase, bf.args, bf.args+bf.count);
 method = bf.method;
 callCallable(nArgs+bf.count);
-}
-else if (method.isGenericSymbolFunction()) {
-uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
-stack.erase(stack.end() -nArgs -1);
-callSymbol(symbol, nArgs);
+return;
 }
 else if (method.isStdFunction()) {
 const StdFunction::Func& func = method.asObject<StdFunction>()->func;
@@ -105,17 +140,9 @@ func(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
 callFrames.pop_back();
+return;
 }
-else if (method.isNullOrUndefined()) {
-stack.resize(newStackBase -1);
-pushUndefined();
-runtimeError("%s isn't callable", method.getClass(vm).name);
 }
-else {
-int symbol = vm.findMethodSymbol(("()"));
-QClass& cls = method.getClass(vm);
-callSymbol(symbol, nArgs+1);
-}}
 
 void QFiber::adjustArguments (int nArgs, int nClosureArgs, bool vararg) {
 if (!vararg) {
