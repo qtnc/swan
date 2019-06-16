@@ -78,6 +78,8 @@ virtual inline void setBuffer  (int i, const void* data, int length) final overr
 virtual void setRange  (int i, const Swan::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV::Null; }
 virtual inline void setUndefined (int i) final override { at(i) = QV::UNDEFINED; }
+virtual inline void setNativeFunction (int i, Swan::NativeFunction f) final override { at(i) = QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION); }
+virtual void setStdFunction (int i, const std::function<void(Swan::Fiber&)>& func) final override;
 virtual inline void setFiber (int i, Swan::Fiber& f) final override { at(i) = QV(static_cast<QFiber*>(&f)); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
 virtual void setHandle (int i, const Swan::Handle& h) final override { at(i) = QV(h.value); }
@@ -93,6 +95,7 @@ virtual void pushRange (const Swan::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV::Null); }
 virtual inline void pushUndefined () final override { stack.push_back(QV::UNDEFINED); }
 virtual inline void pushNativeFunction (Swan::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
+virtual inline void pushStdFunction (const std::function<void(Swan::Fiber&)>& f) final override ;
 virtual inline void pushFiber (Swan::Fiber& f) final override { push(QV(static_cast<QFiber*>(&f))); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;

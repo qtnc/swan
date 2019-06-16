@@ -65,6 +65,13 @@ if (parentFiber) parentFiber->gcVisit();
 return false;
 }
 
+bool BoundFunction::gcVisit () {
+if (QObject::gcVisit()) return true;
+object.gcVisit();
+method.gcVisit();
+return false;
+}
+
 bool QList::gcVisit () {
 if (QObject::gcVisit()) return true;
 for (QV& val: data) val.gcVisit();

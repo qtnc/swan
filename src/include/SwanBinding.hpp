@@ -29,27 +29,55 @@ template<int ...> struct sequence {};
 template<int N, int ...S> struct sequence_generator: sequence_generator<N-1, N-1, S...> {};
 template<int ...S> struct sequence_generator<0, S...>{ typedef sequence<S...> type; };
 
+/*template<class T> struct UserObjectTrait {
+static inline constexpr size_t getMemSize () { return sizeof(T); }
+static inline T* getPointer (void* ptr) { return static_cast<T*>(ptr); }
+static inline void store (void* ptr, const T& value) { new(ptr) T(value); }
+static inline void storeMove (void* ptr, T&& value) { new(ptr) T(value); }
+template<class... A> static void emplace (void* ptr, A&&... args) { new(ptr) T(args...); }
+void destruct (void* ptr) { getPointer(ptr)->~T(); }
+};*/
+
+template<class T> struct UserObjectTrait {
+static inline constexpr size_t getMemSize () { return sizeof(T*); }
+static inline T*& getPointer (void* ptr) {
+return *static_cast<T**>(ptr);
+}
+static inline void store (void* ptr, const T& value) { 
+getPointer(ptr) = new T(value);
+}
+static inline void storeMove (void* ptr, T&& value) { 
+getPointer(ptr) = new T(value);
+}
+template<class... A> static void emplace (void* ptr, A&&... args) { 
+getPointer(ptr) = new T(args...);
+}
+static inline void destruct (void* ptr) {
+delete getPointer(ptr);
+}
+};
+
 template<class T, class B = void> struct SwanGetSlot: std::false_type {};
 
 template <class T> struct SwanGetSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
 typedef T* returnType;
 static inline bool check (Swan::Fiber& f, int idx) { return f.isUserObject<T>(idx); }
 static inline T* get (Swan::Fiber& f, int idx) {
-return static_cast<T*>( f.getUserPointer(idx) );
+return UserObjectTrait<T>::getPointer( f.getUserPointer(idx) );
 }};
 
 template <class T> struct SwanGetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value && !is_std_function<T>::value && !is_variant<T>::value>::type> {
 typedef T& returnType;
 static inline bool check (Swan::Fiber& f, int idx) { return f.isUserObject<T>(idx); }
 static inline T& get (Swan::Fiber& f, int idx) {
-return *static_cast<T*>( f.getUserPointer(idx) );
+return *UserObjectTrait<T>::getPointer( f.getUserPointer(idx) );
 }};
 
 template <class T> struct SwanGetSlot<T, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value && !is_std_function<T>::value  && !is_variant<T>::value>::type> {
 typedef T& returnType;
 static inline bool check (Swan::Fiber& f, int idx) { return f.isUserObject<T>(idx); }
 static inline T& get (Swan::Fiber& f, int idx) {
-return *static_cast<T*>( f.getUserPointer(idx) );
+return *UserObjectTrait<T>::getPointer( f.getUserPointer(idx) );
 }};
 
 template<> struct SwanGetSlot<Swan::Fiber&> {
@@ -74,10 +102,9 @@ return f.getBool(idx);
 
 template<> struct SwanGetSlot<std::nullptr_t> {
 typedef std::nullptr_t returnType;
-static inline bool check (Swan::Fiber& f, int idx) { return f.isNull(idx); }
-static inline std::nullptr_t get (Swan::Fiber& f, int idx) { 
-return nullptr;
-}};
+static inline bool check (Swan::Fiber& f, int idx) { return f.isNullOrUndefined(idx); }
+static inline std::nullptr_t get (Swan::Fiber& f, int idx) {  return nullptr; }
+};
 
 template<> struct SwanGetSlot<std::string> {
 typedef std::string returnType;
@@ -149,10 +176,10 @@ return SwanGetSlot<returnType>::get(f, idx);
 
 template<class T, class B = void> struct SwanSetSlot: std::false_type {};
 
-template<class T> struct SwanSetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value  && !is_variant<T>::value>::type> {
+template<class T> struct SwanSetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value  && !is_std_function<T>::value && !is_variant<T>::value>::type> {
 static inline void set (Swan::Fiber& f, int idx, const T& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
-new(ptr) T(value);
+UserObjectTrait<T>::store(ptr, value);
 }};
 
 template<class T> struct SwanSetSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
@@ -160,13 +187,13 @@ static inline void set (Swan::Fiber& f, int idx, const T*  value) {
 if (!value) f.setNull(idx);
 else {
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
-new(ptr) T(*value);
+UserObjectTrait<T>::store(ptr, value);
 }}};
 
-template<class T> struct SwanSetSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value  && !is_variant<T>::value>::type> {
+template<class T> struct SwanSetSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value  && !is_std_function<T>::value && !is_variant<T>::value>::type> {
 static inline void set (Swan::Fiber& f, int idx, T& value) { 
 void* ptr = f.setNewUserPointer(idx, typeid(T).hash_code());
-new(ptr) T(std::move(value));
+UserObjectTrait<T>::storeMove(ptr, std::move(value));
 }};
 
 template<class T> struct SwanSetSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
@@ -239,12 +266,33 @@ std::visit([&](auto&& x){ SwanSetSlot<decltype(x)>::set(f, idx, x); }, value);
 }};
 #endif
 
+template<class R, class... A> struct SwanSetSlot<std::function<R(A...)>> {
+static inline void set (Swan::Fiber& f, int idx, const std::function<R(A...)>& func) { 
+f.setCallback<R, A...>(idx, func);
+}};
+
+template<class... A> struct SwanSetSlot<std::function<void(A...)>> {
+static inline void set (Swan::Fiber& f, int idx, const std::function<void(A...)>& func) { 
+f.setCallback<A...>(idx, func);
+}};
+
+template<class R, class... A> struct SwanSetSlot<const std::function<R(A...)>&> {
+static inline void set (Swan::Fiber& f, int idx, const std::function<R(A...)>& func) { 
+f.setCallback<R, A...>(idx, func);
+}};
+
+template<class... A> struct SwanSetSlot<const std::function<void(A...)>&> {
+static inline void set (Swan::Fiber& f, int idx, const std::function<void(A...)>& func) { 
+f.setCallback<A...>(idx, func);
+}};
+
+
 template<class T, class B = void> struct SwanPushSlot: std::false_type {};
 
-template<class T> struct SwanPushSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value  && !is_variant<T>::value>::type> {
+template<class T> struct SwanPushSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value  && !is_std_function<T>::value && !is_variant<T>::value>::type> {
 static inline void push (Swan::Fiber& f, const T& value) { 
 void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
-new(ptr) T(value);
+UserObjectTrait<T>::store(ptr, value);
 }};
 
 template<class T> struct SwanPushSlot<T*, typename std::enable_if< std::is_class<T>::value>::type> {
@@ -252,13 +300,13 @@ static inline void push (Swan::Fiber& f, const T*  value) {
 if (!value) f.pushNull();
 else {
 void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
-new(ptr) T(*value);
+UserObjectTrait<T>::store(ptr, value);
 }}};
 
-template<class T> struct SwanPushSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value  && !is_variant<T>::value>::type> {
+template<class T> struct SwanPushSlot<T, typename std::enable_if< std::is_class<T>::value  && !is_optional<T>::value  && !is_std_function<T>::value && !is_variant<T>::value>::type> {
 static inline void push (Swan::Fiber& f, T& value) { 
 void* ptr = f.pushNewUserPointer(typeid(T).hash_code());
-new(ptr) T(std::move(value));
+UserObjectTrait<T>::storeMove(ptr, std::move(value));
 }};
 
 template<class T> struct SwanPushSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
@@ -338,6 +386,26 @@ std::visit([&](auto&& x){ SwanPushSlot<decltype(x)>::push(f, x); }, value);
 }};
 #endif
 
+template<class R, class... A> struct SwanPushSlot<std::function<R(A...)>> {
+static inline void push (Swan::Fiber& f, const std::function<R(A...)>& func) { 
+f.pushCallback<R, A...>(func);
+}};
+
+template<class... A> struct SwanPushSlot<std::function<void(A...)>> {
+static inline void push (Swan::Fiber& f, const std::function<void(A...)>& func) { 
+f.pushCallback<A...>(func);
+}};
+
+template<class R, class... A> struct SwanPushSlot<const std::function<R(A...)>&> {
+static inline void push (Swan::Fiber& f, const std::function<R(A...)>& func) { 
+f.pushCallback<R, A...>(func);
+}};
+
+template<class... A> struct SwanPushSlot<const std::function<void(A...)>&> {
+static inline void push (Swan::Fiber& f, const std::function<void(A...)>& func) { 
+f.pushCallback<A...>(func);
+}};
+
 static inline void pushMultiple (Swan::Fiber& f) {}
 
 template<class T, class... A> static inline void pushMultiple (Swan::Fiber& f, T&& arg, A&&... args) {
@@ -348,10 +416,10 @@ pushMultiple(f, args...);
 template<class R, class... A> struct SwanGetSlot<std::function<R(A...)>> {
 typedef std::function<R(A...)> returnType;
 static inline returnType get (Swan::Fiber& f, int idx) { 
-if (f.isNull(idx)) return nullptr;
+if (f.isNullOrUndefined(idx)) return nullptr;
 Swan::VM& vm = f.getVM();
 Swan::Handle handle = f.getHandle(idx);
-return [=](A&&... args)->R{
+return [=,&vm](A&&... args)->R{
 Swan::Fiber& fb = vm.getActiveFiber();
 Swan::ScopeLocker<Swan::VM> lock(vm);
 fb.pushHandle(handle);
@@ -366,10 +434,10 @@ return result;
 template<class... A> struct SwanGetSlot<std::function<void(A...)>> {
 typedef std::function<void(A...)> returnType;
 static inline returnType get (Swan::Fiber& f, int idx) { 
-if (f.isNull(idx)) return nullptr;
+if (f.isNullOrUndefined(idx)) return nullptr;
 Swan::Handle handle = f.getHandle(idx);
 Swan::VM& vm = f.getVM();
-return [=](A&&... args){
+return [=,&vm](A&&... args){
 Swan::Fiber& fb = vm.getActiveFiber();
 Swan::ScopeLocker<Swan::VM> lock(vm);
 fb.pushHandle(handle);
@@ -416,7 +484,6 @@ callNative(seq, obj, func, params);
 }
 };
 
-//##Begin added
 template<class T, class R, class... A> struct SwanWrapper< R (T::*)(A...)const> {
 typedef R(T::*Func)(A...)const;
 template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
@@ -439,7 +506,6 @@ std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1
 callNative(seq, obj, func, params);
 }
 };
-//##End added
 
 template<class R, class... A> struct SwanWrapper< R(A...) > {
 typedef R(*Func)(A...);
@@ -461,6 +527,56 @@ std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0
 callNative(seq, func, params);
 }
 };
+
+//Begin added
+#ifdef __WIN32
+template<class R, class... A> struct SwanWrapper< R __stdcall(A...) > {
+typedef R(*__stdcall Func)(A...);
+template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
+template<Func func> static void wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+R result = callNative(seq, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+};
+
+template<class... A> struct SwanWrapper< void __stdcall(A...) > {
+typedef void(*__stdcall Func)(A...);
+template<int... S> static void callNative (sequence<S...> unused, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  func( std::get<S>(params)... );  }
+template<Func func> static void wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+callNative(seq, func, params);
+}
+};
+#endif
+
+template<class T> struct SwanCallbackWrapper: std::false_type { };
+
+template<class R, class... A> struct SwanCallbackWrapper< std::function<R(A...)> > {
+typedef std::function<R(A...)> Func;
+template<int... S> static R callNative (sequence<S...> unused, const Func& func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
+static std::function<void(Swan::Fiber&)> wrap (const Func& func) {
+return [=](Swan::Fiber& f){
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+R result = callNative(seq, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+};}
+};
+
+template<class... A> struct SwanCallbackWrapper< std::function<void(A...)> > {
+typedef std::function<void(A...)> Func;
+template<int... S> static void callNative (sequence<S...> unused, const Func& func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  func( std::get<S>(params)... );  }
+static std::function<void(Swan::Fiber&)> wrap (const Func& func) {
+return [=](Swan::Fiber& f){
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+callNative(seq, func, params);
+};}
+};
+//End added
 
 template <class UNUSED> struct SwanStaticWrapper: std::false_type { };
 
@@ -492,14 +608,13 @@ template<int... S> static void callConstructor (sequence<S...> unused, void* ptr
 static void constructor (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
-void* ptr = f.getUserPointer(0);
+T* ptr = SwanGetSlot<T*>::get(f, 0);
 callConstructor(seq, ptr, params);
 }};
 
 template<class T> struct SwanDestructorWrapper {
 static void destructor (void* userData) {
-T* obj = reinterpret_cast<T*>(userData);
-obj->~T();
+UserObjectTrait<T>::destruct(userData);
 }};
 
 template<class UNUSED> struct SwanPropertyWrapper: std::false_type {};
@@ -521,6 +636,63 @@ SwanSetSlot<P>::set(f, 0, value);
 
 } // namespace Binding
 
+template<class T> inline T& Fiber::getUserObject (int stackIndex) {
+return *Swan::Binding::UserObjectTrait<T>::getPointer(getUserPointer(stackIndex));
+}
+
+template<class T> inline T* Fiber::getOptionalUserPointer (int stackIndex, T* defaultValue) {
+return Swan::Binding::UserObjectTrait<T>::getPointer(getOptionalUserPointer(stackIndex, typeid(T).hash_code(), defaultValue));
+}
+
+template<class T> inline T* Fiber::getOptionalUserPointer (int stackIndex, const std::string& key, T* defaultValue) {
+return Swan::Binding::UserObjectTrait<T>::getPointer(getOptionalUserPointer(stackIndex, key, typeid(T).hash_code(), defaultValue));
+}
+
+template<class T> inline void Fiber::setUserObject (int stackIndex, const T& obj) {
+void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
+Swan::Binding::UserObjectTrait<T>::store(ptr, obj);
+}
+
+template<class T, class... A> inline void Fiber::emplaceUserObject (int stackIndex, A&&... args) {
+void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
+Swan::Binding::UserObjectTrait<T>::emplace(ptr, args...);
+}
+
+template<class T> inline void Fiber::pushNewClass (const std::string& name, int nParents) { 
+pushNewForeignClass(name, typeid(T).hash_code(), Swan::Binding::UserObjectTrait<T>::getMemSize(), nParents); 
+}
+
+template<class R, class... A> inline std::function<R(A...)> Fiber::getCallback (int idx) {
+return Swan::Binding::SwanGetSlot<std::function<R(A...)>>::get(*this, idx);
+}
+
+template<class... A> inline std::function<void(A...)> Fiber::getCallback (int idx) {
+return Swan::Binding::SwanGetSlot<std::function<void(A...)>>::get(*this, idx);
+}
+
+template <class R, class... A> void Fiber::setCallback (int idx, const std::function<R(A...)>& cb) {
+std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<R(A...)>>::wrap(cb);
+setNull(idx);
+//todo
+}
+
+template <class... A> void Fiber::setCallback (int idx, const std::function<void(A...)>& cb) {
+std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<void(A...)>>::wrap(cb);
+setNull(idx);
+//todo
+}
+
+template <class R, class... A> void Fiber::pushCallback (const std::function<R(A...)>& cb) {
+std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<R(A...)>>::wrap(cb);
+pushUndefined();
+//todo
+}
+
+template <class... A> void Fiber::pushCallback (const std::function<void(A...)>& cb) {
+std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<void(A...)>>::wrap(cb);
+pushUndefined();
+//todo
+}
 
 template <class T, class... A> inline void Fiber::registerConstructor () {
 registerMethod("constructor", &Swan::Binding::SwanConstructorWrapper<T, A...>::constructor);

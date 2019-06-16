@@ -453,6 +453,9 @@ virtual void setNull (int stackIndex) = 0;
 */
 virtual void setUndefined (int stackIndex) = 0;
 
+virtual void setNativeFunction (int stackIndex, NativeFunction value) = 0;
+virtual void setStdFunction (int stackIndex, const std::function<void(Swan::Fiber&)>& value) = 0;
+
 /** Replace the element at the specified stack index by a new object of the registered user-defined type given by its ID. 
 Return a pointer to an uninitialized block of memory where the data associated to the object can be copied.
 @param stackIndex the stack index which will be overwritten
@@ -513,6 +516,11 @@ virtual void pushUndefined () = 0;
 @param value the value to push onto the stack
 */
 virtual void pushNativeFunction (NativeFunction value) = 0;
+
+/** Push a Function object at the back of the stack 
+@param value the value to push onto the stack
+*/
+virtual void pushStdFunction (const std::function<void(Swan::Fiber&)>& value) = 0;
 
 /** Push a new Class object at the back of the stack.
 @param name the name of the new class 
@@ -670,6 +678,13 @@ if (length) *length /= sizeof(T);
 return re;
 }
 
+template<class R, class... A> std::function<R(A...)> getCallback (int stackIndex);
+template<class... A> std::function<void(A...)> getCallback (int stackIndex);
+template <class R, class... A> void setCallback (int stackIndex, const std::function<R(A...)>& func);
+template <class... A> void setCallback (int stackIndex, const std::function<void(A...)>& func);
+template <class R, class... A> void pushCallback (const std::function<R(A...)>& func);
+template <class... A> void pushCallback (const std::function<void(A...)>& func);
+
 /** Check if the element at stack index is of the registered user-defined type given. The type must of course first be registered. 
 @param <T> the type to check
 @param stackIndex the stack index to check
@@ -692,18 +707,14 @@ The behavior is undefined in case the requested element isn't of the required ty
 @param <T> the requiested type
 @param stackIndex the stack index from which to get the value
 */
-template<class T> inline T& getUserObject (int stackIndex) {
-return *static_cast<T*>(getUserPointer(stackIndex));
-}
+template<class T> inline T& getUserObject (int stackIndex);
 
 /** Return a pointer to the object at the given stack index, if it is of the required registered user-defined type (non built-in Swan type). Return the defaultValue otherwise.
 @param <T> the requiested type
 @param stackIndex the stack index from which to get the value
 @param defaultValue the default value to return in case the value can't be retrieved
 */
-template<class T> inline T* getOptionalUserPointer (int stackIndex, T* defaultValue = nullptr) {
-return static_cast<T*>(getUserPointer(stackIndex, typeid(T).hash_code(), defaultValue));
-}
+template<class T> inline T* getOptionalUserPointer (int stackIndex, T* defaultValue = nullptr);
 
 /** Look for an object of the given registered user-defined type at the given stack index, or inside a Map at index -1 with the given key. Return a pointer to that object if found, otherwise defaultValue.
 @param <T> the expected type
@@ -711,9 +722,7 @@ return static_cast<T*>(getUserPointer(stackIndex, typeid(T).hash_code(), default
 @param key the key in which to look for the value inside the Map
 @param defaultValue the default value to return in case the value can't be retrieved
  */
-template<class T> inline T* getOptionalUserPointer (int stackIndex, const std::string& key, T* defaultValue = nullptr) {
-return static_cast<T*>(getUserPointer(stackIndex, key, typeid(T).hash_code(), defaultValue));
-}
+template<class T> inline T* getOptionalUserPointer (int stackIndex, const std::string& key, T* defaultValue = nullptr);
 
 /** Look for an object of the given registered user-defined type inside a Map at index -1 with the given key. Return a pointer to that object if found, otherwise defaultValue.
 @param <T> the expected type
@@ -730,10 +739,7 @@ The object is copied. T must be copiable and the copy constructor must be access
 @param stackIndex the stack index which has to be replaced
 @param value the value to put at the stack index
 */
-template<class T> inline void setUserObject (int stackIndex, const T& obj) {
-void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
-new(ptr) T(obj);
-}
+template<class T> inline void setUserObject (int stackIndex, const T& obj);
 
 /** Replace the element at stack index by an object of a registered type. 
 The stored object on the stack is constructed in place.  
@@ -741,19 +747,14 @@ The stored object on the stack is constructed in place.
 @param stackIndex the stack index which has to be replaced
 @param args arguments to pass to the constructor of T
 */
-template<class T, class... A> inline void emplaceUserObject (int stackIndex, A&&... args) {
-void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
-new(ptr) T(args...);
-}
+template<class T, class... A> inline void emplaceUserObject (int stackIndex, A&&... args);
 
 /** Create a new Swan class with the given name and push it at the back of the stack.
 Parents, if any, must be pushed first. If no parent is given, the class at least anyway extends Object by default.
 @param <T> the type to register
 @param name the name of the class in Swan
 */
-template<class T> inline void pushNewClass (const std::string& name, int nParents=0) { 
-pushNewForeignClass(name, typeid(T).hash_code(), sizeof(T), nParents); 
-}
+template<class T> inline void pushNewClass (const std::string& name, int nParents=0);
 
 /** Register a new C++ class for use in Swan. 
 It creates a Swan Class object which is pused on the stack, and its name also become a global variable allowing to create instances in Swan. 

@@ -2,6 +2,7 @@
 #include "Upvalue.hpp"
 #include "Object.hpp"
 #include "BoundFunction.hpp"
+#include "StdFunction.hpp"
 #include "Function.hpp"
 #include "Closure.hpp"
 #include "ForeignInstance.hpp"
@@ -30,6 +31,9 @@ QObject(vm.functionClass), func(f) {}
 
 BoundFunction::BoundFunction (QVM& vm, const QV& o, const QV& m):
 QObject(vm.functionClass), object(o), method(m) {}
+
+StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
+QObject(vm.functionClass), func(func0) {}
 
 QInstance* QInstance::create (QClass* type, int nFields) { 
 return type->vm.constructVLS<QInstance, QV>(nFields, type); 

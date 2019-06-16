@@ -204,6 +204,10 @@ string s = out->str();
 f.setBuffer(0, s.data(), s.size());
 }
 
+std::function<double(double)> test (double a) {
+return [=](double b){ return a*b; };
+}
+
 void registerIO (Swan::Fiber& f) {
 f.loadGlobal("Iterable");
 f.registerClass<IO>("IO", 1);
@@ -233,5 +237,6 @@ f.registerStaticProperty("in", STATIC_METHOD(ioGetStdin), STATIC_METHOD(ioSetStd
 f.pop();
 
 f.registerFunction("print", print);
+f.registerFunction("test", FUNCTION(test));
 }
 

@@ -2,6 +2,7 @@
 #include "Vm.hpp"
 #include "Fiber_inlines.hpp"
 #include "BoundFunction.hpp"
+#include "StdFunction.hpp"
 #include "OpCodeInfo.hpp"
 #include "Tuple.hpp"
 #include "Upvalue.hpp"
@@ -96,6 +97,14 @@ else if (method.isGenericSymbolFunction()) {
 uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
 stack.erase(stack.end() -nArgs -1);
 callSymbol(symbol, nArgs);
+}
+else if (method.isStdFunction()) {
+const StdFunction::Func& func = method.asObject<StdFunction>()->func;
+callFrames.push_back({nullptr, nullptr, newStackBase});
+func(*this);
+stack.at(newStackBase -1) = stack.at(newStackBase);
+stack.resize(newStackBase);
+callFrames.pop_back();
 }
 else if (method.isNullOrUndefined()) {
 stack.resize(newStackBase -1);
