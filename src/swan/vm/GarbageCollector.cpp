@@ -67,8 +67,8 @@ return false;
 
 bool BoundFunction::gcVisit () {
 if (QObject::gcVisit()) return true;
-object.gcVisit();
 method.gcVisit();
+for (size_t i=0, n=count; i<n; i++) args[i].gcVisit();
 return false;
 }
 

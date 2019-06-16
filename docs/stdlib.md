@@ -71,10 +71,13 @@ Methods:
 ## Function: is Object
 Class representing all function objects.
 
-- Constructor: Function(name): return a dynamic method symbol, i.e. `Function('xyz')` returns `::xyz`.
+- Constructor: Function(code): returns a function, evaluating the string given as an expression. 
 - Constructor: Function(n), with n<0: return the currently running function a the given stack level, i.e. Function(-1) returns the current function, Function(-2) the callee, Function(-3) the callee of the callee, etc.
+- Operators: ()
 
-No specific methods beside () operator.
+Methods:
+
+- bind(...args): create a function, which, when called, will call this function with one or more bound arguments. Example: if `g=f.bind(1,2)`, calling `g(3,4)` will be equivalent to calling `f(1,2,3,4)`. Functional programming afficionados may call this currifying.
 
 ## Fiber: is Iterable
 A Fiber represent a paralel execution fiber, as known as coroutine.

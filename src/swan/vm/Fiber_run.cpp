@@ -42,7 +42,7 @@ if (symbol<c.methods.size() && !c.methods[symbol].isNull()) return c.methods[sym
 else if (symbol<cls.methods.size() && !cls.methods[symbol].isNull()) return cls.methods[symbol];
 }
 else if (symbol<cls.methods.size() && !cls.methods[symbol].isNullOrUndefined()) {
-return QV(vm.construct<BoundFunction>(vm, obj, cls.methods[symbol]), QV_TAG_BOUND_FUNCTION);
+return QV(BoundFunction::create(vm, cls.methods[symbol], 1, &obj), QV_TAG_BOUND_FUNCTION);
 }
 return QV::UNDEFINED;
 }

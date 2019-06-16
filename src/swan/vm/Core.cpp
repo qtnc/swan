@@ -29,8 +29,15 @@ upvalues(trace_allocator<Upvalue>(vm))
 QClosure::QClosure (QVM& vm, QFunction& f):
 QObject(vm.functionClass), func(f) {}
 
-BoundFunction::BoundFunction (QVM& vm, const QV& o, const QV& m):
-QObject(vm.functionClass), object(o), method(m) {}
+BoundFunction::BoundFunction (QVM& vm, const QV& m, size_t c):
+QObject(vm.functionClass), method(m), count(c) {}
+
+BoundFunction* BoundFunction::create (QVM& vm, const QV& m, size_t c, const QV* a) {
+auto bf = vm.constructVLS<BoundFunction, QV>(c, vm, m, c);
+memcpy(bf->args, a, c*sizeof(QV));
+return bf;
+}
+
 
 StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
 QObject(vm.functionClass), func(func0) {}

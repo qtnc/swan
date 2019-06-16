@@ -1,5 +1,6 @@
 #include "SwanLib.hpp"
 #include "../vm/Fiber_inlines.hpp"
+#include "../vm/BoundFunction.hpp"
 #include "../../include/cpprintf.hpp"
 using namespace std;
 
@@ -128,8 +129,8 @@ f.returnValue(!re);
 static void functionInstantiate (QFiber& f) {
 f.returnValue(QV::UNDEFINED);
 if (f.isString(1)) {
-int symbol = f.vm.findMethodSymbol(f.getString(1));
-f.returnValue(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION));
+f.loadString(f.getString(1), "<eval>");
+f.returnValue(f.at(-1));
 }
 else if (f.isNum(1)) {
 int index = f.getNum(1) -1;
@@ -137,6 +138,10 @@ if (index<0 && -index<=f.callFrames.size()) {
 auto cf = f.callFrames.end() +index;
 if (cf->closure) f.returnValue(QV(cf->closure, QV_TAG_CLOSURE));
 }}
+}
+
+static void functionBind (QFiber& f) {
+f.returnValue(QV(BoundFunction::create(f.vm, f.at(0), f.getArgCount() -1, &f.at(1)), QV_TAG_BOUND_FUNCTION));
 }
 
 void QVM::initBaseTypes () {
@@ -169,6 +174,7 @@ functionClass
 ->copyParentMethods()
 BIND_L( (), {  f.callMethod(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
 BIND_F(hashCode, objectHashCode)
+BIND_F(bind, functionBind)
 ;
 
 boolClass

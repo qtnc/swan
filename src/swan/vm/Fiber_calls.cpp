@@ -89,9 +89,9 @@ stack.erase(stack.begin() + newStackBase -1);
 }
 else if (method.isBoundFunction()) {
 BoundFunction& bf = *method.asObject<BoundFunction>();
-stack.insert(stack.begin() + newStackBase, bf.object);
+stack.insert(stack.begin() + newStackBase, bf.args, bf.args+bf.count);
 method = bf.method;
-callCallable(nArgs+1);
+callCallable(nArgs+bf.count);
 }
 else if (method.isGenericSymbolFunction()) {
 uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
