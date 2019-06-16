@@ -1,6 +1,7 @@
 #include "FiberVM.hpp"
 #include "Value.hpp"
 #include "Range.hpp"
+#include "StdFunction.hpp"
 
 QFiber& QVM::createFiber () {
 auto f = construct<QFiber>(*this);
@@ -56,10 +57,17 @@ void QFiber::setBuffer  (int i, const void* data, int length) { }
 #endif
 
 void QFiber::pushRange (const Swan::Range& r) {
-push(new QRange(vm, r));
+push(vm.construct<QRange>(vm, r));
 }
 
 void QFiber::setRange (int i, const Swan::Range& r) {
-at(i) = new QRange(vm, r);
+at(i) = vm.construct<QRange>(vm, r);
 }
 
+void QFiber::setStdFunction (int i, const std::function<void(Swan::Fiber&)>& f) {
+at(i) = QV(vm.construct<StdFunction>(vm, f), QV_TAG_STD_FUNCTION);
+}
+
+void QFiber::pushStdFunction (const std::function<void(Swan::Fiber&)>& f) {
+stack.push_back( QV(vm.construct<StdFunction>(vm, f), QV_TAG_STD_FUNCTION) );
+}

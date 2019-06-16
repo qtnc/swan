@@ -672,26 +672,22 @@ return Swan::Binding::SwanGetSlot<std::function<void(A...)>>::get(*this, idx);
 
 template <class R, class... A> void Fiber::setCallback (int idx, const std::function<R(A...)>& cb) {
 std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<R(A...)>>::wrap(cb);
-setNull(idx);
-//todo
+setStdFunction(idx, func);
 }
 
 template <class... A> void Fiber::setCallback (int idx, const std::function<void(A...)>& cb) {
 std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<void(A...)>>::wrap(cb);
-setNull(idx);
-//todo
+setStdFunction(idx, func);
 }
 
 template <class R, class... A> void Fiber::pushCallback (const std::function<R(A...)>& cb) {
 std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<R(A...)>>::wrap(cb);
-pushUndefined();
-//todo
+pushStdFunction(func);
 }
 
 template <class... A> void Fiber::pushCallback (const std::function<void(A...)>& cb) {
 std::function<void(Swan::Fiber&)> func = Swan::Binding::SwanCallbackWrapper<std::function<void(A...)>>::wrap(cb);
-pushUndefined();
-//todo
+pushStdFunction(func);
 }
 
 template <class T, class... A> inline void Fiber::registerConstructor () {
