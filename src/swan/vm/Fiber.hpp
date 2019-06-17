@@ -137,7 +137,7 @@ void storeMethod (int symbol);
 void storeStaticMethod (int symbol);
 QV loadMethod (QV& obj, int symbol);
 void pushNewClass (int nParents, int nStaticFields, int nFields);
-void callSymbol (int symbol, int nArgs);
+void  callSymbol (int symbol, int nArgs);
 void callSuperSymbol (int symbol, int nArgs);
 bool callMethod (QV& callable, int nArgs);
 void callCallable (int nArgs);

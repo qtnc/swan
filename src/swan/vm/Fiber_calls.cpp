@@ -92,7 +92,6 @@ uint32_t newStackBase = stack.size() -nArgs;
 QV& method = stack.at(newStackBase -1);
 const QClass& cls = method.getClass(vm);
 
-
 if (method.isClosure()) {
 QClosure* closure = method.asObject<QClosure>();
 stack.erase(stack.begin() + newStackBase -1);
@@ -100,24 +99,24 @@ callClosure(*closure, nArgs);
 return;
 }
 else if (method.isNativeFunction()) {
-QNativeFunction func = method.asNativeFunction();
+auto native = method.asNativeFunction();
 callFrames.push_back({nullptr, nullptr, newStackBase});
-func(*this);
+native(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
 callFrames.pop_back();
-return;
-}
-else if (method.isFiber()) {
-QFiber& f = *method.asObject<QFiber>();
-callFiber(f, nArgs);
-stack.erase(stack.begin() + newStackBase -1);
 return;
 }
 else if (method.hasTag(QV_TAG_DATA)) {
 int symbol = vm.findMethodSymbol(("()"));
 QClass& cls = method.getClass(vm);
 callSymbol(symbol, nArgs+1);
+return;
+}
+else if (method.isFiber()) {
+QFiber& f = *method.asObject<QFiber>();
+callFiber(f, nArgs);
+stack.erase(stack.begin() + newStackBase -1);
 return;
 }
 else if (method.isGenericSymbolFunction()) {
@@ -140,6 +139,9 @@ func(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
 callFrames.pop_back();
+return;
+}
+else {
 return;
 }
 }
