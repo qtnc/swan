@@ -105,7 +105,8 @@ virtual inline void swap (int i1 = -2, int i2 = -1) final override { std::swap(a
 virtual inline void setCopy (int i, int j) final override { at(i) = at(j); }
 virtual inline void insertCopy (int i, int j) final override { stack.insert(&at(i), at(j)); }
 virtual inline void pop () final override { stack.pop_back(); }
-inline QV& top () { return at(-1); }
+inline QV& top () { return *(stack.end() -1); }
+inline QV& base () { return stack.at(callFrames.back().stackBase); }
 inline void push (const QV& x) { stack.push_back(x); }
 inline void pushCppCallFrame () { callFrames.push_back({ nullptr, nullptr, stack.size() }); }
 inline void popCppCallFrame () { callFrames.pop_back(); }
@@ -139,9 +140,9 @@ QV loadMethod (QV& obj, int symbol);
 void pushNewClass (int nParents, int nStaticFields, int nFields);
 void  callSymbol (int symbol, int nArgs);
 void callSuperSymbol (int symbol, int nArgs);
-bool callMethod (QV& callable, int nArgs);
+inline bool callFunc (QV& callable, int nArgs);
 void callCallable (int nArgs);
-void callClosure (QClosure& closure, int nArgs);
+inline void callClosure (QClosure& closure, int nArgs);
 void callFiber (QFiber& f, int nArgs);
 
 Upvalue* captureUpvalue (int slot);

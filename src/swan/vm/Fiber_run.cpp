@@ -106,7 +106,7 @@ push(stack.at(frame.stackBase));
 BREAK
 
 CASE(OP_LOAD_THIS_FIELD)
-push(at(0).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
+push(base().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
 BREAK
 
 CASE(OP_POP)
@@ -156,7 +156,6 @@ CASE(OP_STORE_LOCAL)
 stack.at(frame.stackBase + frame.read<uint_local_index_t>()) = top();
 BREAK
 
-
 #define C(N) CASE(OP_CALL_METHOD_##N)
 C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
 C(9) C(10) C(11) C(12) C(13) C(14) C(15)
@@ -203,15 +202,15 @@ vm.globalVariables.at(frame.read<uint_global_symbol_t>()) = top();
 BREAK
 
 CASE(OP_STORE_THIS_FIELD)
-at(0).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
+base().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
 BREAK
 
 CASE(OP_LOAD_THIS_STATIC_FIELD)
-push( at(0).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
+push( base().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
 BREAK
 
 CASE(OP_STORE_THIS_STATIC_FIELD)
-at(0).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
+base().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
 BREAK
 
 CASE(OP_LOAD_FIELD)
@@ -412,7 +411,7 @@ pushNewClass(nParents, nStaticFields, nFields);
 BREAK
 
 CASE(OP_THROW) {
-push(at(-1));
+push(top());
 std::runtime_error e(ensureString(-1)->asString());
 pop();
 handleException(e);

@@ -172,7 +172,7 @@ BIND_L(name, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name)); })
 
 functionClass
 ->copyParentMethods()
-BIND_L( (), {  f.callMethod(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
+//##BIND_L( (), {  f.callFunc(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
 BIND_F(hashCode, objectHashCode)
 BIND_F(bind, functionBind)
 ;

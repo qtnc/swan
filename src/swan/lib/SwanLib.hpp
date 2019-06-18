@@ -1,6 +1,7 @@
 #ifndef _____SWANLIB_HPP_____
 #define _____SWANLIB_HPP_____
 #include "../vm/VM.hpp"
+#include "../vm/FiberVM.hpp"
 
 #define FUNC(BODY) [](QFiber& f){ BODY }
 #define BIND_L(NAME, BODY) ->bind(#NAME, FUNC(BODY))

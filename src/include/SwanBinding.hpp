@@ -29,33 +29,42 @@ template<int ...> struct sequence {};
 template<int N, int ...S> struct sequence_generator: sequence_generator<N-1, N-1, S...> {};
 template<int ...S> struct sequence_generator<0, S...>{ typedef sequence<S...> type; };
 
-/*template<class T> struct UserObjectTrait {
+template<class T> struct UserObjectTrait {
 static inline constexpr size_t getMemSize () { return sizeof(T); }
 static inline T* getPointer (void* ptr) { return static_cast<T*>(ptr); }
 static inline void store (void* ptr, const T& value) { new(ptr) T(value); }
+static inline void store (void* ptr, const T* value) { new(ptr) T(*value); }
 static inline void storeMove (void* ptr, T&& value) { new(ptr) T(value); }
-template<class... A> static void emplace (void* ptr, A&&... args) { new(ptr) T(args...); }
-void destruct (void* ptr) { getPointer(ptr)->~T(); }
-};*/
-
-template<class T> struct UserObjectTrait {
-static inline constexpr size_t getMemSize () { return sizeof(T*); }
-static inline T*& getPointer (void* ptr) {
-return *static_cast<T**>(ptr);
-}
-static inline void store (void* ptr, const T& value) { 
-getPointer(ptr) = new T(value);
-}
-static inline void storeMove (void* ptr, T&& value) { 
-getPointer(ptr) = new T(value);
-}
-template<class... A> static void emplace (void* ptr, A&&... args) { 
-getPointer(ptr) = new T(args...);
-}
-static inline void destruct (void* ptr) {
-delete getPointer(ptr);
-}
+template<class... A> static inline void emplace (void* ptr, A&&... args) { new(ptr) T(args...); }
+static inline void destruct (void* ptr) { getPointer(ptr)->~T(); }
 };
+
+/** Use this macro before registering a new type to make it be stored by reference */
+#define SWAN_REGISTER_BYREFOBJ(T) \
+namespace Swan { namespace Binding { \
+template<> struct UserObjectTrait<T>  { \
+static inline constexpr size_t getMemSize () { return sizeof(T*); } \
+static inline T*& getPointer (void* ptr) { return *static_cast<T**>(ptr); } \
+static inline void store (void* ptr, const T& value) {  getPointer(ptr) = new T(value); } \
+static inline void store (void* ptr, const T* value) {  getPointer(ptr) = new T(*value); } \
+static inline void storeMove (void* ptr, T&& value) {  getPointer(ptr) = new T(value); } \
+template<class... A> static inline void emplace (void* ptr, A&&... args) {  getPointer(ptr) = new T(args...); } \
+static inline void destruct (void* ptr) { delete getPointer(ptr); } \
+}; }}
+
+/** Use this macro before registering a new type to make it be stored using std::shared_ptr. */
+#define SWAN_REGISTER_SHAREDPTROBJ(T) \
+namespace Swan { namespace Binding { \
+template<> struct UserObjectTrait<T>  { \
+static inline constexpr size_t getMemSize () { return sizeof(std::shared_ptr<T>); } \
+static inline std::shared_ptr<T>& getSharedPointer (void* ptr) { return *static_cast<std::shared_ptr<T>*>(ptr); } \
+static inline T* getPointer (void* ptr) { return getSharedPointer(ptr) .get(); } \
+static inline void store (void* ptr, const T& value) {  getSharedPointer(ptr) = const_cast<T&>(value) .shared_from_this(); } \
+static inline void store (void* ptr, const T* value) {  getSharedPointer(ptr) = const_cast<T*>(value) ->shared_from_this(); } \
+static inline void storeMove (void* ptr, T&& value) {  getSharedPointer(ptr) = value.shared_from_this(); } \
+template<class... A> static inline void emplace (void* ptr, A&&... args) {  getSharedPointer(ptr) = std::make_shared<T>(args...); } \
+static inline void destruct (void* ptr) { getSharedPointer(ptr) .reset(); } \
+}; }}
 
 template<class T, class B = void> struct SwanGetSlot: std::false_type {};
 

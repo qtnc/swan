@@ -5,8 +5,8 @@ I took the scripts that have been used to measure wren's performance with a few 
 
 Script/Language | Swan | Wren | Python 3.6 |  LuaJIT -joff | LuaJIT
 -----|-----|-----|-----|-----|-----
-method_call | 0.944 | 0.503 | 3.622 | 0.833 | 0.030
-binary_trees | 0.768 | 0.543 | 0.770 | 0.224 | 0.216
+method_call | 0.904 | 0.503 | 3.622 | 0.833 | 0.030
+binary_trees | 0.777 | 0.543 | 0.770 | 0.224 | 0.216
 Fib | 0.778 |  0.563 | 1.591 | 0.234 |  0.049
 for | 0.480 |  0.465 |  0.998 | 0.094 | 0.083
 map_numeric | 0.736 | 0.759 | 0.705 | 0.450 | 0.200

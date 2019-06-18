@@ -21,7 +21,7 @@ void QFiber::callSymbol (int symbol, int nArgs) {
 QV receiver = *(stack.end() -nArgs);
 QClass& cls = receiver.getClass(vm);
 QV method = cls.findMethod(symbol);
-bool re = callMethod(method, nArgs);
+bool re = callFunc(method, nArgs);
 if (!re) runtimeError("%s has no method %s", cls.name, vm.methodSymbols[symbol]);
 }
 
@@ -30,12 +30,12 @@ uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
 QClass* cls = receiver.getClass(vm) .parent;
 QV method = cls->findMethod(symbol);
-bool re = callMethod(method, nArgs);
+bool re = callFunc(method, nArgs);
 if (!re) {
 runtimeError("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
 }}
 
-bool QFiber::callMethod (QV& method, int nArgs) {
+inline bool QFiber::callFunc (QV& method, int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
 
@@ -164,7 +164,7 @@ push(QTuple::create(vm, 0, nullptr));
 }}
 }
 
-void QFiber::callClosure (QClosure& closure, int nArgs) {
+inline void QFiber::callClosure (QClosure& closure, int nArgs) {
 int nClosureArgs = closure.func.nArgs;
 adjustArguments(nArgs, nClosureArgs, closure.func.vararg);
 uint32_t newStackBase = stack.size() -nClosureArgs;
