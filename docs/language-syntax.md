@@ -372,6 +372,13 @@ print(v2>v1) # true
 
 
 ```
+# We can take a function corresponding to an operator. 
+# This is called generic method or method symbol
+# ::+ is a kind of shortcut for $(a,b): a+b
+let plus = ::+
+print(plus(7, 9)) # 16
+print(plus('ab', 'cd')) # abcd
+
 # We can take a method from a class and use it as a standalone function:
 # Num::+ is a kind of shortcut for $(a,b): a+b
 var plus = Num::+, multiply = Num::*
@@ -388,6 +395,8 @@ print(triple(9)) #27
 Num::* = Num::/
 print(4*5) #0.8 (!)
 ```
+
+The difference between `::+` and `Num::+` is that, in the second case, the particular implementation of the `+` method for the class `Num` is taken. In the first case, the implementation taken depends on the first parameter, i.e. `::+(1,2)` will take `Num::+` while `::+('a', 'b')` will take `String::+`.
 
 
 ## Syntax suggars for object-oriented programming

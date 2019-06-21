@@ -45,6 +45,11 @@ normal_distribution<double> dist( f.getOptionalNum(1, "mu", 0), f.getOptionalNum
 f.returnValue( dist(r.rand) );
 }
 
+static void randomSeed (QFiber& f) {
+QRandom& r = f.getObject<QRandom>(0);
+r.rand.seed(f.getNum(1));
+}
+
 static inline QRandom& getDefaultRandom (QFiber& f) {
 return * f.vm.globalVariables[f.vm.globalSymbols["rand"].index] .asObject<QRandom>();
 }
@@ -92,6 +97,7 @@ void QVM::initRandomType () {
 randomClass
 ->copyParentMethods()
 BIND_F( (), randomCall )
+BIND_F("reset", randomSeed)
 BIND_F( normal, randomNormal)
 ;
 

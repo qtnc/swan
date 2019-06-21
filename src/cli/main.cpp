@@ -7,6 +7,7 @@
 #include<exception>
 #include<cstring>
 #include<boost/algorithm/string.hpp>
+#include<optional>
 using namespace std;
 using boost::starts_with;
 
@@ -24,13 +25,14 @@ printIntro();
 println("Synopsis: %s [options] [script] [args...]", argv0);
 println("Where [script] is the script to execute");
 println("And where [options] can be: ");
-println("-c: compile script but don't run it");
-println("-e: execute the following expression given on the command line");
-println("-g: save debug information when compiling");
-println("-h: print this help message and exit");
-println("-i: run interactive REPL (default when no script file is specified)");
-println("-m: import the following given module");
-println("-o: output compiled bytecode to specified file");
+println("-c:  compile script but don't run it");
+println("-e:  execute the following expression given on the command line");
+println("-g:  save debug information when compiling");
+println("-g0: don't save debug information when compiling");
+println("-h:  print this help message and exit");
+println("-i:  run interactive REPL (default when no script file is specified)");
+println("-m:  import the following given module");
+println("-o:  output compiled bytecode to specified file");
 }
 
 static void printCLIHelp () {
@@ -71,7 +73,6 @@ code.clear();
 static void repl (Swan::VM& vm, Swan::Fiber& fiber) {
 Swan::ScopeUnlocker<Swan::VM> unlocker(vm);
 string code, line;
-vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
 printIntro();
 println("Type 'exit', 'quit' or press Ctrl+Z to quit; type 'help' for other commands.");
 print("?>>");
@@ -87,13 +88,15 @@ line.clear();
 int main (int argc, char** argv) {
 vector<string> args, importModules;
 string inFile, outFile, expression;
-bool runREPL=false, compileOnly=false, compileDbgInfo=false;
+bool runREPL=false, compileOnly=false;
+optional<bool> compileDbgInfo;
 int argIndex=1, exitCode=0;
 while(argIndex<argc) {
 string arg = argv[argIndex++];
 if (arg=="-c") compileOnly=true;
 else if (arg=="-e") expression = argv[argIndex++];
 else if (arg=="-g") compileDbgInfo=true;
+else if (arg=="-g0") compileDbgInfo=false;
 else if (arg=="-h" || arg=="--help" || arg=="-?") { printHelp(argv[0]); return 0; }
 else if (arg=="-i") runREPL=true;
 else if (arg=="-m") importModules.push_back(argv[argIndex++]);
@@ -128,6 +131,10 @@ fiber.call(args.size());
 fiber.storeGlobal("argv");
 }
 
+if (compileDbgInfo.has_value()) {
+fiber.getVM().setOption(Swan::VM::Option::COMPILATION_DEBUG_INFO, compileDbgInfo.value());
+}
+
 if (!expression.empty()) {
 fiber.loadString(expression, "<cmdline>");
 fiber.call(0);
@@ -150,12 +157,14 @@ fiber.pop();
 
 if (compileOnly && !inFile.empty()) {
 if (outFile.empty()) outFile = inFile + ".sb";
-fiber.getVM().setOption(Swan::VM::Option::COMPILATION_DEBUG_INFO, compileDbgInfo);
 ofstream out(outFile, ios::binary);
 fiber.importAndDumpBytecode("", inFile, out);
 }
 
-if (runREPL && !compileOnly) repl(vm, fiber);
+if (runREPL && !compileOnly) {
+vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
+repl(vm, fiber);
+}
 
 vm.destroy();
 } 

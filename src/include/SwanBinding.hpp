@@ -60,7 +60,7 @@ static inline constexpr size_t getMemSize () { return sizeof(std::shared_ptr<T>)
 static inline std::shared_ptr<T>& getSharedPointer (void* ptr) { return *static_cast<std::shared_ptr<T>*>(ptr); } \
 static inline T* getPointer (void* ptr) { return getSharedPointer(ptr) .get(); } \
 static inline void store (void* ptr, const T& value) {  getSharedPointer(ptr) = const_cast<T&>(value) .shared_from_this(); } \
-static inline void store (void* ptr, const T* value) {  getSharedPointer(ptr) = const_cast<T*>(value) ->shared_from_this(); } \
+static inline void store (void* ptr, const T* value) {  getSharedPointer(ptr) = value? const_cast<T*>(value) ->shared_from_this() :nullptr; } \
 static inline void storeMove (void* ptr, T&& value) {  getSharedPointer(ptr) = value.shared_from_this(); } \
 template<class... A> static inline void emplace (void* ptr, A&&... args) {  getSharedPointer(ptr) = std::make_shared<T>(args...); } \
 static inline void destruct (void* ptr) { getSharedPointer(ptr) .reset(); } \
@@ -72,7 +72,8 @@ template <class T> struct SwanGetSlot<T*, typename std::enable_if< std::is_class
 typedef T* returnType;
 static inline bool check (Swan::Fiber& f, int idx) { return f.isUserObject<T>(idx); }
 static inline T* get (Swan::Fiber& f, int idx) {
-return UserObjectTrait<T>::getPointer( f.getUserPointer(idx) );
+if (f.isNullOrUndefined(idx)) return nullptr;
+else return UserObjectTrait<T>::getPointer( f.getUserPointer(idx) );
 }};
 
 template <class T> struct SwanGetSlot<T&, typename std::enable_if< std::is_class<T>::value && !is_optional<T>::value && !is_std_function<T>::value && !is_variant<T>::value>::type> {
@@ -643,6 +644,21 @@ SwanSetSlot<P>::set(f, 0, value);
 }
 };
 
+template<class T, class P, size_t OFFSET> struct SwanPropertyByOffsetWrapper {
+static void getter (Swan::Fiber& f) {
+T* obj = SwanGetSlot<T*>::get(f, 0);
+P* value = reinterpret_cast<P*>(reinterpret_cast<char*>(obj) + OFFSET);
+SwanSetSlot<P>::set(f, 0, *value);
+}
+static void setter (Swan::Fiber& f) {
+T* obj = SwanGetSlot<T*>::get(f, 0);
+P value = SwanGetSlot<P>::get(f, 1);
+P* ptr = reinterpret_cast<P*>(reinterpret_cast<char*>(obj) + OFFSET);
+*ptr = value;
+SwanSetSlot<P>::set(f, 0, value);
+}
+};
+
 } // namespace Binding
 
 template<class T> inline T& Fiber::getUserObject (int stackIndex) {
@@ -715,5 +731,6 @@ storeDestructor(&Swan::Binding::SwanDestructorWrapper<T>::destructor);
 #define PROPERTY(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>), (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
 #define GETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>)
 #define SETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
+#define MEMBER(CLS,MEM) (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::getter), (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::setter)
 
 #endif

@@ -208,14 +208,14 @@ Methods:
 - static List.of(sequences...): create a list from one or more concatenated sequences
 - add(...items): add one or more items at the end of the list
 - clear: clear the whole list
-- draw([random=rand], count=1): randomly draw the specified number of elements from the list. Drawn elements aren't removed from the source list.
-- draw([random=rand], weights): randomly draw an element from the list, selecting the element with probabilities weights (See Random for more info). Drawn element isn't removed from the list.
+- draw([random=rand], count=1): randomly draw the specified number of elements from the list. Drawn elements aren't removed from the source list. AVailability depends on the Random class being available.
+- draw([random=rand], weights): randomly draw an element from the list, selecting the element with probabilities weights (See Random for more info). Drawn element isn't removed from the list. AVailability depends on the Random class being available.
 - insert(index, ...items): insert one or more items starting at the given position
 - indexOf(needle, start=0): search for needle in the list, return its position if found, -1 if not
 - iterator: return an iterator to iterate through the elements of this list in order
 - lastIndexOf(needle, start=length): search for needle in the list from the end, return its position if found, -1 if not
 - length: return the number of element in the list
-- lower(needle, comparator=::<): return the index of the greatest element less or equal than needle by doing a binary search. This suppose that the elements are sorted. 
+- lower(needle, comparator=::<): return the index of the greatest element less or equal than needle by doing a binary search. This suppose that the elements are sorted aoccording to the comparator given. 
 - pop: remove an item from the end of the list and return it
 - push(...items): add one or more items at the end of the list
 - remove(...items): remove one or more items
@@ -223,12 +223,12 @@ Methods:
 - removeIf(predicate): remove all items from the list for which the predicate returned true
 - reverse: reverse the elements in the list, so that the first becomes the last one and vice-versa.
 - rotate(distance): shift the items in the list; depending on distance, first elements become the last ones or last become the first ones.
-- shuffle(random=rand): randomly shuffles the elements in the list
+- shuffle(random=rand): randomly shuffles the elements in the list. AVailability depends on the Random class being available.
 - slice(start, end): return a sublist containing elements from start inclusive to end exclusive. Equivalent to `list[start..end]`.
 - sort(comparator=::<): sort the elements in the list
 - splice(start, end, ...newItems): erase the elements from start inclusive to end exclusive, and then insert newItems at their place. Equivalent to `list[start..end] = newItems`.
 - toString: return a string like "[1, 2, 3, 4, 5]"
-- upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted. 
+- upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted according to the comparator given.
 
 ## Map: is Iterable
 A Map is an associative container where key/value pairs are held with no particular order. If keys need to be ordered, Dictionary must be used.
@@ -346,7 +346,7 @@ A random object holds the state of a pseudo-random number generator.
 
 Operator() is used to generate a random number out of the generator.
 A default global Random instance is created with the name *rand*.
-The random generator used is the standard C++11 MT19937.
+The random generator used is the standard C++11 MT19937. It's a good and quite fast random number generator, but too weak for cryptography.
 
 - rand(), without parameters: generate a number between 0 and 1
 - rand(n), for n<=1: generate a number between 0 and 1 and return true if the generated number is <n.
@@ -358,7 +358,7 @@ Other methods:
 
 - Constructor: Random([seed]): construct a pseudo-random number generator with a given seed number, or use any system-dependent method of obtaining seed if seed is omited
 - normal(mu=0, sigma=1): generates a number according to normal/gaussian distribution with mean mu and deviation sigma. The generated number has ~65% chance to be between mu-sigma and mu+sigma, ~90% between mu -2sigma and mu +2sigma, and ~96% between mu -3sigma and mu +3sigma. There is no bounds, so a number as big as mu + 100sigma may be generated, though with an extremely low probability.
-
+- reset(seed): reset this random number generator to the seed provided
 ## Set: is Iterable
 A Set is a collection of items, in principle all of the same type (although nothing is enforced), where order has no importance and where any item may only be present once.
 Another characteristic of sets beside the uniqueness of held objects is their ability to make set opations: union, intersection, difference and symetric difference

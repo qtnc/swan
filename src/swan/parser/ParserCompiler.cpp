@@ -42,6 +42,10 @@ if (it!=end) utf8::next(it, end);
 return it==end? 0 : utf8::peek_next(it, end);
 }
 
+template<class T> static inline uint32_t utf8peek (T it, T end) {
+return it==end? 0 : utf8::peek_next(it, end);
+}
+
 static inline ostream& operator<< (ostream& out, const QToken& token) {
 return out << string(token.start, token.length);
 }
@@ -1128,11 +1132,12 @@ return d;
 }
 
 static void skipComment (const char*& in, const char* end, char delim) {
-int c = utf8::peek_next(in, end);
+int c = utf8peek(in, end);
 if (isSpace(c) || isName(c) || c==delim) {
 while(c && in<end && !isLine(c)) c=utf8::next(in, end);
 return;
 }
+else if (!c || isLine(c)) return;
 int opening = c, closing = c, nesting = 1;
 if (opening=='[' || opening=='{' || opening=='<') closing = opening+2; 
 else if (opening=='(') closing=')';
@@ -1241,10 +1246,10 @@ in = cur.start;
 }
 #define RET0(X) { cur = { X, start, static_cast<size_t>(in-start), QV::UNDEFINED}; return cur; }
 #define RET RET0(T_NAME)
-#define RET2(C) if (utf8::peek_next(in, end)==C) utf8::next(in, end); RET
-#define RET3(C1,C2) if(utf8::peek_next(in, end)==C1 || utf8::peek_next(in, end)==C2) utf8::next(in, end); RET
-#define RET4(C1,C2,C3) if (utf8::peek_next(in, end)==C1 || utf8::peek_next(in, end)==C2 || utf8::peek_next(in, end)==C3) utf8::next(in, end); RET
-#define RET22(C1,C2) if (utf8::peek_next(in, end)==C1) utf8::next(in, end); RET2(C2)
+#define RET2(C) if (utf8peek(in, end)==C) utf8::next(in, end); RET
+#define RET3(C1,C2) if(utf8peek(in, end)==C1 || utf8peek(in, end)==C2) utf8::next(in, end); RET
+#define RET4(C1,C2,C3) if (utf8peek(in, end)==C1 || utf8peek(in, end)==C2 || utf8peek(in, end)==C3) utf8::next(in, end); RET
+#define RET22(C1,C2) if (utf8peek(in, end)==C1) utf8::next(in, end); RET2(C2)
 const char *start = in;
 if (in>=end || !*in) RET0(T_END)
 int c;
@@ -1254,17 +1259,17 @@ c = utf8::next(in, end);
 switch(c){
 case '\0': RET0(T_END)
 case '(':
-if (utf8::peek_next(in, end)==')') {
+if (utf8peek(in, end)==')') {
 utf8::next(in, end);
 RET2('=')
 }break;
 case '[': 
-if (utf8::peek_next(in, end)==']') {
+if (utf8peek(in, end)==']') {
 utf8::next(in, end);
 RET2('=')
 }break;
 case '/': 
-switch (utf8::peek_next(in, end)) {
+switch (utf8peek(in, end)) {
 case '/': case '*': skipComment(in, end, '/'); return nextNameToken(eatEq);
 default: RET
 }
@@ -1309,10 +1314,10 @@ return cur;
 }
 #define RET(X) { cur = { X, start, static_cast<size_t>(in-start), QV::UNDEFINED}; return cur; }
 #define RETV(X,V) { cur = { X, start, static_cast<size_t>(in-start), V}; return cur; }
-#define RET2(C,A,B) if (utf8::peek_next(in, end)==C) { utf8::next(in, end); RET(A) } else RET(B)
-#define RET3(C1,A,C2,B,C) if(utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET(A) } else if (utf8::peek_next(in, end)==C2) { utf8::next(in, end); RET(B) } else RET(C)
-#define RET4(C1,R1,C2,R2,C3,R3,C) if(utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET(R1) } else if (utf8::peek_next(in, end)==C2) { utf8::next(in, end); RET(R2) } else if (utf8::peek_next(in, end)==C3) { utf8::next(in, end); RET(R3) }  else RET(C)
-#define RET22(C1,C2,A,B,C,D) if (utf8::peek_next(in, end)==C1) { utf8::next(in, end); RET2(C2,A,B) } else RET2(C2,C,D)
+#define RET2(C,A,B) if (utf8peek(in, end)==C) { utf8::next(in, end); RET(A) } else RET(B)
+#define RET3(C1,A,C2,B,C) if(utf8peek(in, end)==C1) { utf8::next(in, end); RET(A) } else if (utf8peek(in, end)==C2) { utf8::next(in, end); RET(B) } else RET(C)
+#define RET4(C1,R1,C2,R2,C3,R3,C) if(utf8peek(in, end)==C1) { utf8::next(in, end); RET(R1) } else if (utf8peek(in, end)==C2) { utf8::next(in, end); RET(R2) } else if (utf8peek(in, end)==C3) { utf8::next(in, end); RET(R3) }  else RET(C)
+#define RET22(C1,C2,R11,R12,R21,R22) if (utf8peek(in, end)==C1) { utf8::next(in, end); RET2(C2,R11,R12) } else RET2(C2,R21,R22)
 const char *start = in;
 if (in>=end || !*in) RET(T_END)
 int c;
@@ -1349,13 +1354,13 @@ case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT)
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
 case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) 
 case '/': 
-switch (utf8::peek_next(in, end)) {
+switch (utf8peek(in, end)) {
 case '/': case '*': skipComment(in, end, '/'); return nextToken();
 default: RET2('=', T_SLASHEQ, T_SLASH)
 }
 case '.':
-if (utf8::peek_next(in, end)=='?') { utf8::next(in, end); RET(T_DOTQUEST) } 
-else if (utf8::peek_next(in, end)=='.') { utf8::next(in, end); RET2('.', T_DOTDOTDOT, T_DOTDOT) }
+if (utf8peek(in, end)=='?') { utf8::next(in, end); RET(T_DOTQUEST) } 
+else if (utf8peek(in, end)=='.') { utf8::next(in, end); RET2('.', T_DOTDOTDOT, T_DOTDOT) }
 else RET(T_DOT)
 case '"': case '\'': case '`':
 case 146: case 147: case 171: case 8216: case 8217: case 8220: 

@@ -36,11 +36,10 @@ n = ((n +ALIGNMENT -1)/ALIGNMENT)*ALIGNMENT;
 }
 
 void purgeMem () {
-for (auto& p: bpools) p.second->release_memory();
+//for (auto& p: bpools) p.second->release_memory(); //Fixme: disabled because release_memory() randomly crashes
 for (auto& p: freeList) boost::alignment::aligned_free(p.second);
 freeList.clear();
 }
-
 
 void* QVM::allocate (size_t n) {
 gcMemUsage += n;
