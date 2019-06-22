@@ -83,6 +83,24 @@ f.returnValue(f.at(2));
 else f.returnValue(QV::UNDEFINED);
 }
 
+static void listFill (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+int n = f.getArgCount();
+int from=0, to=list.data.size(); QV value = QV::UNDEFINED;
+if (n==4) {
+from = f.getNum(1);
+to = f.getNum(2);
+value = f.at(3);
+Swan::Range(from, to, false).makeBounds(list.data.size(), from, to);
+}
+else if (n==3) {
+f.getRange(1).makeBounds(list.data.size(), from, to);
+value = f.at(2);
+}
+else if (n==2) value = f.at(1);
+std::fill(list.data.begin()+from, list.data.begin()+to, value);
+}
+
 static void listPush (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 int n = f.getArgCount() -1;
@@ -255,6 +273,7 @@ BIND_F(removeAt, listRemoveAt)
 BIND_F(indexOf, listIndexOf)
 BIND_F(lastIndexOf, listLastIndexOf)
 BIND_F(sort, listSort)
+BIND_F(fill, listFill)
 BIND_F(reverse, listReverse)
 BIND_F(rotate, listRotate)
 BIND_F(lower, listLowerBound)

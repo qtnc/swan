@@ -111,6 +111,7 @@ Methods:
 
 - draw(startX, startY, endX, endY, value): draw a line between the points (startX, startY) and (endX, endY), setting the touched cells with the value given
 - fill(startX, startY, endX, endY, value): fills a rectangular area with a given value
+- fill(xRange, yRange, value): fills a rectangular area with a given value
 - floodFill(x, y, value): fills the grid with the specified value, using the flood fill algorithm starting at the given point
 - hasDirectPath(startX, startY, endX, endY, traversaleTest): test if there exist a direct path between (startX, startY) and (endX, endY). Return a 3-tuple (result, impactX, impactY) telling if there is a direct path, and if not, where is the impact point. See below for a description of the traversalTest callback.
 - iterator: return an iterator to iterate through the value in the grid. Values are ordered left to right, top to bottom.
@@ -210,6 +211,9 @@ Methods:
 - clear: clear the whole list
 - draw([random=rand], count=1): randomly draw the specified number of elements from the list. Drawn elements aren't removed from the source list. AVailability depends on the Random class being available.
 - draw([random=rand], weights): randomly draw an element from the list, selecting the element with probabilities weights (See Random for more info). Drawn element isn't removed from the list. AVailability depends on the Random class being available.
+- fill(start, end, value): fills the range between start and end by the value given
+- fill(range, value): fills the range specified by the value given
+- fill(value): fill the entire list with the specified value
 - insert(index, ...items): insert one or more items starting at the given position
 - indexOf(needle, start=0): search for needle in the list, return its position if found, -1 if not
 - iterator: return an iterator to iterate through the elements of this list in order

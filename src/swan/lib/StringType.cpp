@@ -207,6 +207,38 @@ boost::trim(re);
 f.returnValue(QString::create(f.vm, re));
 }
 
+static void stringFill (QFiber& f) {
+QString& s = f.getObject<QString>(0);
+QString& pad = f.getObject<QString>(1);
+int desiredLength = f.getNum(2);
+int side = f.getOptionalNum(3, 1);
+int padLength = utf8::distance(pad.data, pad.data+pad.length);
+int baseLength = utf8::distance(s.data, s.data+s.length);
+int leftPad=0, rightPad=0;
+string re;
+if (side==1) leftPad=desiredLength-baseLength;
+else if (side==2) rightPad=desiredLength-baseLength;
+else if (side==3) {
+int neededPad = desiredLength-baseLength;
+rightPad = neededPad/2;
+leftPad = desiredLength -baseLength -rightPad;
+}
+while(leftPad>0) {
+int thisPad = std::min(leftPad, padLength);
+if (thisPad==padLength) re.append(pad.data, pad.data+pad.length);
+else { char* pe=pad.data; utf8::advance(pe, thisPad, pad.data+pad.length); re.append(pad.data, pe); }
+leftPad-=thisPad;
+}
+re.append(s.data, s.data+s.length);
+while(rightPad>0) {
+int thisPad = std::min(rightPad, padLength);
+if (thisPad==padLength) re.append(pad.data, pad.data+pad.length);
+else { char* pe=pad.data; utf8::advance(pe, thisPad, pad.data+pad.length); re.append(pad.data, pe); }
+rightPad-=thisPad;
+}
+f.returnValue(re);
+}
+
 static void stringToNum (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int base = f.getOptionalNum(1, -1);
@@ -336,6 +368,7 @@ BIND_F(findAll, stringFindAll)
 BIND_F(split, stringSplitWithoutRegex)
 BIND_F(replace, stringReplaceWithoutRegex)
 #endif
+BIND_F(fill, stringFill)
 BIND_F(trim, stringTrim)
 BIND_F(format, stringFormat)
 ;
