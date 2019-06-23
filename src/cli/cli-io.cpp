@@ -86,7 +86,7 @@ istringstream in(p.str());
 io.encoder(in, *io.out);
 }
 else *io.out << p.str();
-f.setNull(0);
+f.setUndefined(0);
 }
 
 static void ioWrite (Swan::Fiber& f) {
@@ -107,7 +107,7 @@ static void ioRead (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
 int num = f.getOptionalNum(1, -1);
 ostringstream out;
-if (!io.in || !*io.in) { f.setNull(0); return; }
+if (!io.in || !*io.in) { f.setUndefined(0); return; }
 if (io.decoder) {
 f.getVM().unlock();
 if (num<0) io.decoder(*io.in, out, 0);
@@ -132,7 +132,7 @@ f.setBuffer(0, &buf[0], io.in->gcount());
 
 static void ioReadLine (Swan::Fiber& f) {
 IO& io = f.getUserObject<IO>(0);
-if (!io.in || !*io.in) { f.setNull(0); return; }
+if (!io.in || !*io.in) { f.setUndefined(0); return; }
 if (io.decoder) {
 f.getVM().unlock();
 ostringstream out;

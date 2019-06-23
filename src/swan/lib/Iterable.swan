@@ -50,7 +50,6 @@ Iterable::toSet = $$: Set.of(this)
 Iterable::toMap = $$: Map.of(this)
 
 Iterable::map = $$f: f(x) for x in this
-
 Iterable::filter = $$f: x for x in this if f(x)
 
 Iterable::reduce = $$(f,a){
@@ -61,19 +60,8 @@ return a
 Iterable::min = $$(f=min): this.reduce(f)
 Iterable::max = $$(f=max): this.reduce(f)
 
-Iterable::dropWhile = $$f: $*{
-for x in this {
-if f(x) break
-yield x
-}}
-
-Iterable::skipWhile = $$f: $*{
-var test = true
-for x in this {
-if test && f(x) continue
-test = false
-yield x
-}}
+Iterable::dropWhile = $$f: x for x in this while f(x)
+Iterable::skipWhile = $$f: x for x in this continue while f(x)
 
 Iterable::skip = $$n: $*{
 let i = 0

@@ -121,6 +121,10 @@ vector<shared_ptr<Expression>> decorations;
 virtual bool isDecorable () { return true; }
 };
 
+struct Comprenable {
+virtual void chain (const shared_ptr<Statement>& sta) = 0;
+};
+
 struct ConstantExpression: Expression {
 QToken token;
 ConstantExpression(QToken x): token(x) {}
@@ -404,9 +408,9 @@ void compile (QCompiler& compiler)override ;
 };
 
 struct ComprehensionExpression: Expression {
-vector<shared_ptr<struct ForStatement>> subCompr;
-shared_ptr<Expression> filterExpression, loopExpression;
-ComprehensionExpression (shared_ptr<Expression> lp): filterExpression(nullptr), loopExpression(lp) {}
+shared_ptr<Statement> rootStatement;
+shared_ptr<Expression> loopExpression;
+ComprehensionExpression (const shared_ptr<Statement>& rs, const shared_ptr<Expression>& le): rootStatement(rs), loopExpression(le)  {}
 shared_ptr<Expression> optimize ()override ;
 const QToken& nearestToken () override { return loopExpression->nearestToken(); }
 void compile (QCompiler&)override ;
@@ -510,11 +514,15 @@ SimpleStatement (const QToken& t): token(t) {}
 const QToken& nearestToken () override { return token; }
 };
 
-struct IfStatement: Statement  {
+struct IfStatement: Statement, Comprenable   {
 shared_ptr<Expression> condition;
 shared_ptr<Statement> ifPart, elsePart;
 QOpCode jumpType;
 IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp=nullptr, shared_ptr<Statement> ep = nullptr, QOpCode jt = OP_JUMP_IF_FALSY): condition(cond), ifPart(ifp), elsePart(ep), jumpType(jt) {}
+void chain (const shared_ptr<Statement>& st) final override { 
+if (!ifPart) ifPart=st; 
+else if (!elsePart) elsePart = st;
+}
 shared_ptr<Statement> optimizeStatement () override { 
 condition=condition->optimize(); 
 ifPart=ifPart->optimizeStatement(); 
@@ -606,12 +614,13 @@ compiler.popLoop();
 }
 };
 
-struct ForStatement: Statement {
+struct ForStatement: Statement, Comprenable  {
 QToken token;
 vector<shared_ptr<Variable>> loopVariables;
 shared_ptr<Expression> inExpression;
 shared_ptr<Statement> loopStatement;
 ForStatement (const QToken& tk): token(tk), loopVariables(), inExpression(nullptr), loopStatement(nullptr)  {}
+void chain (const shared_ptr<Statement>& st) final override { loopStatement=st; }
 shared_ptr<Statement> optimizeStatement () override { 
 if (inExpression) inExpression=inExpression->optimize(); 
 if (loopStatement) loopStatement=loopStatement->optimizeStatement(); 
@@ -678,7 +687,7 @@ compiler.popLoop();
 
 struct ContinueStatement: SimpleStatement {
 int count;
-ContinueStatement (const QToken& tk, int n): SimpleStatement(tk), count(n) {}
+ContinueStatement (const QToken& tk, int n = 1): SimpleStatement(tk), count(n) {}
 void compile (QCompiler& compiler) override {
 if (compiler.loops.empty()) compiler.compileError(token, ("Can't use 'continue' outside of a loop"));
 else if (count>compiler.loops.size()) compiler.compileError(token, ("Can't continue on that many loops"));
@@ -693,7 +702,7 @@ else loop.jumpsToPatch.push_back({ Loop::CONDITION, compiler.writeOpJump(OP_JUMP
 
 struct BreakStatement: SimpleStatement {
 int count;
-BreakStatement (const QToken& tk, int n): SimpleStatement(tk), count(n) {}
+BreakStatement (const QToken& tk, int n=1): SimpleStatement(tk), count(n) {}
 void compile (QCompiler& compiler) override {
 if (compiler.loops.empty()) compiler.compileError(token, ("Can't use 'break' outside of a loop"));
 else if (count>compiler.loops.size()) compiler.compileError(token, ("Can't break that many loops"));
@@ -708,7 +717,7 @@ loop.jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP) });
 struct ReturnStatement: Statement {
 QToken returnToken;
 shared_ptr<Expression> expr;
-ReturnStatement (const QToken& retk, shared_ptr<Expression> e0): returnToken(retk), expr(e0) {}
+ReturnStatement (const QToken& retk, shared_ptr<Expression> e0 = nullptr): returnToken(retk), expr(e0) {}
 const QToken& nearestToken () override { return expr? expr->nearestToken() : returnToken; }
 shared_ptr<Statement> optimizeStatement () override { if (expr) expr=expr->optimize(); return shared_this(); }
 void compile (QCompiler& compiler) override {
@@ -733,11 +742,12 @@ compiler.writeOp(OP_THROW);
 }
 };
 
-struct TryStatement: Statement {
+struct TryStatement: Statement, Comprenable  {
 shared_ptr<Statement> tryPart, catchPart, finallyPart;
 QToken catchVar;
 TryStatement (shared_ptr<Statement> tp, shared_ptr<Statement> cp, shared_ptr<Statement> fp, const QToken& cv): tryPart(tp), catchPart(cp), finallyPart(fp), catchVar(cv)  {}
 const QToken& nearestToken () override { return tryPart->nearestToken(); }
+void chain (const shared_ptr<Statement>& st) final override { tryPart=st; }
 shared_ptr<Statement> optimizeStatement () override { 
 tryPart = tryPart->optimizeStatement();
 if (catchPart) catchPart=catchPart->optimizeStatement();
@@ -776,9 +786,10 @@ compiler.writeOp(OP_END_FINALLY);
 }
 };
 
-struct BlockStatement: Statement {
+struct BlockStatement: Statement, Comprenable  {
 vector<shared_ptr<Statement>> statements;
-BlockStatement (const vector<shared_ptr<Statement>>& sta): statements(sta) {}
+BlockStatement (const vector<shared_ptr<Statement>>& sta = {}): statements(sta) {}
+void chain (const shared_ptr<Statement>& st) final override { statements.push_back(st); }
 shared_ptr<Statement> optimizeStatement () override { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
 const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override { return any_of(statements.begin(), statements.end(), [&](auto s){ return s && s->isUsingExports(); }); }
@@ -1972,15 +1983,88 @@ return make_shared<ConditionalExpression>(cond, ifPart, elsePart);
 
 shared_ptr<Expression> QParser::parseComprehension (shared_ptr<Expression> loopExpr) {
 skipNewlines();
-auto compr = make_shared<ComprehensionExpression>(loopExpr);
-do {
+shared_ptr<ForStatement> firstFor = make_shared<ForStatement>(cur);
+firstFor->parseHead(*this);
+shared_ptr<Comprenable> expr = firstFor;
+shared_ptr<Statement> rootStatement = firstFor, leafExpr = make_shared<YieldExpression>(loopExpr->nearestToken(), loopExpr);
+while(true){
 skipNewlines();
+if (match(T_FOR)) {
 shared_ptr<ForStatement> forSta = make_shared<ForStatement>(cur);
 forSta->parseHead(*this);
-compr->subCompr.push_back(forSta);
-} while(match(T_FOR));
-if (match(T_IF)) compr->filterExpression = parseExpression(P_COMPREHENSION);
-return compr;
+expr->chain(forSta);
+expr = forSta;
+}
+else if (match(T_IF)) {
+auto ifSta = make_shared<IfStatement>(parseExpression(P_COMPREHENSION));
+expr->chain(ifSta);
+expr = ifSta;
+}
+else if (match(T_WHILE)) {
+auto ifSta = make_shared<IfStatement>(parseExpression(P_COMPREHENSION));
+ifSta->elsePart = make_shared<ReturnStatement>(cur);
+expr->chain(ifSta);
+expr = ifSta;
+}
+else if (match(T_BREAK)) {
+consume(T_IF, "Expected 'if' after 'break' in comprehension expression");
+auto ifSta = make_shared<IfStatement>(parseExpression(P_COMPREHENSION));
+ifSta->chain(make_shared<BreakStatement>(cur));
+expr->chain(ifSta);
+expr = ifSta;
+}
+else if (match(T_RETURN)) {
+consume(T_IF, "Expected 'if' after 'return' in comprehension expression");
+auto ifSta = make_shared<IfStatement>(parseExpression(P_COMPREHENSION));
+ifSta->chain(make_shared<ReturnStatement>(cur));
+expr->chain(ifSta);
+expr = ifSta;
+}
+else if (match(T_CONTINUE)) {
+if (match(T_IF)) {
+auto ifSta = make_shared<IfStatement>(parseExpression(P_COMPREHENSION));
+ifSta->chain(make_shared<ContinueStatement>(cur));
+expr->chain(ifSta);
+expr = ifSta;
+} else {
+consume(T_WHILE, "Expected 'if' or 'while' after 'continue' in comprehension expression");
+auto cond = parseExpression(P_COMPREHENSION);
+QToken trueToken = { T_TRUE, nullptr, 0, true }, falseToken = { T_FALSE, nullptr, 0, false };
+auto var = make_shared<NameExpression>(createTempName());
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>(var, make_shared<ConstantExpression>(trueToken) ) };
+vector<shared_ptr<Statement>> rootBlock = { make_shared<VariableDeclaration>(vars), rootStatement }, leafBlock = {
+make_shared<IfStatement>(var, 
+make_shared<IfStatement>(cond, make_shared<ContinueStatement>(cur), createBinaryOperation(var, T_EQ, make_shared<ConstantExpression>(falseToken) ) 
+))};
+auto bs = make_shared<BlockStatement>(leafBlock);
+rootStatement = make_shared<BlockStatement>(rootBlock);
+expr->chain(bs);
+expr = bs;
+}}
+else if (match(T_WITH)) {
+auto openExpr = parseExpression(P_COMPREHENSION);
+QToken varToken;
+if (match(T_AS)) {
+consume(T_NAME, "Expected variable name after 'as'");
+varToken = cur;
+}
+else varToken = createTempName();
+QString* closeName = QString::create(vm, ("close"), 5);
+QToken closeToken = { T_NAME, closeName->data, closeName->length, QV(closeName, QV_TAG_STRING) };
+auto varExpr = make_shared<NameExpression>(varToken);
+vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
+auto varDecl = make_shared<VariableDeclaration>(varDecls);
+auto closeExpr = createBinaryOperation(varExpr, T_DOT, make_shared<NameExpression>(closeToken));
+auto trySta = make_shared<TryStatement>(nullptr, nullptr, closeExpr, cur); 
+vector<shared_ptr<Statement>> statements = { varDecl, trySta };
+auto bs = make_shared<BlockStatement>(statements);
+expr->chain(bs);
+expr = trySta;
+}
+else break;
+}
+expr->chain(leafExpr);
+return make_shared<ComprehensionExpression>(rootStatement, loopExpr);
 }
 
 static shared_ptr<Expression> nameExprToConstant (QParser& parser, shared_ptr<Expression> key) {
@@ -2271,9 +2355,7 @@ return BinaryOperation::optimize();
 }
 
 shared_ptr<Expression> ComprehensionExpression::optimize () {
-loopExpression=loopExpression->optimize(); 
-for (auto& e: subCompr) e=static_pointer_cast<ForStatement>(e->optimizeStatement());
-if (filterExpression) filterExpression=filterExpression->optimize(); 
+rootStatement = rootStatement->optimizeStatement();
 return shared_this(); 
 }
 
@@ -2314,18 +2396,9 @@ compiler.popScope();
 }
 
 void ComprehensionExpression::compile (QCompiler  & compiler) {
-auto yieldSta = make_shared<YieldExpression>(loopExpression->nearestToken(), loopExpression);
-auto ifSta = filterExpression? make_shared<IfStatement>(filterExpression, yieldSta, nullptr) : nullptr;
-auto finalSta = ifSta? static_pointer_cast<Statement>(ifSta) : static_pointer_cast<Statement>(yieldSta);
-shared_ptr<ForStatement> forSta = nullptr;
-for (auto& sc: subCompr) {
-if (forSta) forSta->loopStatement = sc;
-forSta = sc;
-}
-forSta->loopStatement = finalSta;
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
-subCompr[0]->optimizeStatement()->compile(fc);
+rootStatement->optimizeStatement()->compile(fc);
 QFunction* func = fc.getFunction(0);
 func->name = "<comprehension>";
 compiler.result = fc.result;
