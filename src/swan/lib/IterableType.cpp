@@ -24,10 +24,26 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
+static void iterableToJSON (QFiber& f) {
+bool first = true;
+int toJSONSymbol = f.vm.findMethodSymbol("toJSON");
+string re = "[";
+iterateSequence(f, f.at(0), [&](const QV& x){
+if (!first) re.append(",");
+else first=false;
+f.push(x);
+f.callSymbol(toJSONSymbol, 1);
+re.append(f.getString(-1));
+f.pop();
+});
+re.append("]");
+f.returnValue(re);
+}
 
 void QVM::initIterableType () {
 iterableClass
 BIND_F(join, iterableJoin)
 BIND_F(+, iterablePlus)
+BIND_F(toJSON, iterableToJSON)
 ;
 }

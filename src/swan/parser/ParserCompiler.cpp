@@ -514,7 +514,7 @@ struct IfStatement: Statement  {
 shared_ptr<Expression> condition;
 shared_ptr<Statement> ifPart, elsePart;
 QOpCode jumpType;
-IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp, shared_ptr<Statement> ep = nullptr, QOpCode jt = OP_JUMP_IF_FALSY): condition(cond), ifPart(ifp), elsePart(ep), jumpType(jt) {}
+IfStatement (shared_ptr<Expression> cond, shared_ptr<Statement> ifp=nullptr, shared_ptr<Statement> ep = nullptr, QOpCode jt = OP_JUMP_IF_FALSY): condition(cond), ifPart(ifp), elsePart(ep), jumpType(jt) {}
 shared_ptr<Statement> optimizeStatement () override { 
 condition=condition->optimize(); 
 ifPart=ifPart->optimizeStatement(); 
@@ -2003,7 +2003,9 @@ if (!match(T_RIGHT_PAREN)) {
 do {
 shared_ptr<Expression> arg = parseUnpackOrExpression();
 if (match(T_COLON)) {
-shared_ptr<Expression> val = parseExpression();
+shared_ptr<Expression> val;
+if (matchOneOf(T_COMMA, T_RIGHT_PAREN, T_RIGHT_BRACKET, T_RIGHT_BRACE)) { val=arg; prevToken(); }
+else val = parseExpression();
 if (!mapArg) { mapArg = make_shared<LiteralMapExpression>(cur); args.push_back(mapArg); }
 arg = nameExprToConstant(*this, arg);
 mapArg->items.push_back(make_pair(arg, val));
@@ -2080,6 +2082,11 @@ return make_shared<NameExpression>(cur);
 }
 
 shared_ptr<Expression> QParser::parseField () {
+if (matchOneOf(T_COMMA, T_RIGHT_PAREN, T_RIGHT_BRACKET, T_RIGHT_BRACE)) {
+prevToken();
+cur.value = QV::UNDEFINED;
+return make_shared<ConstantExpression>(cur);
+}
 consume(T_NAME, ("Expected field name after '_'"));
 return make_shared<FieldExpression>(cur);
 }
@@ -2489,7 +2496,10 @@ for (auto& item: items) {
 shared_ptr<Expression> expr = item;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item);
 if (bop && bop->op==T_EQ) expr = bop->left;
-if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<UnpackExpression>(expr)) return false;
+if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<UnpackExpression>(expr)) {
+if (auto cst = dynamic_pointer_cast<ConstantExpression>(expr)) return cst->token.value.i == QV::UNDEFINED.i;
+else return false;
+}
 }
 return true;
 }

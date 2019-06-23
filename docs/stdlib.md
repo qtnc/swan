@@ -421,6 +421,7 @@ Methods:
 - codePointAt(index): return the code point at given character position 0..0x1FFFFF
 - compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - endsWith(needle): return true if needle is found at the end of the string
+- fill(pattern, length, side=1): return a new string where this string is filled/padded up to the specified length using the given pattern; side tells where to place the padding pattern: 1=left, 2=right, 3=both/center.
 - findAll(regex, group=0): find all matches of the regular expression against this string. For each match, take the group number given as result, or return a list of RegexMatchResult objects if group=true.
 - findFirstOf(needles, start=0): search for the first occurence of one of the characters inside needle; return -1 if nothing is found.
 - format(...items): take this string as a format string and format accordingly; see the format global function for more info.

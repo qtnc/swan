@@ -198,12 +198,19 @@ out << c;
 
 static void jsonenc (istream& in, ostream& out, int mode) {
 auto encfunc = [](ostream& out, uint16_t x) {
-if (x==34) out << "\\\"";
-else if (x==39) out << "\\'";
-else if (x==92) out << "\\\\"; 
-else if (x>=32 && x<127) out << static_cast<char>(x);
+switch(x){
+case '"': out << "\\\""; break;
+case '\\': out << "\\\\"; break;
+case '\r': out << "\\r"; break;
+case '\n': out << "\\n"; break;
+case '\t': out << "\\t"; break;
+case '\b': out << "\\b"; break;
+case '\f': out << "\\f"; break;
+default:
+if (x>=32 && x<127) out << static_cast<char>(x);
 else print(out, "\\u%0$4x", x);
-};
+break;
+}};
 typedef istream_iterator_adapter<char> incvt;
 typedef ostream_iterator_functor_adapter<uint16_t, std::function<void(ostream&,uint16_t)>> outcvt;
 auto unused = utf8::utf8to16(incvt(in), incvt(), outcvt(out, encfunc));

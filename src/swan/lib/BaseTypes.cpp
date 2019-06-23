@@ -182,6 +182,7 @@ boolClass
 BIND_L(!, { f.returnValue(!f.getBool(0)); })
 BIND_N(?)
 BIND_L(toString, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
+BIND_L(toJSON, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
 BIND_F(hashCode, objectHashCode)
 ;
 
@@ -190,6 +191,7 @@ nullClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(?, { f.returnValue(QV::FALSE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4));  })
+BIND_L(toJSON, { f.returnValue(QV(f.vm, "null", 4));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;
@@ -199,6 +201,7 @@ undefinedClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(?, { f.returnValue(QV::FALSE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "undefined", 9));  })
+BIND_L(toJSON, { f.returnValue(QV(f.vm, "undefined", 9));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;

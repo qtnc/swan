@@ -203,6 +203,17 @@ ostringstream out;
 f.returnValue(out.str());
 }
 
+static void stringToJSON (QFiber& f) {
+QString& b = f.getObject<QString>(0);
+auto it = QVM::bufferToStringConverters.find("json");
+istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+ostringstream out;
+out << '"';
+(it->second)(in, out, 0);
+out << '"';
+f.returnValue(out.str());
+}
+
 static void stringToBuffer (QFiber& f) {
 QString &s = f.getObject<QString>(0), *enc = f.ensureString(1);
 f.returnValue(convertStringToBuffer(s, enc->asString()));
@@ -284,7 +295,11 @@ stringClass ->type
 BIND_F( (), stringInstantiate)
 BIND_F( of, stringFromSequence)
 ;
-stringClass BIND_F(toString, stringToString);
+
+stringClass 
+BIND_F(toString, stringToString)
+BIND_F(toJSON, stringToJSON)
+;
 
 bufferClass ->type
 ->copyParentMethods()

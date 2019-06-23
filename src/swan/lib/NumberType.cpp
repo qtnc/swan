@@ -48,6 +48,10 @@ f.returnValue(QV(f.vm, buf));
 else f.returnValue(QV(f.vm, format("%.14g", val) ));
 }}
 
+static void numToJSON (QFiber& f) {
+f.returnValue(format("%.14g", f.getNum(0)));
+}
+
 static void numFormat (QFiber& f) {
 double value = f.getNum(0);
 int decimals = f.getOptionalNum(1, 2);
@@ -105,6 +109,7 @@ BIND_L(unp, { f.returnValue(+f.getNum(0)); })
 BIND_L(~, { f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); })
 BIND_L(compare, { f.returnValue(f.getNum(0)  - f.getNum(1)); })
 BIND_F(toString, numToString)
+BIND_F(toJSON, numToJSON)
 BIND_F(hashCode, objectHashCode)
 BIND_F(format, numFormat)
 BIND_L(.., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), false)); })

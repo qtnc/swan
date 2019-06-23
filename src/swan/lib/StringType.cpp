@@ -239,6 +239,10 @@ rightPad-=thisPad;
 f.returnValue(re);
 }
 
+static void stringToJSON (QFiber& f) {
+f.returnValue('"' + f.getString(0) + '"');
+}
+
 static void stringToNum (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int base = f.getOptionalNum(1, -1);
@@ -336,6 +340,7 @@ void QVM::initStringType () {
 stringClass
 ->copyParentMethods()
 BIND_N(toString)
+BIND_F(toJSON, stringToJSON)
 BIND_F(+, stringPlus)
 BIND_F(in, stringIn)
 BIND_F(hashCode, stringHashCode)

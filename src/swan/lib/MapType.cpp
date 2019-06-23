@@ -77,10 +77,35 @@ f.returnValue(it->second);
 map.map.erase(it);
 }}}
 
+static void mappingToJSON (QFiber& f) {
+bool first = true;
+int toJSONSymbol = f.vm.findMethodSymbol("toJSON");
+vector<QV, trace_allocator<QV>> tuple(f.vm);
+string re = "{";
+iterateSequence(f, f.at(0), [&](const QV& x){
+if (!first) re.append(",");
+else first=false;
+tuple.clear();
+x.asObject<QSequence>()->copyInto(f, tuple);
+QV key = tuple[0], value = tuple[tuple.size() -1];
+f.push(key);
+f.callSymbol(toJSONSymbol, 1);
+re.append(f.getString(-1));
+f.pop();
+f.push(value);
+f.callSymbol(toJSONSymbol, 1);
+re.append(":");
+re.append(f.getString(-1));
+f.pop();
+});
+re.append("}");
+f.returnValue(re);
+}
 
 void QVM::initMapType () {
 mappingClass
 ->copyParentMethods()
+BIND_F(toJSON, mappingToJSON)
 ;
 
 mapClass
