@@ -151,12 +151,19 @@ void adjustUpvaluePointers (const QV* oldPtr, const QV* newPtr);
 void handleException (const std::exception& e);
 
 FiberState run ();
-template<class... A> void runtimeError (const char* msg, const A&... args);
-
 virtual ~QFiber ();
 virtual void release () final override;
 virtual bool gcVisit () override;
 virtual size_t getMemSize () override { return sizeof(*this); }
+};
+
+template<class E, class... A> inline void error (const char* msg, A&&... args) {
+throw E(format(msg, args...));
+}
+
+//Just because std::bad_function_call doesn't accept any argument
+struct call_error: std::runtime_error {
+call_error(const std::string& s): runtime_error(s) {}
 };
 
 #endif

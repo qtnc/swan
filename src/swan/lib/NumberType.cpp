@@ -40,12 +40,13 @@ static void numToString (QFiber& f) {
 double val = f.getNum(0);
 if (!numToStringBase(f, val)) {
 int base = f.getOptionalNum(1, 0);
-if (base>=2 && base<=36) {
+if (base==0) f.returnValue(QV(f.vm, format("%.14g", val) ));
+else if (base>=2 && base<=36) {
 char buf[32] = {0};
 lltoa(static_cast<int64_t>(val), buf, base);
 f.returnValue(QV(f.vm, buf));
 }
-else f.returnValue(QV(f.vm, format("%.14g", val) ));
+else error<invalid_argument>("Invalid base (%d), base must be between 2 and 36.", base);
 }}
 
 static void numToJSON (QFiber& f) {

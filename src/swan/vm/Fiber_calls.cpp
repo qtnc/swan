@@ -14,7 +14,7 @@ void QFiber::call (int nArgs) {
 pushCppCallFrame();
 callCallable(nArgs);
 popCppCallFrame();
-if (state==FiberState::YIELDED) runtimeError("Yielding across C++ call frame");
+if (state==FiberState::YIELDED) error<call_error>("Yielding across C++ call frame");
 }
 
 void QFiber::callSymbol (int symbol, int nArgs) {
@@ -22,7 +22,7 @@ QV receiver = *(stack.end() -nArgs);
 QClass& cls = receiver.getClass(vm);
 QV method = cls.findMethod(symbol);
 bool re = callFunc(method, nArgs);
-if (!re) runtimeError("%s has no method %s", cls.name, vm.methodSymbols[symbol]);
+if (!re) error<call_error>("%s has no method %s", cls.name, vm.methodSymbols[symbol]);
 }
 
 void QFiber::callSuperSymbol (int symbol, int nArgs) {
@@ -32,7 +32,7 @@ QClass* cls = receiver.getClass(vm) .parent;
 QV method = cls->findMethod(symbol);
 bool re = callFunc(method, nArgs);
 if (!re) {
-runtimeError("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
+error<call_error>("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
 }}
 
 inline bool QFiber::callFunc (QV& method, int nArgs) {
@@ -84,7 +84,7 @@ int symbol = vm.findMethodSymbol(name);
 pushCppCallFrame();
 callSymbol(symbol, nArgs);
 popCppCallFrame();
-if (state==FiberState::YIELDED) runtimeError("Yielding across C++ call frame");
+if (state==FiberState::YIELDED) error<call_error>("Yielding across C++ call frame");
 }
 
 void QFiber::callCallable (int nArgs) {
@@ -199,7 +199,8 @@ break;
 case FiberState::RUNNING:
 case FiberState::FAILED:
 default:
-runtimeError(("Couldn't call a running or finished fiber")); [[fallthrough]];
+error<call_error>(("Couldn't call a running or finished fiber")); 
+[[fallthrough]];
 case FiberState::FINISHED:
 pushUndefined();
 return;

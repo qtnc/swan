@@ -13,6 +13,7 @@ boost::core::scoped_demangled_name exceptionType(tp.name());
 if (tp==typeid(std::range_error) || tp==typeid(std::out_of_range) || tp==typeid(std::length_error) || tp==typeid(std::overflow_error) || tp==typeid(std::underflow_error)) eName = "RangeError";
 else if (tp==typeid(std::domain_error) || tp==typeid(std::invalid_argument)) eName = "ValueError";
 else if (tp==typeid(std::bad_cast) || tp==typeid(std::bad_function_call)) eName = "TypeError";
+else if (tp==typeid(std::bad_function_call) || tp==typeid(call_error)) eName = "CallError";
 f.loadGlobal(eName);
 f.pushString(format("%s: %s", exceptionType.get(), e.what()));
 f.call(1);

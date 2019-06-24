@@ -15,8 +15,4 @@ inline void QFiber::storeStaticMethod (int symbol) {
 at(-2).asObject<QClass>() ->type->bind(symbol, top());
 }
 
-template<class... A> void QFiber::runtimeError (const char* msg, const A&... args) {
-throw std::runtime_error(format(msg, args...));
-}
-
 #endif

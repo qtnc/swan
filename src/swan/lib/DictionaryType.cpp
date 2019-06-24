@@ -15,7 +15,7 @@ f.returnValue(it!=map.map.end());
 
 static void dictionaryInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
+if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
 QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 vector<QV, trace_allocator<QV>> tuple(f.vm);
 f.returnValue(map);
@@ -29,7 +29,7 @@ if (tuple.size())  map->set(tuple[0], tuple.back());
 static void dictionaryFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV::UNDEFINED;
 if (sorter.isNullOrUndefined()) sorter = QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
+if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
 QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);

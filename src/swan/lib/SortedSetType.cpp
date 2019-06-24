@@ -6,7 +6,7 @@ using namespace std;
 
 static void setInstantiate (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
+if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
 QSortedSet* set = f.vm.construct<QSortedSet>(f.vm, sorter);
 f.returnValue(set);
 for (int i=2, n=f.getArgCount(); i<n; i++) set->add(f.at(i));
@@ -14,7 +14,7 @@ for (int i=2, n=f.getArgCount(); i<n; i++) set->add(f.at(i));
 
 static void setFromSequence (QFiber& f) {
 QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) f.runtimeError("Sorter must be callable");
+if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
 QSortedSet* set = f.vm.construct<QSortedSet>(f.vm, sorter);
 f.returnValue(set);
 for (int i=2, l=f.getArgCount(); i<l; i++) {

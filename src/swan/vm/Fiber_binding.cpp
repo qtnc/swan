@@ -14,7 +14,7 @@ static void instantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
 if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined()) {
-f.runtimeError(("This class isn't instantiable"));
+error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
 QObject* instance = cls.instantiate();
@@ -49,11 +49,11 @@ vector<QV> parents(stack.end() -nParents, stack.end());
 stack.erase(stack.end() -nParents -1, stack.end());
 QClass* parent = parents[0].asObject<QClass>();
 if (parent->nFields<0) {
-runtimeError("Unable to inherit from built-in class %s", parent->name);
+error<invalid_argument>("Unable to inherit from built-in class %s", parent->name);
 return;
 }
 if (dynamic_cast<QForeignClass*>(parent)) {
-runtimeError("Unable to inherit from foreign class %s", parent->name);
+error<invalid_argument>("Unable to inherit from foreign class %s", parent->name);
 return;
 }
 GCLocker gcLocker(vm);

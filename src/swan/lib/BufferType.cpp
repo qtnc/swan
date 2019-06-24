@@ -151,7 +151,7 @@ QVM::bufferToStringConverters[normalizeEncodingName(name)] = func;
 
 static QString* convertBufferToString (QBuffer& b, const string& encoding) {
 auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(encoding));
-if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", encoding, "UTF-8"));
+if (it==QVM::bufferToStringConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", encoding, "UTF-8");
 istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
 ostringstream out;
 (it->second)(in, out, 0);
@@ -160,7 +160,7 @@ return QString::create(b.type->vm, out.str());
 
 static QBuffer* convertStringToBuffer (QString& s, const string& encoding) {
 auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(encoding));
-if (it==QVM::stringToBufferConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", "UTF-8", encoding));
+if (it==QVM::stringToBufferConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", encoding);
 istringstream in(string(s.begin(), s.end()));
 ostringstream out;
 (it->second)(in, out);
@@ -183,7 +183,7 @@ f.returnValue(convertBufferToString(b, enc->asString()));
 else if (f.isString(1) && f.getArgCount()==3 && f.isString(2)) {
 QString &b = f.getObject<QString>(1), &enc = f.getObject<QString>(2);
 auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(enc.asString()));
-if (it==QVM::stringToBufferConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", enc.asString(), "UTF-8"));
+if (it==QVM::stringToBufferConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", enc.asString(), "UTF-8");
 istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
 ostringstream out;
 (it->second)(in, out);
@@ -196,7 +196,7 @@ static void stringToString (QFiber& f) {
 if (f.getArgCount()==1) return;
 QString &b = f.getObject<QString>(0), &enc = f.getObject<QString>(1);
 auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(enc.asString()));
-if (it==QVM::bufferToStringConverters.end()) throw std::logic_error(format("No converter found to convert from %s to %s", "UTF-8", enc.asString() ));
+if (it==QVM::bufferToStringConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", enc.asString() );
 istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
 ostringstream out;
 (it->second)(in, out, 0);

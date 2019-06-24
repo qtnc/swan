@@ -24,7 +24,7 @@ static void objectInstantiate (QFiber& f) {
 int ctorSymbol = f.vm.findMethodSymbol("constructor");
 QClass& cls = f.getObject<QClass>(0);
 if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined()) {
-f.runtimeError("%s has no constructor", cls.name);
+error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
 QObject* instance = cls.instantiate();

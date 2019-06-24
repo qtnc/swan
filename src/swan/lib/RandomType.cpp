@@ -20,13 +20,14 @@ f.returnValue( dist(r.rand) );
 else if (nargs==2) {
 if (f.isNum(1)) {
 double n = f.getNum(1);
-if (n<1) {
+if (n<0) error<invalid_argument>("ARgument to rand() must be positive");
+else if (n<1) {
 bernoulli_distribution dist(n);
 f.returnValue( dist(r.rand) );
 } else {
 uniform_int_distribution<int64_t> dist(0, n -1);
 f.returnValue(static_cast<double>( dist(r.rand) ));
-}} else {
+}} else {//not num
 vector<double> weights;
 vector<QV, trace_allocator<QV>> qw(f.vm);
 f.getObject<QSequence>(1) .copyInto(f, qw);
