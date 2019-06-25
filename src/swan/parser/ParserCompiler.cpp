@@ -826,35 +826,11 @@ void compile (QCompiler& compiler)override ;
 
 struct ImportDeclaration: Statement {
 shared_ptr<Expression> from;
-vector<pair<QToken,QToken>> imports;
-ImportDeclaration (shared_ptr<Expression> f): from(f) {}
+vector<shared_ptr<Variable>> imports;
 shared_ptr<Statement> optimizeStatement () override { from=from->optimize(); return shared_this(); }
 const QToken& nearestToken () override { return from->nearestToken(); }
-void compile (QCompiler& compiler) override {
-doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-int subscriptSymbol = compiler.parser.vm.findMethodSymbol("[]");
-vector<int> varSlots;
-compiler.writeDebugLine(nearestToken());
-for (auto& p: imports) {
-varSlots.push_back(compiler.findLocalVariable(p.second, LV_NEW | LV_CONST));
-compiler.writeOp(OP_LOAD_UNDEFINED);
-}
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
-from->compile(compiler);
-compiler.writeOp(OP_CALL_FUNCTION_2);
-for (int i=0, n=imports.size(); i<n; i++) {
-auto& p = imports[i];
-auto slot = varSlots[i];
-if (n>1) compiler.writeOp(OP_DUP);
-compiler.writeDebugLine(p.second);
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, p.first.start, p.first.length), QV_TAG_STRING)));
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, subscriptSymbol);
-writeOpStoreLocal(compiler, slot);
-compiler.writeOp(OP_POP);
-}
-if (imports.size()>1) compiler.writeOp(OP_POP);
-}};
+void compile (QCompiler& compiler) override;
+};
 
 struct FunctionDeclaration: Expression, Decorable {
 QToken name;
@@ -1917,26 +1893,11 @@ return result;
 }
 
 shared_ptr<Statement> QParser::parseImportDecl () {
-bool parent = match(T_LEFT_PAREN);
-shared_ptr<Expression> from = parseExpression(P_COMPREHENSION);
-if (parent) consume(T_RIGHT_PAREN, "Expected ')' to close function call");
-auto im = make_shared<ImportDeclaration>(from);
-if (match(T_FOR)) {
-do {
-consume(T_NAME, "Expected variable name after 'for'");
-QToken t1 = cur, t2 = cur;
-if (match(T_AS)) {
-consume(T_NAME, "Expected variable name after 'as'");
-t2 = cur;
-}
-im->imports.emplace_back(t1,t2);
-} while(match(T_COMMA));
-}
-else if (auto cst = dynamic_pointer_cast<ConstantExpression>(from)) {
-im->imports.emplace_back(cst->token, cst->token);
-}
-else parseError("Expecting 'for' after non-constant import");
-return im;
+auto importSta = make_shared<ImportDeclaration>();
+parseVarList(importSta->imports, VD_SINGLE);
+consume(T_IN, "Expected 'in' after import variables");
+importSta->from = parseExpression(P_COMPREHENSION);
+return importSta;
 }
 
 shared_ptr<Statement> QParser::parseStatement () {
@@ -2406,6 +2367,22 @@ int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 compiler.writeOp(OP_CALL_FUNCTION_1);
+}
+
+void ImportDeclaration::compile (QCompiler& compiler) {
+doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
+compiler.writeDebugLine(imports[0]->name->nearestToken());
+make_shared<VariableDeclaration>(imports)->optimizeStatement()->compile(compiler);
+compiler.pushScope();
+auto importVar = make_shared<NameExpression>(compiler.createTempName());
+compiler.writeDebugLine(imports[0]->name->nearestToken());
+int valueSlot = compiler.findLocalVariable(importVar->token, LV_NEW);
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
+from->compile(compiler);
+compiler.writeOp(OP_CALL_FUNCTION_2);
+createBinaryOperation(imports[0]->name, T_EQ, importVar)->optimize()->compile(compiler);
+compiler.popScope();
 }
 
 void NameExpression::compile (QCompiler& compiler) {

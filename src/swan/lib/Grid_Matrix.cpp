@@ -40,7 +40,7 @@ matrixOp(m1, m3, [&](double x){ return x+d; });
 }
 else {
 QGrid &m2 = f.getObject<QGrid>(1);
-if (m1.width!=m2.width || m1.height!=m2.height) f.runtimeError("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
+if (m1.width!=m2.width || m1.height!=m2.height) error<invalid_argument>("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
 matrixOp(m1, m2, m3, [](double a, double b){ return a+b; });
 }
 }
@@ -55,7 +55,7 @@ matrixOp(m1, m3, [&](double x){ return x-d; });
 }
 else {
 QGrid &m2 = f.getObject<QGrid>(1);
-if (m1.width!=m2.width || m1.height!=m2.height) f.runtimeError("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
+if (m1.width!=m2.width || m1.height!=m2.height) error<invalid_argument>("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
 matrixOp(m1, m2, m3, [](double a, double b){ return a-b; });
 }
 }
@@ -87,7 +87,7 @@ matrixOp(m1, m3, [&](double x){ return x*d; });
 }
 else {
 QGrid &m2 = f.getObject<QGrid>(1);
-if (m1.height != m2.width) f.runtimeError("Matrices ahve incompatible sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
+if (m1.height != m2.width) error<invalid_argument>("Matrices ahve incompatible sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
 QGrid &m3 = *QGrid::create(f.vm, m1.width, m2.height, nullptr);
 f.returnValue(&m3);
 matrixMul(m1, m2, m3);
@@ -103,9 +103,9 @@ matrixOp(m1, m3, [&](double x){ return x/d; });
 }
 else {
 QGrid &m2 = f.getObject<QGrid>(1);
-if (m1.width!=m2.width || m1.height!=m2.height) f.runtimeError("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
-if (m1.width!=m1.height) f.runtimeError("Can't operate on non-square matrix (%dx%d)", m1.width, m1.height);
-f.runtimeError("Matrix inversion isn't yet supported");
+if (m1.width!=m2.width || m1.height!=m2.height) error<invalid_argument>("Can't operate on matrices of different sizes (%dx%d and %dx%d)", m1.width, m1.height, m2.width, m2.height);
+if (m1.width!=m1.height) error<invalid_argument>("Can't operate on non-square matrix (%dx%d)", m1.width, m1.height);
+error<domain_error>("Matrix inversion isn't yet supported");
 QGrid& m3 = *QGrid::create(f.vm, m1.width, m1.height, nullptr);
 f.returnValue(&m3);
 //todo: matrix inversion
@@ -114,7 +114,7 @@ f.returnValue(&m3);
 static void matrixExpone (QFiber& f) {
 QGrid &m1 = f.getObject<QGrid>(0);
 int exponent = f.getNum(1);
-if (m1.width!=m1.height) f.runtimeError("Can't operate on non-square matrix (%dx%d)", m1.width, m1.height);
+if (m1.width!=m1.height) error<invalid_argument>("Can't operate on non-squared matrix (%dx%d)", m1.width, m1.height);
 if (exponent>=1) {
 QGrid* m3 = &m1;
 for (int i=1; i<exponent; i++) {
@@ -131,7 +131,7 @@ f.returnValue(m3);
 }
 else if (exponent<0) {
 //todo: matrix inversion
-f.runtimeError("Matrix inversion isn't yet supported");
+error<domain_error>("Matrix inversion isn't yet supported");
 }
 }
 
