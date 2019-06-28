@@ -19,7 +19,9 @@ extern double strtod_c  (const char*, char** = nullptr);
 
 static const char 
 *THIS = "this",
-*EXPORTS = "exports";
+*EXPORTS = "exports",
+*FIBER = "Fiber",
+*ASYNC = "async";
 
 OpCodeInfo OPCODE_INFO[] = {
 #define OP(name, stackEffect, nArgs, argFormat) { stackEffect, nArgs, argFormat }
@@ -918,7 +920,7 @@ INFIX_OP(STAR, InfixOp, *, FACTOR),
 INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR),
 INFIX_OP(PERCENT, InfixOp, %, FACTOR),
 INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
-OPERATOR(AMP, Lambda, InfixOp, &, &, BITWISE),
+INFIX_OP(AMP, InfixOp, &, BITWISE),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE),
@@ -990,8 +992,10 @@ PREFIX(UNDEFINED, Literal, undefined),
 PREFIX(NUM, Literal, Num),
 PREFIX(STRING, Literal, String),
 PREFIX(YIELD, Yield, yield),
+PREFIX(AWAIT, Yield, await),
 
 STATEMENT(SEMICOLON, SimpleStatement),
+STATEMENT(ASYNC, Async),
 STATEMENT(BREAK, Break),
 STATEMENT(CLASS, ClassDecl),
 STATEMENT(CONST, VarDecl),
@@ -1020,6 +1024,8 @@ STATEMENT(WHILE, While)
 static std::unordered_map<string,QTokenType> KEYWORDS = {
 #define TOKEN(name, keyword) { (#keyword), T_##name }
 TOKEN(BARBAR, and),
+TOKEN(ASYNC, async),
+TOKEN(AWAIT, await),
 TOKEN(AS, as),
 TOKEN(ASYNC, async),
 TOKEN(AWAIT, await),
@@ -1095,6 +1101,10 @@ return c=='\n';
 
 bool isName (uint32_t c) {
 return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' || c>=128;
+}
+
+bool isUpper (uint32_t c) {
+return c>='A' && c<='Z';
 }
 
 static bool isSpaceOrIgnorableLine (uint32_t c, const char* in, const char* end) {
@@ -1505,7 +1515,7 @@ return sw;
 }
 
 void ForStatement::parseHead (QParser& parser) {
-parser.parseVarList(loopVariables, VD_SINGLE);
+parser.parseVarList(loopVariables, VD_SINGLE | VD_NODEFAULT);
 parser.consume(T_IN, "Expecting 'in' after for loop variables");
 inExpression = parser.parseExpression(P_COMPREHENSION);
 }
@@ -1662,6 +1672,7 @@ var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
 skipNewlines();
 }
 if (!(var->flags&VD_CONST) && match(T_CONST)) var->flags |= VD_CONST;
+if (!(var->flags&VD_CONST)) match(T_VAR);
 if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 switch(nextToken().type){
 case T_NAME: var->name = parseName(); break;
@@ -1674,7 +1685,7 @@ default: parseError("Expecting identifier, '(', '[' or '{' in variable declarati
 }
 if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
-if (match(T_EQ)) var->value = parseExpression();
+if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression();
 else var->flags |= VD_NODEFAULT;
 vars.push_back(var);
 if (flags&VD_SINGLE) break;
@@ -1786,9 +1797,15 @@ cls.methods.push_back(setter);
 }
 
 shared_ptr<Expression> QParser::parseLambda  () {
+return parseLambda(0);
+}
+
+shared_ptr<Expression> QParser::parseLambda  (int flags) {
 auto func = make_shared<FunctionDeclaration>(cur);
+func->flags |= flags;
 if (matchOneOf(T_DOLLAR, T_UND)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
+else if (match(T_AMP)) flags |= FD_ASYNC;
 parseFunctionParameters(func);
 matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
 func->body = parseStatement();
@@ -1796,16 +1813,25 @@ if (!func->body) func->body = make_shared<SimpleStatement>(cur);
 return func;
 }
 
+shared_ptr<Statement> QParser::parseAsync () {
+return parseAsyncFunctionDecl(VD_CONST);
+}
+
+shared_ptr<Statement> QParser::parseAsyncFunctionDecl (int varFlags) {
+if (!matchOneOf(T_FUNCTION, T_DOLLAR)) parseError("Expected 'function' after 'async'");
+return parseFunctionDecl(varFlags, FD_ASYNC);
+}
+
 shared_ptr<Statement> QParser::parseFunctionDecl () {
 return parseFunctionDecl(VD_CONST);
 }
 
-shared_ptr<Statement> QParser::parseFunctionDecl (int flags) {
-consume(T_NAME, "Expected function name after 'function'");
+shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, int funcFlags) {
+if (!matchOneOf(T_NAME, T_ASYNC, T_IMPORT)) parseError("Expected function name after 'function'");
 QToken name = cur;
-auto fnDecl = parseLambda();
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
-vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, flags) };
+auto fnDecl = parseLambda(funcFlags);
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) varFlags |= VD_GLOBAL;
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, varFlags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
@@ -1851,6 +1877,9 @@ return parseClassDecl(VD_CONST | VD_GLOBAL);
 else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
 return parseFunctionDecl(VD_CONST | VD_GLOBAL);
 }
+else if (match(T_ASYNC)) {
+return parseAsyncFunctionDecl(VD_CONST | VD_GLOBAL);
+}
 parseError(("Expected 'function', 'var' or 'class' after 'global'"));
 return nullptr;
 }
@@ -1861,6 +1890,7 @@ shared_ptr<VariableDeclaration> varDecl;
 if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VD_CONST));
 else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VD_CONST));
 else if (matchOneOf(T_DOLLAR, T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST));
+else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VD_CONST));
 if (varDecl) {
 auto name = varDecl->vars[0]->name;
 exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
@@ -2896,7 +2926,8 @@ else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV
 continue;
 }
 int slot = -1;
-if (!(var->flags&VD_GLOBAL)) slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+if ((var->flags&VD_GLOBAL)) slot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 if (var->value) var->value->compile(compiler);
@@ -2904,8 +2935,8 @@ else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 for (auto& decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (var->flags&VD_GLOBAL) {
-int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, globalSlot);
+//int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
 compiler.writeOp(OP_POP);
 }
 }//for decompose
@@ -3010,12 +3041,17 @@ compiler.result = fc.result;
 func->vararg = (flags&FD_VARARG);
 func->name = string(name.start, name.length);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
-bool fiber = flags&FD_FIBER;
-if (fiber) compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_EXISTING));
+if (flags&FD_FIBER) {
+QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
+decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));
+}
+else if (flags&FD_ASYNC) {
+QToken asyncToken = { T_NAME, ASYNC, 5, QV::UNDEFINED };
+decorations.insert(decorations.begin(), make_shared<NameExpression>(asyncToken));
+}
 for (auto decoration: decorations) decoration->compile(compiler);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
-if (fiber) compiler.writeOp(OP_CALL_FUNCTION_1);
 return func;
 }
 

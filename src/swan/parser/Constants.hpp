@@ -21,6 +21,7 @@
 #define FD_FIBER 2
 #define FD_METHOD 4
 #define FD_STATIC 8
+#define FD_ASYNC 16
 
 enum QOperatorPriority {
 P_LOWEST,

@@ -239,7 +239,6 @@ return false;
 }
 #endif
 
-
 static QV makeqv (QObject* obj) {
 #define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
 T(QClosure, QV_TAG_CLOSURE)

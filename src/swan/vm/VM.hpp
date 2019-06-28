@@ -54,6 +54,7 @@ QClass *randomClass;
 #ifndef NO_GRID
 QClass *gridClass, *gridIteratorClass;
 #endif
+
 uint8_t varDeclMode = Option::VAR_STRICT;
 bool compileDbgInfo = true;
 bool multilineStrings = true;
