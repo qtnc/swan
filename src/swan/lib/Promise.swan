@@ -1,0 +1,56 @@
+global class Promise {
+constructor (func) {
+_value = null
+_state = null
+_next = null
+_error = null
+if func: func(this::resolve, this::reject)
+}
+
+static of (p) {
+if p is Promise: return p
+else {
+let r = Promise()
+r.resolve(p)
+return r
+}}
+
+resolve (_value) {
+_state = true
+if _next: _next(_value)
+}
+
+reject (_value) {
+_state = false
+if _error: _error(_value)
+}
+
+then (onResolve, onReject) {
+if _state is true { 
+if onResolve is Promise: return onResolve
+onResolve(_value)
+return this
+}
+else if _state is false { 
+if onReject is Promise: return onReject
+onReject(_value)
+return this 
+}
+let resolve, reject
+_next = $value {
+if onResolve is Promise: onResolve.then(resolve)
+else: resolve(onResolve(value))
+}
+_error = $value {
+if onReject is Promise: onReject.then(resolve)
+else: reject(onReject(value))
+}
+return Promise($(res,rej){
+resolve=res
+reject = rej
+})
+}
+
+}
+
+
