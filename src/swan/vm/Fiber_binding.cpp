@@ -200,11 +200,11 @@ const QClosure* closure = at(-1).isClosure()? at(-1).asObject<QClosure>() : null
 const QFunction* func = closure? &closure->func : (at(-1).isNormalFunction()? at(-1).asObject<QFunction>() : nullptr);
 string funcFile = func? func->file : "";
 call(0); 
-if (funcFile.size()) vm.imports[funcFile] = at(-1);
+if (funcFile.size()) vm.imports[funcFile] = top();
 if (count>0) pop(); 
 }}
 vm.importHook(*this, finalFile, Swan::VM::ImportHookState::AFTER_RUN, 0);
-vm.imports[finalFile] = at(-1);
+vm.imports[finalFile] = top();
 } catch (...) { 
 vm.imports.erase(finalFile); 
 throw; 

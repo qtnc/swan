@@ -619,19 +619,23 @@ compiler.popLoop();
 struct ForStatement: Statement, Comprenable  {
 QToken token;
 vector<shared_ptr<Variable>> loopVariables;
-shared_ptr<Expression> inExpression;
+shared_ptr<Expression> inExpression, incrExpression;
 shared_ptr<Statement> loopStatement;
-ForStatement (const QToken& tk): token(tk), loopVariables(), inExpression(nullptr), loopStatement(nullptr)  {}
+bool traditional;
+ForStatement (const QToken& tk): token(tk), loopVariables(), inExpression(nullptr), loopStatement(nullptr), incrExpression(nullptr), traditional(false)   {}
 void chain (const shared_ptr<Statement>& st) final override { loopStatement=st; }
 shared_ptr<Statement> optimizeStatement () override { 
 if (inExpression) inExpression=inExpression->optimize(); 
-if (loopStatement) loopStatement=loopStatement->optimizeStatement(); 
+if (loopStatement) loopStatement=loopStatement->optimizeStatement();
+if (incrExpression) incrExpression=incrExpression->optimize();
 for (auto& lv: loopVariables) lv->optimize();
 return shared_this(); 
 }
 const QToken& nearestToken () override { return token; }
 void parseHead (QParser& parser);
 void compile (QCompiler& compiler)override ;
+void compileForEach (QCompiler& compiler);
+void compileTraditional (QCompiler& compiler);
 };
 
 struct WhileStatement: Statement {
@@ -1515,10 +1519,17 @@ return sw;
 }
 
 void ForStatement::parseHead (QParser& parser) {
-parser.parseVarList(loopVariables, VD_SINGLE | VD_NODEFAULT);
-parser.consume(T_IN, "Expecting 'in' after for loop variables");
+parser.parseVarList(loopVariables);
+if (loopVariables.size()==1 && (loopVariables[0]->flags&VD_NODEFAULT) && parser.match(T_IN)) {
+parser.skipNewlines();
 inExpression = parser.parseExpression(P_COMPREHENSION);
-}
+} else {
+parser.consume(T_SEMICOLON, "Expected ';' after traditional for loop variables declarations");
+traditional=true;
+inExpression = parser.parseExpression();
+parser.consume(T_SEMICOLON, "Expected ';' after traditional for loop condition");
+incrExpression = parser.parseExpression();
+}}
 
 shared_ptr<Statement> QParser::parseFor () {
 shared_ptr<ForStatement> forSta = make_shared<ForStatement>(cur);
@@ -1697,6 +1708,7 @@ return parseVarDecl(cur.type==T_CONST? VD_CONST : 0);
 }
 
 shared_ptr<Statement> QParser::parseVarDecl (int flags) {
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 auto decl = make_shared<VariableDeclaration>();
 parseVarList(decl->vars, flags);
 return decl;
@@ -2351,6 +2363,11 @@ return shared_this();
 }
 
 void ForStatement::compile (QCompiler& compiler) {
+if (traditional) compileTraditional(compiler);
+else compileForEach(compiler);
+}
+
+void ForStatement::compileForEach (QCompiler& compiler) {
 compiler.pushScope();
 int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
@@ -2382,6 +2399,26 @@ if (loopStatement->isExpression()) compiler.writeOp(OP_POP);
 compiler.popScope();
 compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
 compiler.loops.back().endPos = compiler.writePosition();
+compiler.popLoop();
+compiler.popScope();
+}
+
+void ForStatement::compileTraditional (QCompiler& compiler) {
+compiler.pushScope();
+make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->compile(compiler);
+compiler.pushLoop();
+compiler.pushScope();
+int loopStart = compiler.writePosition();
+inExpression->compile(compiler);
+compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
+loopStatement->compile(compiler);
+if (loopStatement->isExpression()) compiler.writeOp(OP_POP);
+compiler.loops.back().condPos = compiler.writePosition();
+incrExpression->compile(compiler);
+compiler.writeOp(OP_POP);
+compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
+compiler.loops.back().endPos = compiler.writePosition();
+compiler.popScope();
 compiler.popLoop();
 compiler.popScope();
 }

@@ -44,4 +44,4 @@ while (depth < stretchDepth) {
 }
 
 print(    "long lived tree of depth " + maxDepth + " check: " + longLivedTree.check)
-print("elapsed: " + (System.clock - start))
+print(format("elapsed: %1", (System.clock - start)))

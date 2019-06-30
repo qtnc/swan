@@ -8,4 +8,4 @@ var start = System.clock
 for i in 1...5 {
   print(fib(28))
 }
-print("elapsed: "+(System.clock - start))
+print(format("elapsed: %1", (System.clock - start)))
