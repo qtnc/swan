@@ -122,20 +122,34 @@ Arithmetic, bitwise, comparison, range and prefix operators can be overloaded.
 Other cannot. Compound assignment operators are always compiled down to operation and then assignment, i.e. `a+=b`  is always compiled as it has been written `a=a+b`.
 
 ## Control flow
-Here are the common available control flows:
+Here are the available control flows in Swan:
 
-* if *condition* *statement*
-* if *condition* *statement* else *statement*
-* for *loop variable* in *iterable* *statement*
-* repeat *statement* while *condition*
-* while *condition* *statement*
+- if *condition* *statement*
+- if *condition* *statement* else *statement*
+- repeat *statement* while *condition*
+- while *condition* *statement*
+- for *loop variable* in *iterable* *statement*
+- for *loop variables*; *condition*; *tail* *statement*
 
 Where:
 
-* *Condition* is an expression evaluated for truth. Like in Ruby, null is considered false, any other value different than false itself is considered true (including number 0 and empty string)
-* *Statement* is a single statement or a block of several statements enclosed in `{ ... }`
-* *Loop variable* is the name of a variable that will be used to store each item produced by the iterator in turn, optionally preceded by `var`or `let` (like with JavaScript).
-* *Iterable* is an expression that can be iterated (see iteration protocol below)
+- *Condition* is an expression evaluated for truth. Like in Ruby, null is considered false, any other value different than false itself is considered true (including number 0 and empty string)
+- *Statement* is a single statement or a block of several statements enclosed in `{ ... }`
+
+There's nothing special for *if*, *else* and *while*, they behave as in other programming languages.
+The *repeat-while* loop is executed at least once. The *while* loop may not be executed at all if the condition is false to begin with.
+
+The first form of *for* (also called foreach) loops over a sequence. 
+It is like Python's *for-in*, JavaScript's *for-of*, Java's and C++'s enhanced for loops.
+
+- *Loop variable* is the name of a variable that will be used to store each item produced by the iterator in turn, optionally preceded by `var`or `let` (like with JavaScript).
+- *Iterable* is an expression that can be iterated (see iteration protocol below)
+
+The second form of *for* is similar to the traditional C-like for loop:
+
+- *loop variables* is a declaration of one or more variables that will be used in the loop statement. The instruction necessarily creates one or more new variables.
+- *tail* is executed just before the *condition* after the first iteration; it's the typical place for variable increment.
+- In the contrary to traditional C, none of the three parts may be omited
 
 Note that, like Python and in contrary to C, C++, Java, JavaScript and many other C-like languages, parentesis are optional around the condition.
 As in Python, a colon `:` can optionally separate the condition from a single statement for readability.
@@ -147,7 +161,7 @@ switch (testExpression) {
 case value1: ...
 case value2: ...
 case value3: ...
-else: ...
+default: ...
 }
 ```
 
@@ -167,11 +181,11 @@ case 0: -1
 case 1: 2
 case 2: 4
 case 3: 6
-else: 12
+default: 12
 }
 ```
 
-When switch is used as an expression, the different cases must be single expressions as well (it is forbidden to have a block of statements).
+When switch is used as an expression, the different cases must be single expressions as well (it is forbidden to have a block of statements). There is obviously no fallthrough once a result is selected.
 
 ## Iteration protocol
 A for loop written as:
@@ -193,7 +207,7 @@ statements...
 }
 ```
 
-Thus, the end of the loop is signaled by returning *undefined* from the next method.
+Thus, the end of the loop is simply signaled by returning *undefined* from the next method.
 
 ## Collections: lists, tuples, maps, sets
 ### Lists and tuples
@@ -266,9 +280,10 @@ var triple = $${ return this*3 }
 var thirty = triple(10) # thirty is 30
 ```
 
-* By using `$$` instead of `$`, you get an implicit `this` as first parameter of the function.
-* Parentesis are optional if the lambda takes no explicit parameter or just a single one.
-* If the last instruction of the function is an expression, it is taken as the return value
+- By using `$$` instead of `$`, you get an implicit `this` as first parameter of the function.
+- Parentesis are optional if the lambda takes no explicit parameter or just a single one.
+- If the last instruction of the function is an expression, it is taken as the return value
+
 
 IF the last parameter is prefixed or suffixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
 
@@ -287,7 +302,7 @@ The tuple can be empty (if less parameters are passed to the function), but neve
 As in all object-oriented programming languages, we can create classes and instantiate objects. The syntax is better explained with an example:
 
 ```
-class Vector {
+class Vector is Object {
 # Constructor
 constructor (x, y, z) {
 _x=x # implicitly declares a field named x
@@ -327,49 +342,20 @@ print(third.z) # 0
 print(third.length) # 5
 ```
 
-* A name starting with `_` denotes an instance field. They are implicitely declared at their first use.
-* A name starting with `__` denotes a static field.
-* A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid.
-* You can declare static methods by preceding its name by the static keyword.
+- A  class can inherit from a single parent superclass. Everything is at least an Object If no other parent is explicitely specified.
+- A name starting with `_` denotes an instance field. They are implicitely declared at their first use.
+- A name starting with `__` denotes a static field.
+- A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid.
+- You can declare static methods by preceding its name by the static keyword.
 
 Additionally to arithmetic, bitwise and comparison operators, you can also override prefix operators as well as call and indexing/subscript:
 
-* *`()`* for call. Overriding call operator makes an object calalble like a function, i.e. `object(param1, param2, ...)`. 
-* *`[]`* for indexing. Overriding indexing operator makes an object subscriptable like a list or map. It is possible to have more than one parameter to index multidimensional structures.
-* *`[]=`* for index assignment. If you only override `[]`, but not `[]=`, indexing is read-only, i.e. you can write `object[x]` but not `object[x]=value`. Subscript setters take one additional parameter than subscript getters, the last parameter is the assigned value.
-* *unm* for unary minus and *unp* for unary plus
-
-## class inheritance and mixins
-A  class can inherit from a single parent superclass.
-Additional superclasses can be specified at declaration, but only their methods are copied, not their fields. This can be useful to create mixins.
-If no superclass is explicitely specified, every class inherits by default from Object.
-
-```
-# A mixin class
-# Every object that mixin this class has only to define a method < and a method ==
-# and automatically inherits all other comparison operators
-class Comparable {
->(x): x<this
->=(x): !(this<x)
-<=(x): !(x<this)
-!=(x): !(this==x)
-}
-
-class Vector: Object, Comparable {
-# ... code from above ...
-# Compare vectors by their length
-< (other) { length < other.length }
-== (other) { length == other.length }
-}
-
-var v1 = Vector(1, 2, 3)
-var v2 = Vector(4, 5, 6)
-# Call the > from Comparable, which will then call back the < from Vector
-print(v2>v1) # true
-```
+- *`()`* for call. Overriding call operator makes an object calalble like a function, i.e. `object(param1, param2, ...)`. 
+- *`[]`* for indexing. Overriding indexing operator makes an object subscriptable like a list or map. It is possible to have more than one parameter to index multidimensional structures.
+- *`[]=`* for index assignment. If you only override `[]`, but not `[]=`, indexing is read-only, i.e. you can write `object[x]` but not `object[x]=value`. Subscript setters take one additional parameter than subscript getters, the last parameter is the assigned value.
+- *unm* for unary minus and *unp* for unary plus
 
 ## Method references and bound methos
-
 
 ```
 # We can take a function corresponding to an operator. 
@@ -489,6 +475,26 @@ for loopVariable in iterable {
 if condition: yield expression
 }
 }
+```
+
+In fact, Swan supports extended/advanced comprehension. The complete syntax of a by comprhension expression is:
+*expression* for *loop variable* in *iterable* *nested elements*, where nested elements can be zero, one, or more of:
+
+- nested for loop
+- `if condition`: a filter, the item is yielded only if the condition is met
+- `while condition` or `break if condition`: the loop is stopped as soon as the condition become false
+- `continue if condition`: similar to the simple filter, but resume to the next iteration instead of simply skipping the item
+- `with expression as name`: see the with expression further below
+- traditional for loops can also be used
+
+```
+let l = List.of(1..5, 5...1) # [1, 2, 3, 4, 5, 4, 3, 2, 1]
+let l2 = [x**2 for x in l while x<=3] # [1, 4, 9] (stops as soon as x>3)
+let l2 = [x**2 for x in l break if x>3] # [1, 4, 9] (another way to say the same thing)
+let l3 = [x for x, count=0, it=l.iterator; (x=it.next) && count<6; count+=1 if count>=2] # [3, 4, 5, 4] (only yield from the 2nd to the 6th element)
+
+# Assuming filenames is a list of file names, this will gather all the lines from all the files, opening and closing them properly. This example requires the CLI.
+let lines = [line for filename in filenames with IO.open(filename, 'r') as file for line in file]
 ```
 
 ## Decorators
@@ -636,20 +642,20 @@ Except that the *variable* is no longer available after the closing brace. An op
 
 
 ## Import and export
-The general syntax of import is: import *source* for *sourceName* as *destinationName*, ...
+The general syntax of import is: import *destination* in *source*.
 
 - *source* is the place from where to import. It's typically a constant string indicating a file name to load.
-- *sourceName* is the name to import from in the source mapping
-- *destinationName* is the name of the variable to which the imported symbol will be affected to
+- *destination* is typically a destructuring expression to take what  you are interested in from the imported mapping.
 
 For exemple, by writing:
-`import 'file.swan' for src as dest`
+`import {src: dest} in 'file.swan'`
 would load the file file.swan, search for an export named src, and put the imported symbol into the dest variable. After this statement, you can use dest as a regular local variable.
 A matching export written in file.swan could be èxport something as src`.
 
-Multiple symbols can naturally be imported at once from the same source with a comma-separated list: `import source for A as first, B as second, C as third, ...`.
-Of course, the as clause can be omited, in which case the destination and source name are identical.
-Import can also be used as an expression. In this case, `for` and `as` can't be used and a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`.
+Simplifications used in map destructuring can of course be used in import, too. If the source name is the same as the destination name, `import {sth: sth} in 'file'` can be written `import {sth} in 'file'`. 
+This is the most common case, since usually the name of the imported element is kept unchanged.
+
+Import can also be used as an expression. In this case a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`.
 
 To be able to import symbols from another source, they have to be explicitly exported first. The export keyword can be used in several ways:
 
@@ -671,6 +677,7 @@ is the same as
 `func(1, 2, 3, {a: 4, b: 5, c: 6})`
 
 This may be used to simulates named function parameters to some extent, in combination with destructuring.
+`func(x: x)` can be further shortened as `func(x:)`.
 
 ### Implicit multiplication
 In mathematics, the multiplication sign can be omited in certain cases. In Swan too !
@@ -705,7 +712,7 @@ let m3 = {...m1, e: 5, ...m2}
 print(m3) #{a: 1, b: 2, c: 3, d: 4, e: 5}
 ```
 
-Difference with JavaScript: in Swan, unpack operator is currently not allowed in map assignment. The following is valid JavaScript ES6/2018, but invalid Swan:
+Difference with JavaScript: in Swan, unpack operator is currently not allowed in map assignment. The following is valid JavaScript ES2017, but invalid Swan:
 
 ```
 let m = {a: 1, b: 2, c: 3, d: 4}
