@@ -2,6 +2,7 @@
 #include "SwanLib.hpp"
 #include "../vm/Buffer.hpp"
 #include "../../include/cpprintf.hpp"
+#include "../../include/SwanCodec.hpp"
 #include<fstream>
 #include<cstdlib>
 #include<boost/algorithm/string.hpp>
@@ -28,7 +29,6 @@ QBufferIterator& li = f.getObject<QBufferIterator>(0);
 if (li.iterator > li.buf.begin()) f.returnValue(static_cast<double>(*--li.iterator));
 else f.returnValue(QV::UNDEFINED);
 }
-
 
 static void bufferHashCode (QFiber& f) {
 QBuffer& b = f.getObject<QBuffer>(0);
@@ -126,13 +126,56 @@ if (needle.length>b.length) { f.returnValue(QV(false)); return; }
 else f.returnValue(equal(needle.begin(), needle.end(), b.end() - needle.length));
 }
 
-static string normalizeEncodingName (const string& name) {
+static string normalizeCodecName (const string& name) {
 string enc = boost::to_lower_copy(name);
 auto it = remove_if(enc.begin(), enc.end(), boost::is_any_of("-_"));
 enc.erase(it, enc.end());
 return enc;
 }
 
+static void stringEncode (QFiber& f) {
+QString &s = f.getObject<QString>(0);
+string enc = f.ensureString(1)->asString();
+auto it = QVM::codecs.find(normalizeCodecName(enc));
+auto& codec = *it->second;
+string out = codec.encode(string(s.begin(), s.end()));
+if (codec.getFlags()&CFE_ENCODE_VALID_STRING) f.returnValue(out);
+else f.returnValue(QBuffer::create(f.vm, out.data(), out.size()));
+}
+
+static void stringDecode (QFiber& f) {
+QString &s = f.getObject<QString>(0);
+string enc = f.ensureString(1)->asString();
+auto it = QVM::codecs.find(normalizeCodecName(enc));
+auto& codec = *it->second;
+string out = codec.decode(string(s.begin(), s.end()));
+if (codec.getFlags()&CFE_DECODE_VALID_STRING) f.returnValue(out);
+else f.returnValue(QBuffer::create(f.vm, out.data(), out.size()));
+}
+
+static void bufferDecode (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0);
+string enc = f.ensureString(1)->asString();
+bool preserveBuffer = f.getOptionalBool(2, false);
+auto it = QVM::codecs.find(normalizeCodecName(enc));
+auto& codec = *it->second;
+string out = codec.decode(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+if (!preserveBuffer && (codec.getFlags()&CFE_DECODE_VALID_STRING)) f.returnValue(out);
+else f.returnValue(QBuffer::create(f.vm, out.data(), out.size()));
+}
+
+static void bufferEncode (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0);
+string enc = f.ensureString(1)->asString();
+bool preserveBuffer = f.getOptionalBool(2, false);
+auto it = QVM::codecs.find(normalizeCodecName(enc));
+auto& codec = *it->second;
+string out = codec.encode(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
+if (!preserveBuffer && (codec.getFlags()&CFE_ENCODE_VALID_STRING)) f.returnValue(out);
+else f.returnValue(QBuffer::create(f.vm, out.data(), out.size()));
+}
+
+/*
 Swan::VM::EncodingConversionFn export Swan::VM::getEncoder (const std::string& name) {
 return QVM::stringToBufferConverters[normalizeEncodingName(name)];
 }
@@ -150,22 +193,17 @@ QVM::bufferToStringConverters[normalizeEncodingName(name)] = func;
 }
 
 static QString* convertBufferToString (QBuffer& b, const string& encoding) {
-auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(encoding));
-if (it==QVM::bufferToStringConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", encoding, "UTF-8");
-istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
-ostringstream out;
-(it->second)(in, out, 0);
-return QString::create(b.type->vm, out.str());
+auto it = QVM::codecs.find(normalizeEncodingName(encoding));
+if (it==QVM::codecs.end()) error<invalid_argument>("No codec found to convert from %s to %s", encoding, "UTF-8");
+string out = (*it)->decode(b.begin(), b.end());
+return QString::create(b.type->vm, out);
 }
 
 static QBuffer* convertStringToBuffer (QString& s, const string& encoding) {
-auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(encoding));
-if (it==QVM::stringToBufferConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", encoding);
-istringstream in(string(s.begin(), s.end()));
-ostringstream out;
-(it->second)(in, out);
-string re = out.str();
-return QBuffer::create(s.type->vm, &re[0], re.size());
+auto it = QVM::codecs.find(normalizeEncodingName(encoding));
+if (it==QVM::codecs.end()) error<invalid_argument>("No codec found to convert from %s to %s", "UTF-8", encoding);
+string out = (*it)->encode(s.begin(), s.end());
+return QBuffer::create(s.type->vm, &out[0], out.size());
 }
 
 static void bufferInstantiate (QFiber& f) {
@@ -182,12 +220,10 @@ f.returnValue(convertBufferToString(b, enc->asString()));
 }
 else if (f.isString(1) && f.getArgCount()==3 && f.isString(2)) {
 QString &b = f.getObject<QString>(1), &enc = f.getObject<QString>(2);
-auto it = QVM::stringToBufferConverters.find(normalizeEncodingName(enc.asString()));
-if (it==QVM::stringToBufferConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", enc.asString(), "UTF-8");
-istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
-ostringstream out;
-(it->second)(in, out);
-f.returnValue(out.str());
+auto it = QVM::codecs.find(normalizeEncodingName(enc.asString()));
+if (it==QVM::codecs.end()) error<invalid_argument>("No converter found to convert from %s to %s", enc.asString(), "UTF-8");
+string out = (*it)->decode(b.begin(), b.end());
+f.returnValue(out);
 }
 else f.returnValue(QV(f.ensureString(1), QV_TAG_STRING));
 }
@@ -195,12 +231,20 @@ else f.returnValue(QV(f.ensureString(1), QV_TAG_STRING));
 static void stringToString (QFiber& f) {
 if (f.getArgCount()==1) return;
 QString &b = f.getObject<QString>(0), &enc = f.getObject<QString>(1);
-auto it = QVM::bufferToStringConverters.find(normalizeEncodingName(enc.asString()));
-if (it==QVM::bufferToStringConverters.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", enc.asString() );
-istringstream in(string(reinterpret_cast<const char*>(b.begin()), reinterpret_cast<const char*>(b.end())));
-ostringstream out;
-(it->second)(in, out, 0);
-f.returnValue(out.str());
+auto it = QVM::codecs.find(normalizeEncodingName(enc.asString()));
+if (it==QVM::codecs.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", enc.asString() );
+string out = (*it)->encode(b.begin(), b.end());
+f.returnValue(out);
+}
+
+static void bufferToBuffer (QFiber& f) {
+QBuffer &b = f.getObject<QBuffer>(0);
+QString &enc = f.getObject<QString>(1);
+auto it = QVM::codecs.find(normalizeEncodingName(enc.asString()));
+if (it==QVM::codecs.end()) error<invalid_argument>("No converter found to convert from %s to %s", "UTF-8", enc.asString() );
+string re = (*it)->encode(b.begin(), b.end());
+QBuffer* out = QBuffer::create(f.vm, reinterpret_cast<const uint8_t*>(re.data()), re.size());
+f.returnValue(out);
 }
 
 static void stringToJSON (QFiber& f) {
@@ -243,6 +287,7 @@ break;
 }}
 f.returnValue(QV(QString::create(f.vm, out), QV_TAG_STRING));
 }}
+*/
 
 static void stringFromSequence (QFiber& f) {
 vector<QV, trace_allocator<QV>> values(f.vm);
@@ -266,7 +311,7 @@ f.returnValue(re);
 }
 
 void QVM::initBufferType () {
-stringClass BIND_F(toBuffer, stringToBuffer);
+//stringClass BIND_F(toBuffer, stringToBuffer);
 
 bufferClass
 ->copyParentMethods()
@@ -280,7 +325,8 @@ BIND_F(lastIndexOf, bufferRfind)
 BIND_F(findFirstOf, bufferFindFirstOf)
 BIND_F(startsWith, bufferStartsWith)
 BIND_F(endsWith, bufferEndsWith)
-BIND_F(toString, bufferToString)
+BIND_F(decode, bufferDecode)
+//BIND_F(toString, bufferToString)
 ;
 
 bufferIteratorClass
@@ -289,22 +335,22 @@ BIND_F(next, bufferIteratorNext)
 BIND_F(previous, bufferIteratorPrevious)
 ;
 
-
 stringClass ->type
 ->copyParentMethods()
-BIND_F( (), stringInstantiate)
-BIND_F( of, stringFromSequence)
+//BIND_F( (), stringInstantiate)
+//BIND_F( of, stringFromSequence)
 ;
 
 stringClass 
-BIND_F(toString, stringToString)
-BIND_F(toJSON, stringToJSON)
+BIND_F(encode, stringEncode)
+//BIND_F(toString, stringToString)
+//BIND_F(toJSON, stringToJSON)
 ;
 
 bufferClass ->type
 ->copyParentMethods()
-BIND_F( (), bufferInstantiate)
-BIND_F(of, bufferFromSequence)
+//BIND_F( (), bufferInstantiate)
+//BIND_F(of, bufferFromSequence)
 ;
 }
 #endif

@@ -5,13 +5,14 @@
 #include<boost/algorithm/string.hpp>
 #include<utf8.h>
 using namespace std;
+using boost::starts_with;
 
 int QFiber::loadFile (const string& filename) {
 string source = vm.fileLoader(filename);
 return loadString(source, filename);
 }
 
-int QFiber::loadString (const string& initialSource, const string& filename) {
+int QFiber::loadString (const string& source, const string& filename) {
 GCLocker gcLocker(vm);
 string displayName = "<string>";
 if (!filename.empty()) {
@@ -19,20 +20,23 @@ int lastSlash = filename.rfind('/');
 if (lastSlash<0 || lastSlash>=filename.length()) lastSlash=-1;
 displayName = filename.substr(lastSlash+1);
 }
-if (boost::starts_with(initialSource, "\x1B\x01")) {
-istringstream in(initialSource, ios::binary);
+if (starts_with(source, "\x1B\x01")) {
+istringstream in(source, ios::binary);
 return loadBytecode(in);
 }
-string source = initialSource;
-if (utf8::is_valid(source.begin(), source.end())) {
-if (utf8::starts_with_bom(source.begin(), source.end())) source = source.substr(3);
+else if (utf8::is_valid(source.begin(), source.end())) {
+if (utf8::starts_with_bom(source.begin(), source.end())) return loadString(source.substr(3), filename, displayName);
+else return loadString(source, filename, displayName);
 }
 else {
-istringstream in(source, ios::binary);
-ostringstream out(ios::binary);
-QVM::bufferToStringConverters["native"](in, out, 0);
-source = out.str();
+const uint8_t* p = reinterpret_cast<const uint8_t*>(source.data());
+string str;
+utf8::utf32to8(p, p+source.size(), back_inserter(str));
+return loadString(str, filename, displayName);
 }
+}
+
+int QFiber::loadString (const string& source, const string& filename, const string& displayName) {
 QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);
 QFunction* func = compiler.getFunction();

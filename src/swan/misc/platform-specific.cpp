@@ -11,7 +11,7 @@ using std::ostringstream;
 #ifdef __WIN32
 #include<windows.h>
 
-string winConvertEncoding (const char* begin, const char* end, int inCP, int outCP) {
+/*string winConvertEncoding (const char* begin, const char* end, int inCP, int outCP) {
 if (!(end-begin)) return "";
 int wideLen = MultiByteToWideChar(inCP, MB_PRECOMPOSED, begin, end-begin, nullptr, 0);
 wstring wide(wideLen, '\0');
@@ -37,7 +37,7 @@ sIn = c;
 else if (mode==2) getline(in, sIn);
 string sRe = winConvertEncoding(sIn.data(), sIn.data()+sIn.size(), inCP, outCP);
 out << sRe;
-}
+}*/
 
 double nativeClock () {
 static uint64_t freq = 0;
@@ -57,6 +57,7 @@ return clock() / CLOCKS_PER_SEC;
 #endif
 
 void initPlatformEncodings () {
+/*
 #define D(N,F) QVM::bufferToStringConverters[#N] = F;
 #define E(N,F) QVM::stringToBufferConverters[#N] = F;
 //nothing for the moment
@@ -71,5 +72,6 @@ C(native, CP_ACP)
 C(oem, CP_OEMCP)
 #undef C
 #endif
+*/
 }
 

@@ -912,11 +912,6 @@ typedef std::function<std::string(const std::string&)> FileLoaderFn;
 /** The type of a compilation message callback function */
 typedef std::function<void(const CompilationMessage&)> CompilationMessageFn;
 
-/** The type of a character encoding coded function */
-typedef std::function<void(std::istream& in, std::ostream& out)> EncodingConversionFn;
-/** The type of a character encoding coded function */
-typedef std::function<void(std::istream& in, std::ostream& out, int)> DecodingConversionFn;
-
 /** Enumeration of Swan VM or compiler options */
 enum Option {
 VAR_DECL_MODE = 0, /// Variable declaration mode
@@ -1001,28 +996,16 @@ static uint32_t export getVersion ();
 /** Return the version of the Swan VM, as an humanly readable string such as 0.19.4a */
 static std::string export getVersionString ();
 
-/** Return the encoder for a given encoding
+/** Return the codec for a given encoding
 @param name name of the encoding, i.e. ISO-8859-1
 */
-static EncodingConversionFn export getEncoder (const std::string& name);
+static struct Codec& export getCodec (const std::string& name);
 
-
-/** Return the decoder for a given encoding
+/** Register a new codec for an encoding with the given name
 @param name name of the encoding, i.e. ISO-8859-1
+@param codec the codec
 */
-static DecodingConversionFn export getDecoder (const std::string& name);
-
-/** Register a new encoder for an encoding with the given name
-@param name name of the encoding, i.e. ISO-8859-1
-@param func encoder function 
-*/
-static void export registerEncoder (const std::string& name, const EncodingConversionFn& func);
-
-/** Register a new decoder for an encoding with the given name
-@param name name of the encoding, i.e. ISO-8859-1
-@param func decoder function 
-*/
-static void export registerDecoder (const std::string& name, const DecodingConversionFn& func);
+static void export registerCodec (const std::string& name, const struct Codec& codec);
 };
 
 /** ScopeLocker allow to safely lock the VM and unlock it when the scope is exited */

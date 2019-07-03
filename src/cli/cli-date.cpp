@@ -123,7 +123,7 @@ f.registerMethod("lengthOfMonth", FUNCTION(getLengthOfMonth));
 f.registerMethod("leapYear", FUNCTION(isLeapYear));
 f.pop();
 
-f.loadGlobal("System");
-f.registerStaticMethod("clock", STATIC_METHOD(nativeClock));
-f.pop();
+//f.loadGlobal("System");
+//f.registerStaticMethod("clock", STATIC_METHOD(nativeClock));
+//f.pop();
 }

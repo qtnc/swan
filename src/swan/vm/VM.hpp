@@ -14,9 +14,6 @@ bool isConst;
 };
 
 struct QVM: Swan::VM  {
-static std::unordered_map<std::string, EncodingConversionFn> stringToBufferConverters;
-static std::unordered_map<std::string, DecodingConversionFn> bufferToStringConverters;
-
 std::vector<std::string> methodSymbols;
 std::vector<QV> globalVariables;
 std::unordered_map<std::string,QV> imports;
@@ -136,6 +133,9 @@ std::fill(uPtr, uPtr+nU, U());
 return reinterpret_cast<T*>(ptr);
 }
 
+#ifndef NO_BUFFER
+static std::unordered_map<std::string, std::shared_ptr<Swan::Codec>> codecs;
+#endif
 };
 
 struct GCLocker {
