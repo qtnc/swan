@@ -36,6 +36,11 @@ QString& s1 = f.getObject<QString>(0), &s2 = f.getObject<QString>(1);
 return stringEquals(s1,s2);
 }
 
+static void stringInstantiate (QFiber& f) {
+f.callSymbol(f.vm.findMethodSymbol("toString"), f.getArgCount() -1);
+f.returnValue(f.top());
+}
+
 static void stringIterator (QFiber& f) {
 QString& s = f.getObject<QString>(0);
 int index = f.getOptionalNum(1, 0);
@@ -386,6 +391,7 @@ BIND_F(previous, stringIteratorPrevious)
 
 stringClass->type
 ->copyParentMethods()
+BIND_F( (), stringInstantiate)
 ;
 }
 

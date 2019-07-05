@@ -999,13 +999,13 @@ static std::string export getVersionString ();
 /** Return the codec for a given encoding
 @param name name of the encoding, i.e. ISO-8859-1
 */
-static struct Codec& export getCodec (const std::string& name);
+static struct Codec& export findCodec (const std::string& name);
 
 /** Register a new codec for an encoding with the given name
 @param name name of the encoding, i.e. ISO-8859-1
 @param codec the codec
 */
-static void export registerCodec (const std::string& name, const struct Codec& codec);
+static void export registerCodec (const std::string& name, struct Codec* codec);
 };
 
 /** ScopeLocker allow to safely lock the VM and unlock it when the scope is exited */

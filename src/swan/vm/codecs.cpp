@@ -75,10 +75,26 @@ io::flush(out);
 return re;
 }
 
+Swan::Codec& export Swan::VM::findCodec (const string& name) {
+auto it = QVM::codecs.find(name);
+if (it==QVM::codecs.end()) error<invalid_argument>("Couldn't find codec '%s'", name);
+return *it->second;
+}
+
+void export Swan::VM::registerCodec (const std::string& name, Swan::Codec* codec) {
+QVM::codecs[name] = shared_ptr<Swan::Codec>(codec);
+}
+
+struct NopCodec: Swan::Codec {
+virtual int getFlags () override { return  CFE_DECODE_VALID_STRING; }
+virtual void transcode (io::filtering_ostream& out, bool encode) override { }
+virtual void transcode (io::filtering_istream& out, bool encode) override { }
+};
+
 template<class Enc, class Dec> 
 struct FltCodec: Swan::Codec {
-virtual int getFlags () { return CFE_DECODE_VALID_STRING; }
-virtual void transcode (io::filtering_ostream& out, bool encode) {
+virtual int getFlags () override { return CFE_DECODE_VALID_STRING; }
+virtual void transcode (io::filtering_ostream& out, bool encode) override {
 if (encode) out.push(Enc());
 else out.push(Dec());
 }
@@ -89,6 +105,7 @@ else in.push(io::invert(Dec()));
 };
 
 unordered_map<string, shared_ptr<Swan::Codec>> QVM::codecs = {
+{ "utf8", make_shared<NopCodec>() },
 { "binary", make_shared<FltCodec<u8tobin, bintou8>>() },
 { "utf16", make_shared<FltCodec<u8to16, u16to8>>() }
 };
