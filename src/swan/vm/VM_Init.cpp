@@ -37,9 +37,14 @@ cur.insert(cur.end(), toResolve.begin(), toResolve.end());
 return boost::join(cur, "/");
 }
 
+static inline bool open (std::ifstream& in, const std::string& filename, std::ios::openmode mode) {
+in.open(filename, mode);
+return static_cast<bool>(in);
+}
+
 static string defaultFileLoader (const string& filename) {
-ifstream in(filename, ios::binary);
-if (!in) throw std::runtime_error(format("Couldn't open file: %s", filename));
+ifstream in;
+if (!open(in, filename+".sb", ios::binary) && !open(in, filename+".swan", ios::binary) && !open(in, filename, ios::binary)) error<ios_base::failure>("Couldn't open %s", filename);
 ostringstream out(ios::binary);
 out << in.rdbuf();
 string s = out.str();

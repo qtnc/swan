@@ -1,3 +1,4 @@
+#include<optional>
 #include "../include/Swan.hpp"
 #include "../include/SwanBinding.hpp"
 #include "../include/SwanCodec.hpp"
@@ -20,30 +21,41 @@ throw E(msg);
 }
 
 template<class Source>
-static shared_ptr<io::filtering_istream> buildInput (Source& src, const encspec& encodings) {
-auto f = make_shared<io::filtering_istream>();
+static bool buildInput (Source& src, shared_ptr<io::filtering_istream>& f,  const encspec& encodings) {
+if (!f) f = make_shared<io::filtering_istream>();
+else while(f->size()) f->pop();
+optional<bool> binary;
 f->set_auto_close(false);
 for (auto it=encodings.rbegin(), end=encodings.rend(); it!=end; ++it) {
-Swan::VM::findCodec(*it).transcode(*f, false);
+auto& codec = Swan::VM::findCodec(*it);
+codec.transcode(*f, false);
+if (!binary.has_value()) binary = !(codec.getFlags()&CFE_DECODE_VALID_STRING);
 }
 f->push(src);
-return f;
+return binary.value_or(true);
 }
 
 template<class Sink>
-shared_ptr<io::filtering_ostream> buildOutput (Sink& snk, const encspec& encodings) {
-auto f = make_shared<io::filtering_ostream>();
+static bool buildOutput (Sink& snk, shared_ptr<io::filtering_ostream>& f, const encspec& encodings) {
+if (!f) f = make_shared<io::filtering_ostream>();
+else while(f->size()) f->pop();
+bool binary = true;
 f->set_auto_close(false);
-for (auto& encoding: encodings) Swan::VM::findCodec(encoding).transcode(*f, true);
+for (auto& encoding: encodings) {
+auto& codec = Swan::VM::findCodec(encoding);
+codec.transcode(*f, true);
+binary = codec.getFlags()&CFE_ENCODE_VALID_STRING;
+}
 f->push(snk);
-return f;
+return binary;
 }
 
 struct Reader {
 shared_ptr<io::filtering_istream> in;
 encspec encodings;
+bool binary;
 virtual ~Reader () = default;
-virtual bool isBinary () {  return !encodings.size();  }
+virtual bool isBinary () { return binary; }
 virtual void close () { in.reset(); }
 virtual int read (char* buf, int max) {
 in->read(buf, max);
@@ -54,24 +66,37 @@ ostringstream out;
 out << in->rdbuf()  << flush;
 return out.str();
 }
-virtual bool readLine (string& s) { return static_cast<bool>(std::getline(*in,s)); }
+virtual bool readLine (string& s) { 
+return static_cast<bool>(std::getline(*in,s)); 
+}
+virtual int tell (int pos) { return in->tellg(); }
+virtual void seek (int pos) {
+if (pos<0) in->seekg(pos+1, ios::end);
+else in->seekg(pos, ios::beg);
+}
 template<class Source> void reset (Source& src, const encspec& enc) {
 encodings = enc;
-in = buildInput(src, encodings);
+binary = buildInput(src, in, encodings);
 }};
 
 struct Writer {
 shared_ptr<io::filtering_ostream> out;
 encspec encodings;
+bool binary;
 virtual ~Writer() = default;
-virtual bool isBinary () { return !encodings.size(); }
+virtual bool isBinary () { return binary; }
 virtual void write (const char* buf, size_t length) {  out->write(buf, length); }
 virtual void write (const string& s) { write(s.data(), s.size()); }
 virtual void flush () { out->flush(); }
 virtual void close () { out.reset(); }
+virtual int tell () { return out->tellp(); }
+virtual void seek (int pos) {
+if (pos<0) out->seekp(pos+1, ios::end);
+else out->seekp(pos, ios::beg);
+}
 template<class Sink> void reset (Sink& snk, const encspec& enc) {
 encodings = enc;
-out = buildOutput(snk, encodings);
+binary = buildOutput(snk, out, encodings);
 }};
 
 struct MemWriter: Writer {
@@ -126,7 +151,11 @@ else error<invalid_argument>("Writing to a text writer requires a String");
 static void readerRead (Swan::Fiber& f) {
 Reader& r = f.getUserObject<Reader>(0);
 int num = f.getOptionalNum(1, "size", -1);
-if (num<=0) f.setString(0, r.readAll());
+if (num<=0) {
+string s = r.readAll();
+if (r.isBinary()) f.setBuffer(0, s.data(), s.size());
+else f.setString(0,s);
+}
 else {
 std::unique_ptr<char[]> buf = make_unique<char[]>(num);
 int count = r.read(&buf[0], num);
@@ -231,7 +260,7 @@ if (mw.isBinary()) f.setBuffer(0, mw.data.data(), mw.data.size());
 else f.setString(0, mw.data);
 }
 
-static void print (Swan::Fiber& f) {
+void print (Swan::Fiber& f) {
 auto& p = std::cout;
 for (int i=0, n=f.getArgCount(); i<n; i++) {
 if (i>0) p<<' ';
@@ -247,43 +276,52 @@ f.setUndefined(0);
 }
 
 
-void registerIO (Swan::Fiber& f) {
+void swanLoadIO (Swan::Fiber& f) {
+f.loadGlobal("Map");
+f.call(0);
+
 f.loadGlobal("Iterable");
-f.registerClass<Reader>("Reader", 1);
+f.pushNewClass<Reader>("Reader", 1);
 f.registerMethod("read", readerRead);
 f.registerMethod("readLine", readerReadLine);
 f.registerMethod("next", readerReadLine);
 f.registerMethod("close", METHOD(Reader, close));
+f.registerProperty("position", METHOD(Reader, tell), METHOD(Reader, seek));
 
 f.pushCopy();
-f.registerClass<FileReader>("FileReader", 1);
+f.pushNewClass<FileReader>("FileReader", 1);
 f.registerStaticMethod("()", fileReaderConstruct);
+f.putInMap(-3, "FileReader");
 f.pop(); // FileReader
 
 f.pushCopy();
-f.registerClass<MemReader>("MemReader", 1);
+f.pushNewClass<MemReader>("MemReader", 1);
 f.registerStaticMethod("()", memReaderConstruct);
+f.putInMap(-4, "MemReader");
 f.pop(); // MemReader
 
+f.putInMap(-2, "Reader");
 f.pop(); // Reader
 
-f.registerClass<Writer>("Writer");
+f.pushNewClass<Writer>("Writer");
 f.registerMethod("write", writerWrite);
 f.registerMethod("flush", METHOD(Writer, flush));
 f.registerMethod("close", METHOD(Writer, close));
+f.registerProperty("position", METHOD(Writer, tell), METHOD(Writer, seek));
 
 f.pushCopy();
-f.registerClass<FileWriter>("FileWriter", 1);
+f.pushNewClass<FileWriter>("FileWriter", 1);
 f.registerStaticMethod("()", fileWriterConstruct);
+f.putInMap(-3, "FileWriter");
 f.pop(); // FileWriter
 
 f.pushCopy();
-f.registerClass<MemWriter>("MemWriter", 1);
+f.pushNewClass<MemWriter>("MemWriter", 1);
 f.registerStaticMethod("()", memWriterConstruct);
 f.registerMethod("value", memWriterValue);
+f.putInMap(-3, "MemWriter");
 f.pop(); // MemWriter
 
+f.putInMap(-2, "Writer");
 f.pop(); // Writer
-
-f.registerFunction("print", print);
 }

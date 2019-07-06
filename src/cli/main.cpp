@@ -1,18 +1,16 @@
 #include "../include/Swan.hpp"
 #include "../include/cpprintf.hpp"
-#include<iostream>
-#include<sstream>
-#include<fstream>
-#include<typeinfo>
-#include<exception>
-#include<cstring>
-#include<boost/algorithm/string.hpp>
 #include<optional>
+#include<fstream>
+#include<sstream>
+#include<typeinfo>
+#include<boost/core/demangle.hpp>
+#include<boost/algorithm/string.hpp>
 using namespace std;
 using boost::starts_with;
 
-void registerIO  (Swan::Fiber& f);
-void registerDate (Swan::Fiber& f);
+void printStackTrace (Swan::RuntimeException& e);
+Swan::VM& createVM ();
 
 static void printIntro () {
 println("Swan version %s", Swan::VM::getVersionString());
@@ -40,11 +38,6 @@ println("Type any Swan code to see the result, or one of these commands: ");
 println("clear:\t clear a possibly incomplete code input buffer");
 println("exit:\t exits from the Swan CLI REPL");
 println("quit:\t synonym for 'exit'");
-}
-
-static void printStackTrace (Swan::RuntimeException& e) {
-println(std::cerr, "ERROR: %s", e.what());
-println(std::cerr, "%s", e.getStackTraceAsString());
 }
 
 static void replEval (Swan::Fiber& fiber, string& code, const string& line) {
@@ -113,11 +106,8 @@ while(argIndex<argc) args.push_back(argv[argIndex++]);
 if (!compileOnly && inFile.empty() && expression.empty()) runREPL=true;
 
 try {
-Swan::VM& vm = Swan::VM::create();
+Swan::VM& vm = createVM();
 Swan::Fiber& fiber = vm.getActiveFiber();
-
-registerIO(fiber);
-registerDate(fiber);
 
 for (auto& mod: importModules) {
 fiber.import("", mod);
@@ -173,7 +163,8 @@ printStackTrace(e);
 exitCode = 3;
 }
 catch (std::exception& ex) {
-println(std::cerr, "Exception caught: %s: %s", typeid(ex).name(), ex.what());
+boost::core::scoped_demangled_name exceptionType(typeid(ex).name());
+println(std::cerr, "Exception caught: %s: %s", exceptionType.get(), ex.what());
 exitCode = 3;
 } catch (...) {
 println(std::cerr, "Caught unknown exception !");

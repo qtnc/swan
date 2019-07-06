@@ -581,6 +581,18 @@ inline void setAndPop (int stackIndex) { setCopy(stackIndex, -1); pop(); }
 */
 inline void insertAndPop (int stackIndex) { insertCopy(stackIndex, -1); pop(); }
 
+/** Store the element on top of the stack into the map at mapIndex with the specified key
+@param mapIndex the stack index where the map is
+@param key the key where to store the element
+*/
+inline void putInMap (int mapIndex, const std::string& key) {
+pushCopy(mapIndex);
+pushString(key);
+pushCopy(-3);
+callMethod("[]=", 3);
+pop();
+}
+
 /** Loads the given Swan source code and compile it. 
 @param source the Swan source code
 @param name name used in compilation or runtime error messages. 

@@ -43,10 +43,12 @@ CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX)
 SRCS=$(wildcard swan/vm/*.cpp) $(wildcard swan/lib/*.cpp) $(wildcard swan/misc/*.cpp) $(wildcard swan/parser/*.cpp)
 CPPRINTF_SRCS=$(wildcard cpprintf/*.cpp)
 CLI_SRCS=$(wildcard cli/*.cpp)
+MODULES_SRCS=$(wildcard modules/*.cpp)
 SWANS=$(wildcard swan/lib/*.swan)
 OBJS=$(addprefix $(OBJDIR),$(SRCS:.cpp=.o))
 CPPRINTF_OBJS=$(addprefix $(OBJDIR),$(CPPRINTF_SRCS:.cpp=.o))
 CLI_OBJS=$(addprefix $(OBJDIR),$(CLI_SRCS:.cpp=.o))
+MODULES_OBJS=$(addprefix $(OBJDIR),$(MODULES_SRCS:.cpp=.o))
 PERCENT=%
 
 all: dll cli
@@ -60,7 +62,7 @@ cli: $(CLI_EXEC)
 
 dll: $(DLL_LIB)
 
-$(CLI_EXEC): $(CLI_OBJS) $(CPPRINTF_OBJS)
+$(CLI_EXEC): $(MODULES_OBJS) $(CLI_OBJS) $(CPPRINTF_OBJS)
 	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -o $@ $^ $(CLI_LDFLAGS)
 
 $(DLL_LIB): $(OBJS) $(CPPRINTF_OBJS)

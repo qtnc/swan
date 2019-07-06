@@ -1936,7 +1936,9 @@ return result;
 
 shared_ptr<Statement> QParser::parseImportDecl () {
 auto importSta = make_shared<ImportDeclaration>();
-parseVarList(importSta->imports, VD_SINGLE);
+int flags = VD_SINGLE;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+parseVarList(importSta->imports, flags);
 consume(T_IN, "Expected 'in' after import variables");
 importSta->from = parseExpression(P_COMPREHENSION);
 return importSta;
@@ -2449,6 +2451,7 @@ compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConsta
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
 createBinaryOperation(imports[0]->name, T_EQ, importVar)->optimize()->compile(compiler);
+compiler.writeOp(OP_POP);
 compiler.popScope();
 }
 
