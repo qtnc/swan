@@ -55,6 +55,64 @@ return e-s;
 }
 };
 
+struct dectohex: io::multichar_output_filter {
+template <class Sink> std::streamsize write (Sink& sink, const char* s, std::streamsize n) {
+for (const char *it=s, *end=it+n; it<end; ++it) {
+string hex = format("%0$2x", static_cast<uint16_t>(*reinterpret_cast<const uint8_t*>(it)));
+io::write(sink, hex.data(), hex.size());
+}
+return n;
+}
+};
+
+struct hextodec: io::multichar_output_filter {
+template <class Sink> std::streamsize write (Sink& sink, const char* s, std::streamsize n) {
+n&=~1;
+char b[3] = {0};
+uint8_t c;
+for (const char *it=s, *end=it+n; it<end; it+=2) {
+memcpy(b, it, 2);
+c = strtoul(b, nullptr, 16);
+io::put(sink, c);
+}
+return n;
+}
+};
+
+struct urlencode: io::multichar_output_filter {
+static const string chars;
+template <class Sink> std::streamsize write (Sink& sink, const char* s, std::streamsize n) {
+for (const char *it=s, *end=it+n; it<end; ++it) {
+if (chars.find(*it)!=string::npos) io::put(sink, *it);
+else {
+string str = format("%%%0$2X", static_cast<uint16_t>(*reinterpret_cast<const uint8_t*>(it)));
+io::write(sink, str.data(), str.size());
+}}
+return n;
+}
+};
+const string urlencode::chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.,";
+
+struct urldecode: io::multichar_output_filter {
+template <class Sink> std::streamsize write (Sink& sink, const char* s, std::streamsize n) {
+char b[3] = {0};
+uint8_t c;
+for (const char *it=s, *end=it+n; it<end; ++it) {
+switch(*it){
+case '%':
+if (end-it<2) return it-s;
+memcpy(b, ++it, 2);
+c = strtoul(b, nullptr, 16);
+io::put(sink, c);
+it+=2;
+break;
+case '+': io::put(sink, ' '); break;
+default: io::put(sink, *it); break;
+}}
+return n;
+}
+};
+
 string Swan::Codec::encode (const string& s) {
 string re;
 io::filtering_ostream out;
@@ -91,9 +149,9 @@ virtual void transcode (io::filtering_ostream& out, bool encode) override { }
 virtual void transcode (io::filtering_istream& out, bool encode) override { }
 };
 
-template<class Enc, class Dec> 
+template<class Enc, class Dec, int Flg = CFE_DECODE_VALID_STRING> 
 struct FltCodec: Swan::Codec {
-virtual int getFlags () override { return CFE_DECODE_VALID_STRING; }
+virtual int getFlags () override { return Flg; }
 virtual void transcode (io::filtering_ostream& out, bool encode) override {
 if (encode) out.push(Enc());
 else out.push(Dec());
@@ -108,6 +166,8 @@ unordered_map<string, shared_ptr<Swan::Codec>> QVM::codecs = {
 { "utf8", make_shared<NopCodec>() },
 { "binary", make_shared<FltCodec<u8tobin, bintou8>>() },
 { "utf16", make_shared<FltCodec<u8to16, u16to8>>() }
+, { "hex", make_shared<FltCodec<dectohex, hextodec, CFE_ENCODE_VALID_STRING>>() }
+, { "urlencoded", make_shared<FltCodec<urlencode, urldecode, CFE_ENCODE_VALID_STRING>>() }
 };
 
 #endif
