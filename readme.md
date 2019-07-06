@@ -59,7 +59,7 @@ print(v3)
 - Loosly typed
 - Class object-oriented
 - Allow functional style with closures and higher order functions
-- Everyting is an object, including numbers, closures, boolean values and null itself
+- Everyting is an object, including numbers, closures, boolean values and null/undefined themselves
 - Fibers better known as coroutines
 - Operator overloading
 - Extending or redefining classes at runtime (except built-in types)
@@ -150,6 +150,8 @@ I have compiled Swan with GCC 8.1 on windows 10 (MinGW), both in 32 and 64 bits.
 Let me know if you have issues with other compilers.
 
 [>> More on building](docs/building.md)
+
+[>> Code organization](docs/code-organization.md)
 
 # Why Swan ?
 
