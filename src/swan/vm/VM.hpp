@@ -35,9 +35,6 @@ QObject* firstGCObject;
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *undefinedClass;
 QClass *listClass, *mapClass, *rangeClass, *setClass, *stringClass, *tupleClass;
 QClass *iterableClass, *iteratorClass, *mappingClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
-#ifndef NO_BUFFER
-QClass *bufferClass, *bufferIteratorClass;
-#endif
 #ifndef NO_REGEX
 QClass *regexClass, *regexMatchResultClass, *regexIteratorClass, *regexTokenIteratorClass;
 #endif
@@ -78,9 +75,6 @@ void initMapType();
 void initTupleType();
 void initSetType();
 void initRangeType();
-#ifndef NO_BUFFER
-void initBufferType();
-#endif
 #ifndef NO_OPTIONAL_COLLECTIONS
 void initLinkedListType();
 void initDictionaryType();
@@ -133,9 +127,6 @@ std::fill(uPtr, uPtr+nU, U());
 return reinterpret_cast<T*>(ptr);
 }
 
-#ifndef NO_BUFFER
-static std::unordered_map<std::string, std::shared_ptr<Swan::Codec>> codecs;
-#endif
 };
 
 struct GCLocker {

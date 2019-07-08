@@ -217,11 +217,6 @@ virtual bool isString (int stackIndex) = 0;
 */
 virtual bool isRange (int stackIndex) = 0;
 
-/** Check if the element at stackIndex is a Buffer value 
-@param stackIndex the stack index to check
-*/
-virtual bool isBuffer (int stackIndex) = 0;
-
 /** Check if the element at stackIndex is a Null value 
 @param stackIndex the stack index to check
 */
@@ -272,13 +267,6 @@ The behavior is undefined in case the requested element isn't of the required ty
 @param stackIndex the stack index from which to get the value 
 */
 virtual const Range& getRange (int stackIndex) = 0;
-
-/** Return a pointer to the data stored in the Buffer object at the given stack index, and optionally store the size of the buffer in length. 
-The size isn't stored if length==nullptr. The behavior is undefined in case the requested element isn't of the required type.
-@param stackIndex the stack index from which to get the value
-@param length a variable where to store the length of the buffer 
-*/
-virtual const void* getBufferV (int stackIndex, int* length = nullptr) = 0;
 
 /** Return a fiber stored at the given stack index. 
 The behavior is undefined in case the requested element isn't of the required type.
@@ -431,14 +419,6 @@ virtual void setString (int stackIndex, const std::string& value) = 0;
 */
 virtual void setCString (int stackIndex, const char* value) = 0;
 
-/** Replace the element at the given stack index by a Buffer with the specified content. 
-The data is copied.
-@param stackIndex the stack index which will be overwritten
-@param data the data of the buffer to put into that stack index 
-@param length the length of the data
-*/
-virtual void setBuffer (int stackIndex, const void* data, int length) = 0;
-
 /** Replace the element at the given stack index by a Range with the specified value 
 @param stackIndex the stack index which will be overwritten
 @param value the value to put into that stack index
@@ -496,13 +476,6 @@ virtual void pushString (const std::string& value) = 0;
 @param value the value to push onto the stack
 */
 virtual void pushCString (const char* value) = 0;
-
-/** Push a Buffer object at the back of the stack. 
-The data of the buffer is copied.
-@param data the data of the buffer to push onto the stack
-@param length the length of the data
-*/
-virtual void pushBuffer (const void* data, int length) = 0;
 
 /** Push a Range object at the back of the stack 
 @param value the value to push onto the stack
@@ -686,17 +659,6 @@ The class on which to store the destructor must be present at the back of the st
 @param dtor the destructor to register
 */
 virtual void storeDestructor ( void(*dtor)(void*) ) = 0;
-
-/** Return a pointer to the data stored in the Buffer object at the given stack index, and optionally store the size of the buffer in length. 
-The size isn't stored if length==nullptr. The behavior is undefined in case the requested element isn't of the required type. 
-@param stackIndex the stack index where to get the value
-@param variable to store the length onto
-*/
-template<class T> inline const T* getBuffer (int stackIndex, int* length = nullptr) {
-const T* re = reinterpret_cast<const T*>(getBufferV(stackIndex, length));
-if (length) *length /= sizeof(T);
-return re;
-}
 
 template<class R, class... A> std::function<R(A...)> getCallback (int stackIndex);
 template<class... A> std::function<void(A...)> getCallback (int stackIndex);

@@ -230,15 +230,6 @@ return false;
 }
 #endif
 
-#ifndef NO_BUFFER
-#include "Buffer.hpp"
-bool QBufferIterator::gcVisit () {
-if (QObject::gcVisit()) return true;
-buf.gcVisit();
-return false;
-}
-#endif
-
 static QV makeqv (QObject* obj) {
 #define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
 T(QClosure, QV_TAG_CLOSURE)
@@ -302,9 +293,6 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 #endif
 #ifndef NO_RANDOM
 , randomClass
-#endif
-#ifndef NO_BUFFER
-, bufferClass, bufferIteratorClass
 #endif
 };
 roots.insert(roots.end(), fibers.begin(), fibers.end());

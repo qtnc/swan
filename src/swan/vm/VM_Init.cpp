@@ -111,11 +111,6 @@ setIteratorClass = QClass::create(*this, classClass, iteratorClass, "SetIterator
 stringIteratorClass = QClass::create(*this, classClass, iteratorClass, "StringIterator", 0, -1);
 tupleIteratorClass = QClass::create(*this, classClass, iteratorClass, "TupleIterator", 0, -1);
 
-#ifndef NO_BUFFER
-auto bufferMetaClass = QClass::create(*this, classClass, classClass, "BufferMetaClass", 0, -1);
-bufferClass = QClass::create(*this, bufferMetaClass, iterableClass, "Buffer", 0, -1);
-bufferIteratorClass = QClass::create(*this, classClass, iteratorClass, "BufferIterator", 0, -1);
-#endif
 #ifndef NO_REGEX
 auto regexMetaClass = QClass::create(*this, classClass, classClass, "RegexMetaClass", 0, -1);
 regexClass = QClass::create(*this, regexMetaClass, objectClass, "Regex", 0, -1);
@@ -183,11 +178,6 @@ initMapType();
 initTupleType();
 initSetType();
 initRangeType();
-
-#ifndef NO_BUFFER
-initBufferType();
-#endif
-
 #ifndef NO_OPTIONAL_COLLECTIONS
 initLinkedListType();
 initDictionaryType();

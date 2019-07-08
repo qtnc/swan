@@ -94,9 +94,6 @@ cout << endl;
 void QVM::initGlobals () {
 QClass* globalClasses[] = { 
 boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass
-#ifndef NO_BUFFER
-, bufferClass
-#endif
 #ifndef NO_REGEX
 , regexClass
 #endif

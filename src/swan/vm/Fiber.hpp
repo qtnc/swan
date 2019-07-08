@@ -38,7 +38,6 @@ virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
 virtual inline bool isString (int i) final override { return at(i).isString(); }
 virtual bool isRange (int i) final override;
-virtual bool isBuffer (int i) final override;
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
 virtual inline bool isUndefined  (int i) final override { return at(i).isUndefined(); }
 virtual inline bool isNullOrUndefined (int i) final override { return at(i).isNullOrUndefined(); }
@@ -50,7 +49,6 @@ virtual inline bool getBool (int i) final override { return at(i).asBool(); }
 virtual inline std::string getString (int i) final override { return at(i).asString(); }
 virtual inline const char* getCString (int i) final override { return at(i).asCString(); }
 virtual inline const Swan::Range& getRange (int i) final override { return at(i).asRange(); }
-virtual const void* getBufferV (int i, int* length = nullptr) final override;
 virtual inline Swan::Fiber& getFiber (int i) final override { return getObject<QFiber>(i); }
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
 virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHandle(); }
@@ -74,7 +72,6 @@ virtual inline void setNum (int i, double d) final override { at(i).d = d; }
 virtual inline void setBool (int i, bool b) final override { at(i) = QV(b); }
 virtual inline void setString  (int i, const std::string& s) final override;
 virtual inline void setCString  (int i, const char* s) final override;
-virtual inline void setBuffer  (int i, const void* data, int length) final override;
 virtual void setRange  (int i, const Swan::Range& r) final override;
 virtual inline void setNull (int i) final override { at(i) = QV::Null; }
 virtual inline void setUndefined (int i) final override { at(i) = QV::UNDEFINED; }
@@ -90,7 +87,6 @@ virtual inline void pushNum (double d) final override { stack.push_back(d); }
 virtual inline void pushBool  (bool b) final override { stack.push_back(b); }
 virtual inline void pushString (const std::string& s) final override;
 virtual inline void pushCString (const char* s) final override;
-virtual inline void pushBuffer  (const void* data, int length) final override;
 virtual void pushRange (const Swan::Range& r) final override;
 virtual inline void pushNull  () final override { stack.push_back(QV::Null); }
 virtual inline void pushUndefined () final override { stack.push_back(QV::UNDEFINED); }
