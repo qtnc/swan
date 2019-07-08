@@ -96,6 +96,12 @@ static Swan::Fiber& get (Swan::Fiber& f, int unused) { return f; }
 static inline bool check (Swan::Fiber& f, int unused) { return true; }
 };
 
+template<> struct SwanGetSlot<Swan::Handle> {
+typedef Swan::Handle returnType;
+static Swan::Handle get (Swan::Fiber& f, int idx) { return f.getHandle(idx); }
+static inline bool check (Swan::Fiber& f, int unused) { return true; }
+};
+
 template<class T> struct SwanGetSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
 typedef T returnType;
 static inline bool check (Swan::Fiber& f, int idx) { return f.isNum(idx); }
@@ -209,6 +215,11 @@ UserObjectTrait<T>::storeMove(ptr, std::move(value));
 template<class T> struct SwanSetSlot<T, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
 static inline void set (Swan::Fiber& f, int idx, T value) { 
 f.setNum(idx, value);
+}};
+
+template<> struct SwanSetSlot<const Swan::Handle&> {
+static inline void set (Swan::Fiber& f, int idx, const Swan::Handle& value) {
+f.setHandle(idx, value);
 }};
 
 template<class T> struct SwanSetSlot<const T&, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
@@ -332,6 +343,11 @@ f.pushNum(value);
 template<class T> struct SwanPushSlot<T&, typename std::enable_if< std::is_arithmetic<T>::value || std::is_enum<T>::value>::type> {
 static inline void push (Swan::Fiber& f, T& value) { 
 f.pushNum(value);
+}};
+
+template<> struct SwanPushSlot<const Swan::Handle&> {
+static inline void push (Swan::Fiber& f, const Swan::Handle& value) {
+f.pushHandle(value);
 }};
 
 template<> struct SwanPushSlot<bool> {
@@ -659,6 +675,17 @@ SwanSetSlot<P>::set(f, 0, value);
 }
 };
 
+template<class T> struct SwanValueWrapper  {
+template<T* value> static void getter (Swan::Fiber& f) {
+SwanSetSlot<const T&>::set(f, 0, *value);
+}
+template<T* value, int idx> static void setter (Swan::Fiber& f) {
+*value = SwanGetSlot<T>::get(f, idx);
+SwanSetSlot<const T&>::set(f, 0, *value);
+}
+};
+
+
 } // namespace Binding
 
 template<class T> inline T& Fiber::getUserObject (int stackIndex) {
@@ -729,6 +756,7 @@ storeDestructor(&Swan::Binding::SwanDestructorWrapper<T>::destructor);
 #define METHOD(CLS,...) (&Swan::Binding::SwanWrapper<decltype(&CLS::__VA_ARGS__)>::wrapper<&CLS::__VA_ARGS__>)
 #define STATIC_METHOD(...) (&Swan::Binding::SwanStaticWrapper<decltype(__VA_ARGS__)>::wrapper<&(__VA_ARGS__)>)
 #define PROPERTY(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>), (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
+#define STATIC_PROPERTY(CLS,PROP) (&Swan::Binding::SwanValueWrapper<decltype(CLS::PROP)>::getter<&CLS::PROP>), (&Swan::Binding::SwanValueWrapper<decltype(CLS::PROP)>::setter<&CLS::PROP,1>)
 #define GETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>)
 #define SETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
 #define MEMBER(CLS,MEM) (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::getter), (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::setter)

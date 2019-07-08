@@ -20,7 +20,7 @@ CXXOPTFLAGS=-g
 endif
 
 ifeq ($(regex),boost)
-OPT_BOOST_REGEX_LIB=-lboost_regex_1_61_0
+OPT_BOOST_REGEX_LIB=-L. -lboost_regex-mgw81-mt-x32-1_70
 DEFINES += USE_BOOST_REGEX
 else
 OPT_BOOST_REGEX_LIB=
@@ -38,7 +38,7 @@ OBJDIR=obj$(NAME_SUFFIX)/
 CXX=g++
 CXXFLAGS=-std=gnu++17 -Wextra $(addprefix -D,$(DEFINES))
 DLL_LDFLAGS=-shared -Wl,--out-implib,$(IMP_LIB) $(OPT_BOOST_REGEX_LIB)
-CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX)
+CLI_LDFLAGS=-L. -l$(LIBNAME)$(NAME_SUFFIX) -lboost_iostreams-mgw81-mt-x32-1_70 -lboost_filesystem-mgw81-mt-x32-1_70 -lboost_date_time-mgw81-mt-x32-1_70
 
 SRCS=$(wildcard swan/vm/*.cpp) $(wildcard swan/lib/*.cpp) $(wildcard swan/misc/*.cpp) $(wildcard swan/parser/*.cpp)
 CPPRINTF_SRCS=$(wildcard cpprintf/*.cpp)

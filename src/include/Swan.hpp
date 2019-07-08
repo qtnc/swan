@@ -21,7 +21,7 @@
 /** Swan version in use: hexadecimal number 0xVVYYMMPP, where V=major version, Y=year, M=month, P=patch.
 Compatibility is ensured if the version only differ in patch, i.e. 0.19.4a is compatible with 0.19.4b, but not with 0.19.5.
 */
-#define SWAN_VERSION 0x00130600UL
+#define SWAN_VERSION 0x00130700UL
 
 namespace Swan {
 
@@ -149,13 +149,21 @@ For example, handles can be used to keep Swan callbacks to call from C++ at late
 Keeping an handle alive prevent the corresponding Swan object from being garbage-collected. 
 */
 struct export Handle {
-export Handle ();
-Handle (const Handle&) = default;
-export Handle (Handle&&);
-Handle& operator= (const Handle&) = default;
-Handle& export operator= (Handle&&);
-export ~Handle ();
+private:
+export void assign (uint64_t);
+export void release ();
+public:
+/** Do not use, should be private */
 uint64_t value;
+/** Do not use, should be private */
+inline explicit Handle (uint64_t x): Handle() { assign(x); }
+/** Default constructor, constructing a handle to the value undefined */
+export Handle ();
+inline Handle (const Handle& h): Handle() { assign(h.value); }
+inline Handle (Handle&& h): Handle() { assign(h.value); h.release(); }
+inline Handle& operator= (const Handle& h) { assign(h.value); return *this; }
+inline Handle& operator= (Handle&& h) { assign(h.value); h.release(); return *this; }
+inline ~Handle () { release(); }
 };
 
 /** 

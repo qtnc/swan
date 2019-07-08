@@ -20,7 +20,7 @@ std::unordered_map<std::string,QV> imports;
 std::unordered_map<std::string, GlobalVariable> globalSymbols;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
-std::vector<QV> keptHandles;
+std::unordered_map<uint64_t, uint32_t> keptHandles;
 std::vector<QFiber*> fibers;
 QFiber *activeFiber;
 PathResolverFn pathResolver;

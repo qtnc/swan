@@ -310,7 +310,7 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 roots.insert(roots.end(), fibers.begin(), fibers.end());
 for (QObject* obj: roots) obj->gcVisit();
 for (QV& gv: globalVariables) gv.gcVisit();
-for (QV& kh: keptHandles) kh.gcVisit();
+for (auto& kh: keptHandles) QV(kh.first).gcVisit();
 for (auto& im: imports) im.second.gcVisit();
 
 auto prevMemUsage = gcMemUsage;

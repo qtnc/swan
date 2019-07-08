@@ -26,6 +26,16 @@ utf8::append(*it, out);
 }
 return n;
 }
+template <class Source> std::streamsize read0 (Source& source, char* s, std::streamsize n) {
+for (char* it=s, *end=s+n; it<end; ) {
+if (end-it<2) return io::WOULD_BLOCK;
+auto x = io::get(source);
+if (x==io::WOULD_BLOCK) return it-s;
+else if (x==EOF) return it-s? it-s : EOF;
+it = utf8::append(*reinterpret_cast<uint8_t*>(&x), it);
+}
+return n;
+}
 };
 
 struct u8tobin: io::multichar_output_filter {
@@ -34,6 +44,19 @@ sink_output_iterator<Sink,uint8_t> out(sink);
 const char* e = utf8::find_invalid(s, s+n);
 utf8::utf8to32(s, e, out);
 return e-s;
+}
+template <class Source> std::streamsize read0 (Source& source, char* s, std::streamsize n) {
+char buf[4] = {0};
+int i=0, j=0;
+for (char* it=s, *end=s+n; it<end; ) {
+auto x = io::get(source);
+if (x==io::WOULD_BLOCK) return it-s;
+else if (x==EOF) return it-s? it-s : EOF;
+buf[i++]=x;
+if (utf8::find_invalid(buf, buf+i)!=buf+i) continue;
+*it++ = utf8::peek_next(buf, buf+i);
+}
+return n;
 }
 };
 
@@ -164,8 +187,8 @@ else in.push(io::invert(Dec()));
 
 unordered_map<string, shared_ptr<Swan::Codec>> QVM::codecs = {
 { "utf8", make_shared<NopCodec>() },
-{ "binary", make_shared<FltCodec<u8tobin, bintou8>>() },
-{ "utf16", make_shared<FltCodec<u8to16, u16to8>>() }
+{ "binary", make_shared<FltCodec<u8tobin, bintou8>>() }
+, { "utf16", make_shared<FltCodec<u8to16, u16to8>>() }
 , { "hex", make_shared<FltCodec<dectohex, hextodec, CFE_ENCODE_VALID_STRING>>() }
 , { "urlencoded", make_shared<FltCodec<urlencode, urldecode, CFE_ENCODE_VALID_STRING>>() }
 };

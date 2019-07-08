@@ -1,137 +1,14 @@
-#include<optional>
+#include "IO.hpp"
 #include "../include/Swan.hpp"
 #include "../include/SwanBinding.hpp"
 #include "../include/SwanCodec.hpp"
-#include "../include/cpprintf.hpp"
-#include<vector>
-#include<sstream>
-#include<exception>
-#include<memory>
-#include<cstdlib>
-#include<cstdio>
-#include<boost/iostreams/device/file.hpp>
 using namespace std;
 namespace io = boost::iostreams;
 
-typedef vector<string> encspec;
-
-template<class E, class... A> inline void error (const char* fmt, A&&... args) {
-string msg = format(fmt, args...);
-throw E(msg);
-}
-
-template<class Source>
-static bool buildInput (Source& src, shared_ptr<io::filtering_istream>& f,  const encspec& encodings) {
-if (!f) f = make_shared<io::filtering_istream>();
-else while(f->size()) f->pop();
-optional<bool> binary;
-f->set_auto_close(false);
-for (auto it=encodings.rbegin(), end=encodings.rend(); it!=end; ++it) {
-auto& codec = Swan::VM::findCodec(*it);
-codec.transcode(*f, false);
-if (!binary.has_value()) binary = !(codec.getFlags()&CFE_DECODE_VALID_STRING);
-}
-f->push(src);
-return binary.value_or(true);
-}
-
-template<class Sink>
-static bool buildOutput (Sink& snk, shared_ptr<io::filtering_ostream>& f, const encspec& encodings) {
-if (!f) f = make_shared<io::filtering_ostream>();
-else while(f->size()) f->pop();
-bool binary = true;
-f->set_auto_close(false);
-for (auto& encoding: encodings) {
-auto& codec = Swan::VM::findCodec(encoding);
-codec.transcode(*f, true);
-binary = codec.getFlags()&CFE_ENCODE_VALID_STRING;
-}
-f->push(snk);
-return binary;
-}
-
-struct Reader {
-shared_ptr<io::filtering_istream> in;
-encspec encodings;
-bool binary;
-virtual ~Reader () = default;
-virtual bool isBinary () { return binary; }
-virtual void close () { in.reset(); }
-virtual int read (char* buf, int max) {
-in->read(buf, max);
-return in? in->gcount() : -1;
-}
-virtual string readAll () {
-ostringstream out;
-out << in->rdbuf()  << flush;
-return out.str();
-}
-virtual bool readLine (string& s) { 
-return static_cast<bool>(std::getline(*in,s)); 
-}
-virtual int tell (int pos) { return in->tellg(); }
-virtual void seek (int pos) {
-if (pos<0) in->seekg(pos+1, ios::end);
-else in->seekg(pos, ios::beg);
-}
-template<class Source> void reset (Source& src, const encspec& enc) {
-encodings = enc;
-binary = buildInput(src, in, encodings);
-}};
-
-struct Writer {
-shared_ptr<io::filtering_ostream> out;
-encspec encodings;
-bool binary;
-virtual ~Writer() = default;
-virtual bool isBinary () { return binary; }
-virtual void write (const char* buf, size_t length) {  out->write(buf, length); }
-virtual void write (const string& s) { write(s.data(), s.size()); }
-virtual void flush () { out->flush(); }
-virtual void close () { out.reset(); }
-virtual int tell () { return out->tellp(); }
-virtual void seek (int pos) {
-if (pos<0) out->seekp(pos+1, ios::end);
-else out->seekp(pos, ios::beg);
-}
-template<class Sink> void reset (Sink& snk, const encspec& enc) {
-encodings = enc;
-binary = buildOutput(snk, out, encodings);
-}};
-
-struct MemWriter: Writer {
-string data;
-io::back_insert_device<string> sink;
-MemWriter (const encspec& encodings = {}):
-data(), sink(data) 
-{ reset(sink, encodings); }
-virtual ~MemWriter () = default;
+struct IO {
+static Swan::Handle in, out, err;
 };
-
-struct MemReader: Reader {
-string data;
-io::array_source source;
-MemReader (const string& data0, const encspec& encodings = {}): 
-data(data0), source(data.data(), data.size()) 
-{ reset(source, encodings); }
-virtual ~MemReader () = default;
-};
-
-struct FileReader: Reader {
-io::file_source source;
-FileReader (const string& filename, const encspec& encodings, ios::openmode mode = ios::in):
-source(filename, mode) 
-{ reset(source, encodings); }
-virtual ~FileReader () = default;
-};
-
-struct FileWriter: Writer {
-io::file_sink sink;
-FileWriter (const string& filename, const encspec& encodings, ios::openmode mode):
-sink(filename, mode) 
-{ reset(sink, encodings); }
-virtual ~FileWriter () = default;
-};
+Swan::Handle IO::in, IO::out, IO::err;
 
 static void writerWrite (Swan::Fiber& f) {
 Writer& w = f.getUserObject<Writer>(0);
@@ -224,17 +101,21 @@ return encs;
 }
 
 static void fileReaderConstruct (Swan::Fiber& f) {
-string filename = f.getString(1);
+int  fd = f.getOptionalNum(1, -1);
+string filename = f.getOptionalString(1, "");
 auto mode = decodeMode(f, 2, "r");
 auto enc = decodeEncoding(f, 2);
-f.emplaceUserObject<FileReader>(0, filename, enc, mode);
+if (fd>=0) f.emplaceUserObject<FileReader>(0, fd, enc);
+else f.emplaceUserObject<FileReader>(0, filename, enc, mode);
 }
 
 static void fileWriterConstruct (Swan::Fiber& f) {
-string filename = f.getString(1);
+int fd = f.getOptionalNum(1, -1);
+string filename = f.getOptionalString(1, "");
 auto mode = decodeMode(f, 2, "w");
 auto enc = decodeEncoding(f, 2);
-f.emplaceUserObject<FileWriter>(0, filename, enc, mode);
+if (fd>=0) f.emplaceUserObject<FileWriter>(0, fd, enc);
+else f.emplaceUserObject<FileWriter>(0, filename, enc, mode);
 }
 
 static void memWriterConstruct (Swan::Fiber& f) {
@@ -324,4 +205,27 @@ f.pop(); // MemWriter
 
 f.putInMap(-2, "Writer");
 f.pop(); // Writer
+
+f.pushNewClass<IO>("IO");
+f.registerStaticProperty("in", STATIC_PROPERTY(IO, in));
+f.registerStaticProperty("out", STATIC_PROPERTY(IO, out));
+f.registerStaticProperty("err", STATIC_PROPERTY(IO, err));
+f.putInMap(-2, "IO");
+f.pop(); // IO
+
+encspec defenc = { "binary" };
+f.pushUndefined();
+f.emplaceUserObject<FileReader>(-1, 0, defenc);
+IO::in = f.getHandle(-1);
+f.pop();
+
+f.pushUndefined();
+f.emplaceUserObject<FileWriter>(-1, 1, defenc);
+IO::out = f.getHandle(-1);
+f.pop();
+
+f.pushUndefined();
+f.emplaceUserObject<FileWriter>(-1, 2, defenc);
+IO::err = f.getHandle(-1);
+f.pop();
 }
