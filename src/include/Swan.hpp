@@ -552,28 +552,6 @@ virtual void setCopy (int targetIndex, int sourceIndex = -1) = 0;
 */
 virtual void insertCopy (int targetIndex, int sourceIndex = -1) = 0;
 
-/** Replace the element at the given stack index by the element at the back of the stack and pop it.
-@param tackIndex the stack index where to pop into
-*/
-inline void setAndPop (int stackIndex) { setCopy(stackIndex, -1); pop(); }
-
-/** Pop the element at the back of the stack and insert it back in the given index.
-@param stackIndex the stack index where to insert the poped element
-*/
-inline void insertAndPop (int stackIndex) { insertCopy(stackIndex, -1); pop(); }
-
-/** Store the element on top of the stack into the map at mapIndex with the specified key
-@param mapIndex the stack index where the map is
-@param key the key where to store the element
-*/
-inline void putInMap (int mapIndex, const std::string& key) {
-pushCopy(mapIndex);
-pushString(key);
-pushCopy(-3);
-callMethod("[]=", 3);
-pop();
-}
-
 /** Loads the given Swan source code and compile it. 
 @param source the Swan source code
 @param name name used in compilation or runtime error messages. 
@@ -660,6 +638,104 @@ The class on which to store the destructor must be present at the back of the st
 */
 virtual void storeDestructor ( void(*dtor)(void*) ) = 0;
 
+/** Push a new empty list on top of the stack */
+inline void pushNewList () {
+loadGlobal("List");
+call(0);
+}
+
+/** Push a new empty map on top of the stack */
+inline void pushNewMap () {
+loadGlobal("Map");
+call(0);
+}
+
+/** Replace the element at stackIndex with a new empty list
+@param stackIndex the stack index where to put the new list
+*/
+inline void setNewList (int stackIndex) {
+pushNewList();
+setCopy(stackIndex);
+pop();
+}
+
+/** Replace the element at stackIndex with a new empty map 
+@param stackIndex the stack index where to put the new map
+*/
+inline void setNewMap (int stackIndex) {
+pushNewMap();
+setCopy(stackIndex);
+pop();
+}
+
+/** Loads m[key] on top of the stack, where m is the element at stackIndex
+@param stackIndex the stack index where the mappable object is
+@param key the key
+*/
+inline void loadIndex (int stackIndex, const std::string& key) {
+pushCopy(stackIndex);
+pushString(key);
+callMethod("[]", 2);
+}
+
+/** Loads m[key] on top of the stack, where m is the element at stackIndex
+@param stackIndex the stack index where the mappable object is
+@param key the key
+*/
+inline void loadIndex (int stackIndex, int key) {
+pushCopy(stackIndex);
+pushNum(key);
+callMethod("[]", 2);
+}
+
+/** Store the element on top of the stack into the object at mapIndex with the specified key, i.e. m[key]=value with m the element at stackIndex and value the element on top of the stack.
+@param mapIndex the stack index where the map is
+@param key the key where to store the element
+*/
+inline void storeIndex (int mapIndex, const std::string& key) {
+pushCopy(mapIndex);
+pushString(key);
+pushCopy(-3);
+callMethod("[]=", 3);
+pop();
+}
+
+/** Store the element on top of the stack into the object at mapIndex with the specified key, i.e. m[key]=value with m the element at stackIndex and value the element on top of the stack.
+@param mapIndex the stack index where the map is
+@param key the key where to store the element
+*/
+inline void storeIndex (int mapIndex, int key) {
+pushCopy(mapIndex);
+pushNum(key);
+pushCopy(-3);
+callMethod("[]=", 3);
+pop();
+}
+
+private: bool isInstanceOfGlobal (int stackIndex, const std::string& name) {
+pushCopy(stackIndex);
+loadGlobal(name);
+swap();
+callMethod("is", 2);
+bool result = getBool(-1);
+pop();
+return result;
+} public:
+
+/** Check if the element at stackIndex is iterable
+@param stackIndex the stack index to check
+*/
+inline bool isIterable (int stackIndex) {
+return isInstanceOfGlobal(stackIndex, "Iterable");
+}
+
+/** Check if the element at stackIndex is a mapping
+@param stackIndex the stack index to check
+*/
+inline bool isMapping (int stackIndex) {
+return isInstanceOfGlobal(stackIndex, "Mapping");
+}
+
 template<class R, class... A> std::function<R(A...)> getCallback (int stackIndex);
 template<class... A> std::function<void(A...)> getCallback (int stackIndex);
 template <class R, class... A> void setCallback (int stackIndex, const std::function<R(A...)>& func);
@@ -729,9 +805,15 @@ The stored object on the stack is constructed in place.
 @param stackIndex the stack index which has to be replaced
 @param args arguments to pass to the constructor of T
 */
-template<class T, class... A> inline void emplaceUserObject (int stackIndex, A&&... args);
+template<class T, class... A> inline void setEmplaceUserObject (int stackIndex, A&&... args);
 
-/** Create a new Swan class with the given name and push it at the back of the stack.
+/** construct in place and push an object of a registered type onto the stack.
+@param <T> the registered user-defined type
+@param args arguments to pass to the constructor of T
+*/
+template<class T, class... A> inline void pushEmplaceUserObject (A&&... args);
+
+/** Create a new C++ class for use in Swan. The new class is pushed on the stack.
 Parents, if any, must be pushed first. If no parent is given, the class at least anyway extends Object by default.
 @param <T> the type to register
 @param name the name of the class in Swan
@@ -875,6 +957,24 @@ The class on which to store the destructor method must be pushed first.
 @param <T> the registered user-defined type
 */
 template <class T> inline void registerDestructor ();
+
+/** Iterate through the items of the element at stackIndex. 
+The callable function is called once for each item found.
+The item found at current iteration is on top of the stack.
+@param stackIndex the stack index of the iterable element to be iterated through
+@param func any callable object: C++11 lambda, functor, etc.
+*/
+template<class F> inline void iterate (int stackIndex, const F& func) {
+pushCopy(stackIndex);
+callMethod("iterator", 1);
+do {
+pushCopy();
+callMethod("next", 1);
+if (isUndefined(-1)) { pop(); break; }
+else { func(*this); pop(); }
+} while(true);
+}
+
 };
 
 /** The class representing a Swan virtual machine  on which scripts will be run */

@@ -705,8 +705,13 @@ void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
 Swan::Binding::UserObjectTrait<T>::store(ptr, obj);
 }
 
-template<class T, class... A> inline void Fiber::emplaceUserObject (int stackIndex, A&&... args) {
+template<class T, class... A> inline void Fiber::setEmplaceUserObject (int stackIndex, A&&... args) {
 void* ptr = setNewUserPointer(stackIndex, typeid(T).hash_code());
+Swan::Binding::UserObjectTrait<T>::emplace(ptr, args...);
+}
+
+template<class T, class... A> inline void Fiber::pushEmplaceUserObject (A&&... args) {
+void* ptr = pushNewUserPointer(typeid(T).hash_code());
 Swan::Binding::UserObjectTrait<T>::emplace(ptr, args...);
 }
 
