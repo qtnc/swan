@@ -490,11 +490,19 @@ template <class UNUSED> struct SwanWrapper: std::false_type { };
 template<class T, class R, class... A> struct SwanWrapper< R (T::*)(A...) > {
 typedef R(T::*Func)(A...);
 template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
+template<int... S> static R callUnlockedNative (sequence<S...> unused, Swan::Fiber& fb, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  Swan::ScopeUnlocker unlocker(fb.getVM()); return (obj->*func)( std::get<S>(params)... );  }
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 T* obj = SwanGetSlot<T*>::get(f, 0);
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 R result = callNative(seq, obj, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+R result = callUnlockedNative(seq, f, obj, func, params);
 SwanSetSlot<R>::set(f, 0, result);
 }
 };
@@ -508,16 +516,31 @@ T* obj = SwanGetSlot<T*>::get(f, 0);
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 callNative(seq, obj, func, params);
 }
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+Swan::ScopeUnlocker unlocker(f.getVM());
+callNative(seq, obj, func, params);
+}
 };
 
 template<class T, class R, class... A> struct SwanWrapper< R (T::*)(A...)const> {
 typedef R(T::*Func)(A...)const;
 template<int... S> static R callNative (sequence<S...> unused, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return (obj->*func)( std::get<S>(params)... );  }
+template<int... S> static R callUnlockedNative (sequence<S...> unused, Swan::Fiber& fb, T* obj, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  Swan::ScopeUnlocker unlocker(fb.getVM()); return (obj->*func)( std::get<S>(params)... );  }
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 T* obj = SwanGetSlot<T*>::get(f, 0);
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 R result = callNative(seq, obj, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+R result = callUnlockedNative(seq, f, obj, func, params);
 SwanSetSlot<R>::set(f, 0, result);
 }
 };
@@ -531,15 +554,29 @@ T* obj = SwanGetSlot<T*>::get(f, 0);
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 callNative(seq, obj, func, params);
 }
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+T* obj = SwanGetSlot<T*>::get(f, 0);
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+Swan::ScopeUnlocker unlocker(f.getVM());
+callNative(seq, obj, func, params);
+}
 };
 
 template<class R, class... A> struct SwanWrapper< R(A...) > {
 typedef R(*Func)(A...);
 template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
+template<int... S> static R callUnlockedNative (sequence<S...> unused, Swan::Fiber& fb, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  Swan::ScopeUnlocker unlocker(fb.getVM()); return func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
 R result = callNative(seq, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+R result = callUnlockedNative(seq, f, func, params);
 SwanSetSlot<R>::set(f, 0, result);
 }
 };
@@ -552,17 +589,29 @@ typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
 callNative(seq, func, params);
 }
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+Swan::ScopeUnlocker unlocker(f.getVM());
+callNative(seq, func, params);
+}
 };
 
-//Begin added
 #ifdef __WIN32
 template<class R, class... A> struct SwanWrapper< R __stdcall(A...) > {
 typedef R(*__stdcall Func)(A...);
 template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
+template<int... S> static R callUnlockedNative (sequence<S...> unused, Swan::Fiber& fb, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  Swan::ScopeUnlocker unlocker(fb.getVM()); return func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
 R result = callNative(seq, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+R result = callUnlockedNative(seq, f, func, params);
 SwanSetSlot<R>::set(f, 0, result);
 }
 };
@@ -573,6 +622,12 @@ template<int... S> static void callNative (sequence<S...> unused, Func func, con
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+callNative(seq, func, params);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0, A...>::extract(seq, f);
+Swan::ScopeUnlocker unlocker(f.getVM());
 callNative(seq, func, params);
 }
 };
@@ -602,17 +657,23 @@ std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<0
 callNative(seq, func, params);
 };}
 };
-//End added
 
 template <class UNUSED> struct SwanStaticWrapper: std::false_type { };
 
 template<class R, class... A> struct SwanStaticWrapper< R(A...) > {
 typedef R(*Func)(A...);
 template<int... S> static R callNative (sequence<S...> unused, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  return func( std::get<S>(params)... );  }
+template<int... S> static R callUnlockedNative (sequence<S...> unused, Swan::Fiber& fb, Func func, const std::tuple<typename SwanGetSlot<A>::returnType...>& params) {  Swan::ScopeUnlocker unlocker(fb.getVM()); return func( std::get<S>(params)... );  }
 template<Func func> static void wrapper (Swan::Fiber& f) {
 typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 R result = callNative(seq, func, params);
+SwanSetSlot<R>::set(f, 0, result);
+}
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+R result = callUnlockedNative(seq, f, func, params);
 SwanSetSlot<R>::set(f, 0, result);
 }
 };
@@ -625,8 +686,13 @@ typename sequence_generator<sizeof...(A)>::type seq;
 std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
 callNative(seq, func, params);
 }
+template<Func func> static void unlocked_wrapper (Swan::Fiber& f) {
+typename sequence_generator<sizeof...(A)>::type seq;
+std::tuple<typename SwanGetSlot<A>::returnType...> params = SwanParamExtractor<1, A...>::extract(seq, f);
+Swan::ScopeUnlocker(f.getVM());
+callNative(seq, func, params);
+}
 };
-
 
 
 template<class T, class... A> struct SwanConstructorWrapper {
@@ -757,13 +823,38 @@ storeDestructor(&Swan::Binding::SwanDestructorWrapper<T>::destructor);
 
 } // namespace Swan
 
+/** Convert a regular function to a native Swan function */
 #define FUNCTION(...) (&Swan::Binding::SwanWrapper<decltype(__VA_ARGS__)>::wrapper<&(__VA_ARGS__)>)
+
+/** Convert a class method to a Swan native function, the first argument of the function being the this object */
 #define METHOD(CLS,...) (&Swan::Binding::SwanWrapper<decltype(&CLS::__VA_ARGS__)>::wrapper<&CLS::__VA_ARGS__>)
+
+/** Convert a regular function into a Swan native function for use as a Swan static method. Use this instead of FUNCTION when registering static members. */
 #define STATIC_METHOD(...) (&Swan::Binding::SwanStaticWrapper<decltype(__VA_ARGS__)>::wrapper<&(__VA_ARGS__)>)
+
+/** Convert a property into a couple of Swan native functions to get/set the property */
 #define PROPERTY(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>), (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
+
+/** Convert a property into a couple of Swan native functions to get/set the property, for use as a a Swan static property.  */
 #define STATIC_PROPERTY(CLS,PROP) (&Swan::Binding::SwanValueWrapper<decltype(CLS::PROP)>::getter<&CLS::PROP>), (&Swan::Binding::SwanValueWrapper<decltype(CLS::PROP)>::setter<&CLS::PROP,1>)
+
+/** Convert a property into a Swan native function getting the property */
 #define GETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::getter<&CLS::PROP>)
+
+/** Convert a property into a Swan native function setting the property */
 #define SETTER(CLS,PROP) (&Swan::Binding::SwanPropertyWrapper<decltype(&CLS::PROP)>::setter<&CLS::PROP>)
+
+/** Convert a property into a couple of Swan native functions to get/set the property. Use this when PROPERTY is unssuficient, for example when accessing a nested member */
 #define MEMBER(CLS,MEM) (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::getter), (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::setter)
+
+
+/** Convert a regular function into a Swan native function. The Swan VM is unlocked while exeucting the function. */
+#define UNLOCKED_FUNCTION(...) (&Swan::Binding::SwanWrapper<decltype(__VA_ARGS__)>::unlocked_wrapper<&(__VA_ARGS__)>)
+
+/** Convert a class method to a Swan native function, the first argument of the function being the this object. The Swan VM is unlocked while executing the method.  */
+#define UNLOCKED_METHOD(CLS,...) (&Swan::Binding::SwanWrapper<decltype(&CLS::__VA_ARGS__)>::unlocked_wrapper<&CLS::__VA_ARGS__>)
+
+/** Convert a regular function into a Swan native function, for use as a Swan static method. The Swan VM is unlocked while exeucting the function. */
+#define UNLOCKED_STATIC_METHOD(...) (&Swan::Binding::SwanStaticWrapper<decltype(__VA_ARGS__)>::unlocked_wrapper<&(__VA_ARGS__)>)
 
 #endif
