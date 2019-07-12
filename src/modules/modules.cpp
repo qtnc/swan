@@ -1,4 +1,5 @@
 #include "../include/Swan.hpp"
+#include "../include/SwanBinding.hpp"
 #include "../include/cpprintf.hpp"
 #include<sstream>
 #include<fstream>
@@ -17,6 +18,7 @@ unordered_map<string,function<void(Swan::Fiber&)>> builtInModules = {
 };
 
 void print (Swan::Fiber&);
+double dclock ();
 
 void printStackTrace (Swan::RuntimeException& e) {
 println(std::cerr, "ERROR: %s", e.what());
@@ -52,5 +54,6 @@ vm.setFileLoader(fileLoader);
 vm.setImportHook(importHook);
 auto& f = vm.getActiveFiber();
 f.registerFunction("print", print);
+f.registerFunction("clock", FUNCTION(dclock));
 return vm;
 }

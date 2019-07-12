@@ -8,7 +8,6 @@ using namespace std;
 #include "../lib/builtin-code.h"
 
 void purgeMem ();
-void initPlatformEncodings ();
 
 static void defaultMessageReceiver (const Swan::CompilationMessage& m) {
 const char* kinds[] = { "ERROR", "WARNING", "INFO" };
@@ -167,8 +166,6 @@ unlock();
 }
 
 void QVM::init () {
-initPlatformEncodings();
-
 initBaseTypes();
 initNumberType();
 initIterableType();

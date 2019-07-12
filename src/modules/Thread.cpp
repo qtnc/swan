@@ -20,7 +20,7 @@ fb.pushHandle(func);
 fb.call(0);
 fb.release();
 });
-f.emplaceUserObject<SwanThread>(0);
+f.setEmplaceUserObject<SwanThread>(0);
 f.getUserObject<SwanThread>(0) .thr = move(t);
 }
 

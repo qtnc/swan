@@ -1,6 +1,11 @@
 #include "../include/Swan.hpp"
 #include<iostream>
+#include<ctime>
 using namespace std;
+
+double dclock () {
+return 1.0 * clock() / CLOCKS_PER_SEC;
+}
 
 void print (Swan::Fiber& f) {
 auto& p = std::cout;
