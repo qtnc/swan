@@ -2698,10 +2698,18 @@ if (!assignable || !assignable->isAssignable()) continue;
 if (!first) compiler.writeOp(OP_POP);
 first=false;
 shared_ptr<Expression> value = nullptr;
-auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first);
-if (method) value = createBinaryOperation(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = createBinaryOperation(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
 else {
-vector<shared_ptr<Expression>> indices = { item.first };
+shared_ptr<Expression> subscript = item.first;
+if (auto field = dynamic_pointer_cast<FieldExpression>(subscript))  {
+field->token.value = QV(compiler.vm, field->token.start, field->token.length);
+subscript = make_shared<ConstantExpression>(field->token);
+}
+else if (auto field = dynamic_pointer_cast<StaticFieldExpression>(subscript))  {
+field->token.value = QV(compiler.vm, field->token.start, field->token.length);
+subscript = make_shared<ConstantExpression>(field->token);
+}
+vector<shared_ptr<Expression>> indices = { subscript };
 value = make_shared<SubscriptExpression>(tmpVar, indices);
 }
 if (defaultValue) value = createBinaryOperation(value, T_QUESTQUEST, defaultValue)->optimize();
@@ -2897,7 +2905,7 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in 
 
 void CallExpression::compile (QCompiler& compiler) {
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
-if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0) {
+if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0 && compiler.getCurClass()) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize()->compile(compiler);
 return;
