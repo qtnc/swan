@@ -298,6 +298,30 @@ printItems(1, 2, 3, 4, 5)
 
 The tuple can be empty (if less parameters are passed to the function), but never null.
 
+Lambdas can be expressed using the Java or JavaScript syntax as well.
+
+```
+# The following expression are all equal
+x => x+1
+x -> x+1
+$x: x+1
+$(x){ return x+1 }
+function (x) { return x+1 }
+
+# The following expression are all equal
+(a,b) => (b,a)
+(a,b) -> (b,a)
+$(a,b): (b,a)
+$(a,b){ return (b,a) }
+function (a, b) { return (b, a) }
+
+# However, beware that the following three are **NOT** equal
+# See further below in chapter destructuring for more info
+(a,b)=>a+b # is equivalent to $(a,b): a+b
+[a,b]=>a+b # is equivalent to $([a,b]): a+b
+{a,b}=>a+b # is equivalent to $({a,b}): a+b
+```
+
 ## Classes
 As in all object-oriented programming languages, we can create classes and instantiate objects. The syntax is better explained with an example:
 

@@ -127,6 +127,11 @@ struct Comprenable {
 virtual void chain (const shared_ptr<Statement>& sta) = 0;
 };
 
+struct Functionnable {
+virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) = 0;
+virtual bool isFunctionnable () = 0;
+};
+
 struct ConstantExpression: Expression {
 QToken token;
 ConstantExpression(QToken x): token(x) {}
@@ -154,9 +159,11 @@ virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
 };
 
-struct LiteralListExpression: LiteralSequenceExpression {
+struct LiteralListExpression: LiteralSequenceExpression, Functionnable  {
 LiteralListExpression (const QToken& t): LiteralSequenceExpression(t) {}
-void compile (QCompiler& compiler) override {
+virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) override;
+virtual bool isFunctionnable () override;
+virtual void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
 if (isSingleSequence()) {
@@ -202,13 +209,14 @@ else writeOpCallFunction(compiler, items.size());
 }}
 };
 
-
-struct LiteralMapExpression: Expression, Assignable {
+struct LiteralMapExpression: Expression, Assignable, Functionnable {
 QToken type;
 vector<pair<shared_ptr<Expression>, shared_ptr<Expression>>> items;
 LiteralMapExpression (const QToken& t): type(t) {}
 const QToken& nearestToken () override { return type; }
 shared_ptr<Expression> optimize () override { for (auto& p: items) { p.first = p.first->optimize(); p.second = p.second->optimize(); } return shared_this(); }
+virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) override;
+virtual bool isFunctionnable () override;
 virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
 void compile (QCompiler& compiler) override {
@@ -252,9 +260,11 @@ compiler.writeOp(OP_POP);
 }}
 };
 
-struct LiteralTupleExpression: LiteralSequenceExpression {
+struct LiteralTupleExpression: LiteralSequenceExpression, Functionnable  {
 LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p = {}): LiteralSequenceExpression(t, p) {}
-void compile (QCompiler& compiler) override {
+virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) override;
+virtual bool isFunctionnable () override;
+virtual void compile (QCompiler& compiler) override {
 int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
@@ -311,12 +321,14 @@ compiler.writeOp(OP_CALL_FUNCTION_2);
 }
 };
 
-struct NameExpression: Expression, Assignable  {
+struct NameExpression: Expression, Assignable, Functionnable  {
 QToken token;
 NameExpression (QToken x): token(x) {}
-const QToken& nearestToken () override { return token; }
-void compile (QCompiler& compiler) override ;
-void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
+virtual const QToken& nearestToken () override { return token; }
+virtual void compile (QCompiler& compiler) override ;
+virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
+virtual void makeFunctionParameters (vector<shared_ptr<Variable>>& params) override;
+virtual bool isFunctionnable () override { return true; }
 };
 
 struct FieldExpression: Expression, Assignable  {
@@ -983,6 +995,8 @@ INFIX_OP(BAR, InfixOp, |, BITWISE),
 { T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT }},
 { T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, nullptr, "function", "function", P_PREFIX }},
 { T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX }},
+INFIX(MINUSGT, ArrowFunction, ->, COMPREHENSION),
+INFIX(EQGT, ArrowFunction, =>, COMPREHENSION),
 INFIX(DOT, InfixOp, ., MEMBER),
 INFIX(DOTQUEST, InfixOp, .?, MEMBER),
 MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER),
@@ -1822,6 +1836,15 @@ parseFunctionParameters(func);
 matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
 func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);
+return func;
+}
+
+shared_ptr<Expression> QParser::parseArrowFunction (shared_ptr<Expression> fargs) {
+auto functionnable = dynamic_pointer_cast<Functionnable>(fargs);
+if (!functionnable || !functionnable->isFunctionnable()) parseError("Expression can't be considered as the argument list for an anonymous function");
+auto func = make_shared<FunctionDeclaration>(cur);
+functionnable->makeFunctionParameters(func->params);
+func->body = parseExpression();
 return func;
 }
 
@@ -2716,6 +2739,55 @@ if (defaultValue) value = createBinaryOperation(value, T_QUESTQUEST, defaultValu
 assignable->compileAssignment(compiler, value);
 }
 compiler.popScope();
+}
+
+bool isItemFunctionnable (shared_ptr<Expression> item) {
+shared_ptr<Expression> expr = item;
+auto bop = dynamic_pointer_cast<BinaryOperation>(item);
+if (bop && bop->op==T_EQ) expr = bop->left;
+auto functionnable = dynamic_pointer_cast<Functionnable>(expr);
+return functionnable && functionnable->isFunctionnable();
+}
+
+bool LiteralTupleExpression::isFunctionnable () {
+return all_of(items.begin(), items.end(), isItemFunctionnable);
+}
+
+void LiteralTupleExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& params) {
+for (auto& item: items) {
+auto var = make_shared<Variable>(nullptr, nullptr);
+auto bx = dynamic_pointer_cast<BinaryOperation>(item);
+if (bx && bx->op==T_EQ) {
+var->name = bx->left;
+var->value = bx->right;
+}
+else {
+var->name = item;
+var->flags |= VD_NODEFAULT;
+}
+params.push_back(var);
+}}
+
+bool LiteralListExpression::isFunctionnable () {
+return all_of(items.begin(), items.end(), isItemFunctionnable);
+}
+
+void LiteralListExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& params) {
+auto var = make_shared<Variable>(shared_this(), make_shared<LiteralListExpression>(nearestToken()));
+params.push_back(var);
+}
+
+bool LiteralMapExpression::isFunctionnable () {
+return all_of(items.begin(), items.end(), [&](auto& item){ return isItemFunctionnable(item.second); });
+}
+
+void LiteralMapExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& params) {
+auto var = make_shared<Variable>(shared_this(), make_shared<LiteralMapExpression>(nearestToken()));
+params.push_back(var);
+}
+
+void NameExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& params) {
+params.push_back(make_shared<Variable>(shared_this(), nullptr, VD_NODEFAULT));
 }
 
 shared_ptr<Expression> UnaryOperation::optimize () { 
