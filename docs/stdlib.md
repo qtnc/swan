@@ -19,25 +19,6 @@ Methdos:
 - hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - toString: return 'true' or 'false'
 
-## Buffer: is Iterable
-A Buffer is an immutable sequence of octets or 8-bit characters, i.e. a file or memory block, or a non-UTF-8 string.
-
-- Constructor: Buffer(items...): where each item is a number between 0 and 255, create the buffer from the given sequence of bytes
-- Constructor: Buffer(string, encoding="UTF-8"), constructing a buffer holding the data of the strig given, encoding characters in the given encoding.
-- Operators: +
-
-Methods:
-
-- static Buffer.of(sequences...): create a buffer from one or more concatenated buffers
-- endsWith(needle): return true if this buffer ends with the data present in needle
-- findFirstOf(needle): return the position where needle is found within this buffer, or -1 if not found
-- lastIndexOf(needle, start=length): return the position where needle is found within this buffer starting search from the end, or -1 if not found
-- length: return the length of the buffer in bytes
-- indexOf(needle, start=0): return the position where needle is found within this buffer, or -1 if not found
-- iterator: return an iterator to iterate through the bytes of this buffer
-- startsWith(needle): return true if this buffer starts with the data present in needle
-- toString: return a string representation of this object
-
 ## Class: is Object
 An object of type Class represents a class, e.g. Object, Num, Bool, etc.
 The is operator overload of class provide for instance check, i.e. `4 is Num` returns true.
