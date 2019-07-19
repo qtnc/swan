@@ -48,12 +48,21 @@ string name = at(-nParents -1).asString();
 vector<QV> parents(stack.end() -nParents, stack.end());
 stack.erase(stack.end() -nParents -1, stack.end());
 QClass* parent = parents[0].asObject<QClass>();
+auto it = find_if(parents.begin(), parents.end(), [&](auto& p){ return !p.isInstanceOf(vm.classClass); });
+if (it!=parents.end()) {
+error<invalid_argument>("Invalid parent class: %s", it->getClass(vm).name);
+return;
+}
 if (parent->nFields<0) {
-error<invalid_argument>("Unable to inherit from built-in class %s", parent->name);
+error<invalid_argument>("Can't inherit from built-in class %s", parent->name);
 return;
 }
 if (dynamic_cast<QForeignClass*>(parent)) {
-error<invalid_argument>("Unable to inherit from foreign class %s", parent->name);
+error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
+return;
+}
+if (nFields+parent->nFields>=std::numeric_limits<uint_field_index_t>::max()) {
+error<invalid_argument>("Too many member fields");
 return;
 }
 GCLocker gcLocker(vm);

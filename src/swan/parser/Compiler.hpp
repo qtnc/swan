@@ -8,6 +8,7 @@
 #include<string>
 #include<vector>
 #include<sstream>
+#include<limits>
 
 struct QVM;
 struct QParser;
@@ -57,14 +58,8 @@ write<U>(u);
 }
 int writePosition () { return out.tellp(); }
 int writeOpJump  (QOpCode op, uint_jump_offset_t arg = ~0) { return writeOpArg(op, arg); }
-int writeOpJumpBackTo  (QOpCode op, int pos) { return writeOpJump(op, writePosition() -pos + sizeof(uint_jump_offset_t) +1); }
-void patchJump (int pos, int reach=-1) {
-int curpos = out.tellp();
-out.seekp(pos);
-if (reach<0) reach = curpos;
-write<uint_jump_offset_t>(reach -pos  - sizeof(uint_jump_offset_t));
-out.seekp(curpos);
-}
+int writeOpJumpBackTo  (QOpCode op, int pos);
+void patchJump (int pos, int reach=-1);
 template<class T> void patch (int pos, const T& val) {
 int curpos = out.tellp();
 out.seekp(pos);

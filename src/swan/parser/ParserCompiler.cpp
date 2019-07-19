@@ -7,6 +7,7 @@
 #include "../../include/cpprintf.hpp"
 #include<cmath>
 #include<cstdlib>
+#include<limits>
 #include<memory>
 #include<algorithm>
 #include<unordered_map>
@@ -65,17 +66,17 @@ else return -1;
 
 static inline void writeOpCallFunction (QCompiler& compiler, uint8_t nArgs) {
 if (nArgs<16) compiler.writeOp(static_cast<QOpCode>(OP_CALL_FUNCTION_0 + nArgs));
-else compiler.writeOpArg<uint8_t>(OP_CALL_FUNCTION, nArgs);
+else compiler.writeOpArg<uint_local_index_t>(OP_CALL_FUNCTION, nArgs);
 }
 
 static inline void writeOpCallMethod (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
 if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
-else compiler.writeOpArgs<uint_method_symbol_t, uint8_t>(OP_CALL_METHOD, symbol, nArgs+1);
+else compiler.writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_METHOD, symbol, nArgs+1);
 }
 
 static inline void writeOpCallSuper  (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
 if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
-else compiler.writeOpArgs<uint_method_symbol_t, uint8_t>(OP_CALL_SUPER, symbol, nArgs+1);
+else compiler.writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_SUPER, symbol, nArgs+1);
 }
 
 static inline void writeOpLoadLocal (QCompiler& compiler, uint_local_index_t slot) {
@@ -94,6 +95,22 @@ static inline void doCompileTimeImport (QVM& vm, const string& baseFile, shared_
 
 void QCompiler::writeDebugLine (const QToken& tk) {
 if (parser.vm.compileDbgInfo) writeOpArg<int16_t>(OP_DEBUG_LINE, parser.getPositionOf(tk.start).first);
+}
+
+int QCompiler::writeOpJumpBackTo  (QOpCode op, int pos) { 
+int distance = writePosition() -pos + sizeof(uint_jump_offset_t) +1;
+if (distance >= std::numeric_limits<uint_jump_offset_t>::max()) compileError(parser.cur, "Jump too long");
+return writeOpJump(op, distance); 
+}
+
+void QCompiler::patchJump (int pos, int reach) {
+int curpos = out.tellp();
+out.seekp(pos);
+if (reach<0) reach = curpos;
+int distance = reach -pos  - sizeof(uint_jump_offset_t);
+if (distance >= std::numeric_limits<uint_jump_offset_t>::max()) compileError(parser.cur, "Jump too long");
+write<uint_jump_offset_t>(distance);
+out.seekp(curpos);
 }
 
 struct Statement: std::enable_shared_from_this<Statement>  {
@@ -1515,7 +1532,7 @@ while(match(T_COMMA)) {
 clearStatements();
 activeCase = parseExpression();
 }
-matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+match(T_COLON);
 }
 else if (matchOneOf(T_DEFAULT, T_ELSE)) {
 clearStatements();
@@ -1791,7 +1808,7 @@ return;
 if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=2) {
 parseError(("Setter methods must take exactly one argument"));
 }
-matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+match(T_COLON);
 if (match(T_SEMICOLON)) func->body = make_shared<SimpleStatement>(cur);
 else func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);
@@ -1833,7 +1850,7 @@ if (matchOneOf(T_DOLLAR, T_UND)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
 else if (match(T_AMP)) flags |= FD_ASYNC;
 parseFunctionParameters(func);
-matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+match(T_COLON);
 func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);
 return func;
@@ -2127,6 +2144,7 @@ else if (arg) args.push_back(arg);
 skipNewlines();
 consume(T_RIGHT_PAREN, ("Expected ')' to close method call"));
 }
+if (args.size() >= std::numeric_limits<uint_local_index_t>::max() -2) parseError("Too many arguments passed");
 return make_shared<CallExpression>(receiver, args);
 }
 
@@ -2138,6 +2156,7 @@ if (arg) args.push_back(arg);
 } while(match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close subscript"));
+if (args.size() >= std::numeric_limits<uint_local_index_t>::max() -2) parseError("Too many arguments passed");
 return make_shared<SubscriptExpression>(receiver, args);
 }
 
@@ -2157,12 +2176,12 @@ activeCase = &sw->cases.back();
 activeExpr = &activeCase->second;
 activeCase->first.push_back(parseExpression());
 while(match(T_COMMA)) activeCase->first.push_back(parseExpression());
-matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+match(T_COLON);
 }
 else if (matchOneOf(T_DEFAULT, T_ELSE)) {
 activeCase = nullptr;
 activeExpr = &sw->defaultCase;
-matchOneOf(T_COLON, T_EQGT, T_MINUSGT);
+match(T_COLON);
 }
 else if (match(T_RIGHT_BRACE)) break;
 else {
@@ -3069,6 +3088,8 @@ compiler.writeOp(OP_POP);
 }//end VariableDeclaration::compile
 
 void ClassDeclaration::compile (QCompiler& compiler) {
+if (fields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many member fields");
+if (staticFields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many static member fields");
 for (auto decoration: decorations) decoration->compile(compiler);
 struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
 ClassDeclaration* oldClassDecl = compiler.curClass;
@@ -3229,6 +3250,8 @@ return x.name.length==name.length && strncmp(name.start, x.name.start, name.leng
 });
 if (rvar==localVariables.rend() && !createNew && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)!=QVM::Option::VAR_IMPLICIT) return -1;
 else if (rvar==localVariables.rend() || (createNew && rvar->scope<curScope)) {
+if (createNew && rvar!=localVariables.rend()) compileWarn(name, "Shadowig %s declared at line %d", string(rvar->name.start, rvar->name.length), parser.getPositionOf(rvar->name.start).first);
+if (localVariables.size() >= std::numeric_limits<uint_local_index_t>::max()) compileError(name, "Too many local variables");
 int n = localVariables.size();
 localVariables.push_back({ name, curScope, false, isConst });
 return n;
@@ -3247,11 +3270,14 @@ if (!parent) return -1;
 int slot = parent->findLocalVariable(token, flags);
 if (slot>=0) {
 parent->localVariables[slot].hasUpvalues=true;
-return addUpvalue(slot, false);
+int upslot = addUpvalue(slot, false);
+if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(token, "Too many upvalues");
+return upslot;
 }
 else if (slot==LV_ERR_CONST) return slot;
 slot = parent->findUpvalue(token, flags);
 if (slot>=0) return addUpvalue(slot, true);
+if (slot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(token, "Too many upvalues");
 return slot;
 }
 
@@ -3405,6 +3431,10 @@ sta=sta->optimizeStatement();
 //println("Code after optimization:");
 //println("%s", sta->print());
 sta->compile(*this);
+if (constants.size() >= std::numeric_limits<uint_constant_index_t>::max()) compileError(sta->nearestToken(), "Too many constant values");
+if (vm.methodSymbols.size()  >= std::numeric_limits<uint_method_symbol_t>::max()) compileError(sta->nearestToken(), "Too many method symbols");
+if (vm.globalVariables.size()  >= std::numeric_limits<uint_global_symbol_t>::max()) compileError(sta->nearestToken(), "Too many global variables");
+// Implicit return last expression
 if (lastOp==OP_POP) {
 seek(-1);
 writeOp(OP_RETURN);
