@@ -101,6 +101,21 @@ else if (n==2) value = f.at(1);
 std::fill(list.data.begin()+from, list.data.begin()+to, value);
 }
 
+static void listResize (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+size_t newSize = f.getNum(1);
+QV value = f.getArgCount()>=3? f.at(2) : QV::UNDEFINED;
+size_t curSize = list.data.size();
+list.data.resize(newSize);
+if (newSize>curSize) std::fill(list.data.begin()+curSize, list.data.end(), value);
+}
+
+static void listReserve (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+size_t capacity = f.getNum(1);
+list.data.reserve(capacity);
+}
+
 static void listPush (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 int n = f.getArgCount() -1;
@@ -278,6 +293,8 @@ BIND_F(reverse, listReverse)
 BIND_F(rotate, listRotate)
 BIND_F(lower, listLowerBound)
 BIND_F(upper, listUpperBound)
+BIND_F(resize, listResize)
+BIND_F(reserve, listReserve)
 BIND_F(==, listEquals)
 BIND_F(*, listTimes)
 ;

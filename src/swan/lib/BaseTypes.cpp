@@ -51,7 +51,7 @@ QClass& cls1 = f.getObject<QClass>(0);
 QClass& cls2 = f.at(1).getClass(f.vm);
 if (cls2.isSubclassOf(f.vm.classClass)) {
 QClass& cls3 = f.getObject<QClass>(1);
-f.returnValue(cls3.isSubclassOf(&cls1));
+f.returnValue(cls3.isSubclassOf(&cls1) || cls2.isSubclassOf(&cls1));
 }
 else f.returnValue(cls2.isSubclassOf(&cls1));
 }

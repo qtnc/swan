@@ -134,6 +134,7 @@ BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSet>(0).set.size
 BIND_L(clear, { f.getObject<QSet>(0).set.clear(); })
 BIND_F(add, setAdd)
 BIND_F(remove, setRemove)
+BIND_L(reserve, { f.getObject<QSet>(0).set.reserve(f.getNum(1)); })
 BIND_F(in, setIn)
 BIND_F(==, setEquals)
 ;

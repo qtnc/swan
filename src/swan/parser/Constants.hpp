@@ -22,6 +22,7 @@
 #define FD_METHOD 4
 #define FD_STATIC 8
 #define FD_ASYNC 16
+#define FD_CONST 0x200
 
 enum QOperatorPriority {
 P_LOWEST,

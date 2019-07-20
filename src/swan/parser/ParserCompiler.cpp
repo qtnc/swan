@@ -22,7 +22,8 @@ static const char
 *THIS = "this",
 *EXPORTS = "exports",
 *FIBER = "Fiber",
-*ASYNC = "async";
+*ASYNC = "async",
+*CONSTRUCTOR = "constructor";
 
 OpCodeInfo OPCODE_INFO[] = {
 #define OP(name, stackEffect, nArgs, argFormat) { stackEffect, nArgs, argFormat }
@@ -886,14 +887,32 @@ virtual bool isDecorable () override { return true; }
 };
 
 struct ClassDeclaration: Expression, Decorable  {
+struct Field {
+int index;
+QToken token;
+shared_ptr<Expression> defaultValue;
+};
 QToken name;
 int flags;
-vector<string> fields, staticFields;
 vector<QToken> parents;
 vector<shared_ptr<FunctionDeclaration>> methods;
+unordered_map<string, Field> fields, staticFields;
+
 ClassDeclaration (const QToken& name0, int flgs): name(name0), flags(flgs)  {}
-int findField (const string& name) {  return findName(fields, name, true);  }
-int findStaticField (const string& name) { return findName(staticFields, name, true); }
+int findField (unordered_map<string,Field>& flds, const QToken& name) {
+auto it = flds.find(string(name.start, name.length));
+int index = -1;
+if (it!=flds.end()) index = it->second.index;
+else {
+index = flds.size();
+flds[string(name.start, name.length)] = { index, name, nullptr };
+}
+return index;
+}
+int findField (const QToken& name) {  return findField(fields, name); }
+int findStaticField (const QToken& name) { return findField(staticFields, name); }
+shared_ptr<FunctionDeclaration> findMethod (const QToken& name, bool isStatic);
+void handleAutoConstructor (unordered_map<string,Field>& memberFields, bool isStatic);
 const QToken& nearestToken () override { return name; }
 shared_ptr<Expression> optimize () override { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
 void compile (QCompiler&)override ;
@@ -928,7 +947,7 @@ struct ParserRule {
 typedef shared_ptr<Expression>(QParser::*PrefixFn)(void);
 typedef shared_ptr<Expression>(QParser::*InfixFn)(shared_ptr<Expression> left);
 typedef shared_ptr<Statement>(QParser::*StatementFn)(void);
-typedef void(QParser::*MemberFn)(ClassDeclaration&,bool);
+typedef void(QParser::*MemberFn)(ClassDeclaration&,int);
 PrefixFn prefix = nullptr;
 InfixFn infix = nullptr;
 StatementFn statement = nullptr;
@@ -1010,7 +1029,7 @@ INFIX_OP(BAR, InfixOp, |, BITWISE),
 { T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT }},
 { T_LEFT_BRACE, { &QParser::parseLiteralMap, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX }},
 { T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT }},
-{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, nullptr, "function", "function", P_PREFIX }},
+{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, &QParser::parseMethodDecl2, "function", "function", P_PREFIX }},
 { T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX }},
 INFIX(MINUSGT, ArrowFunction, ->, COMPREHENSION),
 INFIX(EQGT, ArrowFunction, =>, COMPREHENSION),
@@ -1030,24 +1049,25 @@ PREFIX(YIELD, Yield, yield),
 PREFIX(AWAIT, Yield, await),
 
 STATEMENT(SEMICOLON, SimpleStatement),
-STATEMENT(ASYNC, Async),
 STATEMENT(BREAK, Break),
 STATEMENT(CLASS, ClassDecl),
-STATEMENT(CONST, VarDecl),
 STATEMENT(CONTINUE, Continue),
 STATEMENT(EXPORT, ExportDecl),
-{ T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION }},
 STATEMENT(GLOBAL, GlobalDecl),
 STATEMENT(IF, If),
-{ T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX }},
 STATEMENT(REPEAT, RepeatWhile),
 STATEMENT(RETURN, Return),
-{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX }},
 STATEMENT(THROW, Throw),
 STATEMENT(TRY, Try),
-{ T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
 STATEMENT(WITH, With),
-STATEMENT(WHILE, While)
+STATEMENT(WHILE, While),
+
+{ T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION }},
+{ T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX }},
+{ T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
+{ T_CONST, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
+{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX }},
+{ T_ASYNC, { nullptr, nullptr, &QParser::parseAsync, &QParser::parseAsyncMethodDecl, nullptr, nullptr, P_PREFIX }}
 #undef PREFIX
 #undef PREFIX_OP
 #undef INFIX
@@ -1761,7 +1781,7 @@ parseVarList(func->params, VD_SINGLE);
 if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
 
-void QParser::parseDecoratedDecl (ClassDeclaration& cls, bool isStatic) {
+void QParser::parseDecoratedDecl (ClassDeclaration& cls, int flags) {
 vector<shared_ptr<Expression>> decorations;
 int idxFrom = cls.methods.size();
 bool parsed = false;
@@ -1770,7 +1790,7 @@ while (match(T_AT)) {
 const char* c = in;
 while(isSpace(*c) || isLine(*c)) c++;
 if (*c=='(') {
-parseMethodDecl(cls, isStatic);
+parseMethodDecl(cls, flags);
 parsed=true;
 break;
 }
@@ -1781,22 +1801,22 @@ decorations.push_back(decoration);
 }
 if (!parsed) {
 skipNewlines();
-bool isStatic2 = nextToken().type==T_STATIC;
-if (isStatic2) nextToken();
-if (cur.type==T_FUNCTION) nextToken();
+if (nextToken().type==T_STATIC) {
+flags |= FD_STATIC;
+nextToken();
+}
 const ParserRule& rule = rules[cur.type];
-if (rule.member) (this->*rule.member)(cls, isStatic||isStatic2);
+if (rule.member) (this->*rule.member)(cls, flags);
 else { prevToken(); parseError("Expected declaration to decorate"); }
 }
 for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++it) (*it)->decorations = decorations;
 }
 
-void QParser::parseMethodDecl (ClassDeclaration& cls, bool isStatic) {
+void QParser::parseMethodDecl (ClassDeclaration& cls, int flags) {
 prevToken();
 QToken name = nextNameToken(true);
-auto func = make_shared<FunctionDeclaration>(name, FD_METHOD);
+auto func = make_shared<FunctionDeclaration>(name, FD_METHOD | flags);
 parseFunctionParameters(func);
-if (isStatic) func->flags |= FD_STATIC;
 if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
 return;
@@ -1808,6 +1828,9 @@ return;
 if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=2) {
 parseError(("Setter methods must take exactly one argument"));
 }
+if (auto m = cls.findMethod(name, flags&FD_STATIC)) {
+parseError("%s already defined in line %d", string(name.start, name.length), getPositionOf(m->name.start).first);
+}
 match(T_COLON);
 if (match(T_SEMICOLON)) func->body = make_shared<SimpleStatement>(cur);
 else func->body = parseStatement();
@@ -1815,19 +1838,38 @@ if (!func->body) func->body = make_shared<SimpleStatement>(cur);
 cls.methods.push_back(func);
 }
 
-void QParser::parseSimpleAccessor (ClassDeclaration& cls, bool isStatic) {
+void QParser::parseMethodDecl2 (ClassDeclaration& cls, int flags) {
+nextToken();
+parseMethodDecl(cls, flags);
+}
+
+void QParser::parseAsyncMethodDecl (ClassDeclaration& cls, int flags) {
+if (nextToken().type==T_STATIC && !(flags&FD_STATIC)) {
+flags |= FD_STATIC;
+nextToken();
+}
+if (cur.type==T_FUNCTION) nextToken();
+parseMethodDecl(cls, flags | FD_ASYNC);
+}
+
+void QParser::parseSimpleAccessor (ClassDeclaration& cls, int flags) {
+if (cur.type==T_CONST) flags |= FD_CONST;
+if (flags&FD_CONST) match(T_VAR);
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
-QString* setterName = QString::create(vm, string(cur.start, cur.length) + ("="));
+QToken fieldToken = cur;
+string fieldName = string(fieldToken.start, fieldToken.length);
+if (auto m = cls.findMethod(fieldToken, flags&FD_STATIC)) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
+cls.findField(flags&FD_STATIC? cls.staticFields : cls.fields, fieldToken);
+QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED};
 shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(thisToken);
 shared_ptr<Expression> field;
-int flags = FD_METHOD;
-if (isStatic) flags |= FD_STATIC;
-if (isStatic) field = make_shared<StaticFieldExpression>(cur);
-else field = make_shared<FieldExpression>(cur);
-shared_ptr<Expression> param = make_shared<NameExpression>(cur);
+flags |= FD_METHOD;
+if (flags&FD_STATIC) field = make_shared<StaticFieldExpression>(fieldToken);
+else field = make_shared<FieldExpression>(fieldToken);
+shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
 auto setterParam = make_shared<Variable>(param);
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
@@ -1835,7 +1877,12 @@ shared_ptr<Expression> assignment = createBinaryOperation(field, T_EQ, param);
 shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(cur, flags, empty, field);
 shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(setterNameToken, flags, setterParams, assignment);
 cls.methods.push_back(getter);
-cls.methods.push_back(setter);
+if (!(flags&FD_CONST)) cls.methods.push_back(setter);
+if (match(T_EQ)) {
+auto& f = (flags&FD_STATIC? cls.staticFields : cls.fields)[fieldName];
+f.defaultValue = parseExpression();
+f.token = fieldToken;
+}
 } while (match(T_COMMA));
 }
 
@@ -1891,11 +1938,11 @@ shared_ptr<Statement> QParser::parseClassDecl () {
 return parseClassDecl(VD_CONST);
 }
 
-shared_ptr<Statement> QParser::parseClassDecl (int flags) {
+shared_ptr<Statement> QParser::parseClassDecl (int classFlags) {
 if (!consume(T_NAME, ("Expected class name after 'class'"))) return nullptr;
-shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, flags);
+shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, classFlags);
 skipNewlines();
-if (matchOneOf(T_IS, T_COLON)) do {
+if (matchOneOf(T_IS, T_COLON, T_LT)) do {
 skipNewlines();
 consume(T_NAME, ("Expected class name after 'is'"));
 classDecl->parents.push_back(cur);
@@ -1904,18 +1951,20 @@ else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
-bool isStatic = nextToken().type==T_STATIC;
-if (isStatic) nextToken();
-if (cur.type==T_FUNCTION) nextToken();
+int memberFlags = 0;
+if (nextToken().type==T_STATIC) {
+memberFlags |= FD_STATIC;
+nextToken();
+}
 const ParserRule& rule = rules[cur.type];
-if (rule.member) (this->*rule.member)(*classDecl, isStatic);
+if (rule.member) (this->*rule.member)(*classDecl, memberFlags);
 else { prevToken(); break; }
 }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 }
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
-vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, flags) };
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classFlags |= VD_GLOBAL;
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, classFlags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
@@ -2577,7 +2626,7 @@ if (compiler.getCurMethod()->flags&FD_STATIC) {
 compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
-int fieldSlot = cls->findField(string(token.start, token.length));
+int fieldSlot = cls->findField(token);
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_FIELD, fieldSlot);
 else {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
@@ -2597,7 +2646,7 @@ if (compiler.getCurMethod()->flags&FD_STATIC) {
 compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
-int fieldSlot = cls->findField(string(token.start, token.length));
+int fieldSlot = cls->findField(token);
 assignedValue->compile(compiler);
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else {
@@ -2615,7 +2664,7 @@ compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
 bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
-int fieldSlot = cls->findStaticField(string(token.start, token.length));
+int fieldSlot = cls->findStaticField(token);
 if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_STATIC_FIELD, fieldSlot);
 else if (atLevel<=2) {
 compiler.writeOp(OP_LOAD_THIS);
@@ -2637,7 +2686,7 @@ compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
 bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
-int fieldSlot = cls->findStaticField(string(token.start, token.length));
+int fieldSlot = cls->findStaticField(token);
 assignedValue->compile(compiler);
 if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
 else if (atLevel<=2) {
@@ -3096,9 +3145,46 @@ compiler.writeOp(OP_POP);
 }
 }//end VariableDeclaration::compile
 
+shared_ptr<FunctionDeclaration> ClassDeclaration::findMethod (const QToken& name, bool isStatic) {
+auto it = find_if(methods.begin(), methods.end(), [&](auto& m){ 
+return m->name.length==name.length && strncmp(name.start, m->name.start, name.length)==0
+&& ((!!(m->flags&FD_STATIC))==isStatic);
+});
+return it==methods.end()? nullptr : *it;
+}
+
+void ClassDeclaration::handleAutoConstructor (unordered_map<string,Field>& memberFields, bool isStatic) {
+if (all_of(methods.begin(), methods.end(), [&](auto& m){ return isStatic!=!!(m->flags&FD_STATIC); })) return;
+auto inits = make_shared<BlockStatement>();
+vector<pair<string,Field>> initFields;
+for (auto& field: memberFields) if (field.second.defaultValue) initFields.emplace_back(field.first, field.second);
+sort(initFields.begin(), initFields.end(), [&](auto& a, auto& b){ return a.second.index<b.second.index; });
+for (auto& fp: initFields) {
+auto& f = fp.second;
+shared_ptr<Expression> fieldExpr;
+if (isStatic) fieldExpr = make_shared<StaticFieldExpression>(f.token);
+else fieldExpr = make_shared<FieldExpression>(f.token);
+auto assignment = createBinaryOperation(fieldExpr, T_EQ, f.defaultValue);
+inits->statements.push_back(assignment);
+}
+QToken ctorToken = { T_NAME, CONSTRUCTOR, 11, QV::UNDEFINED };
+auto ctor = findMethod(ctorToken, isStatic);
+if (!ctor && (!isStatic || inits->statements.size() )) {
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
+ctor = make_shared<FunctionDeclaration>(ctorToken);
+ctor->flags = (isStatic? FD_STATIC : 0);
+ctor->params.push_back(make_shared<Variable>(make_shared<NameExpression>(thisToken)));
+ctor->body = make_shared<SimpleStatement>(ctorToken);
+methods.push_back(ctor);
+}
+if (ctor && inits->statements.size()) {
+inits->chain(ctor->body);
+ctor->body = inits;
+}}
+
 void ClassDeclaration::compile (QCompiler& compiler) {
-if (fields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many member fields");
-if (staticFields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many static member fields");
+handleAutoConstructor(fields, false);
+handleAutoConstructor(staticFields, true);
 for (auto decoration: decorations) decoration->compile(compiler);
 struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
 ClassDeclaration* oldClassDecl = compiler.curClass;
@@ -3122,10 +3208,17 @@ else compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
 compiler.writeOp(OP_POP);
 }
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+if (findMethod({ T_NAME, CONSTRUCTOR, 11, QV::UNDEFINED }, true)) {
+compiler.writeOp(OP_DUP);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(CONSTRUCTOR));
+compiler.writeOp(OP_POP);
+}
 fieldInfo.nFields = fields.size();
 fieldInfo.nStaticFields = staticFields.size();
 compiler.patch<FieldInfo>(fieldInfoPos, fieldInfo);
 compiler.curClass = oldClassDecl;
+if (fields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many member fields");
+if (staticFields.size() >= std::numeric_limits<uint_field_index_t>::max()) compiler.compileError(nearestToken(), "Too many static member fields");
 }
 
 void ExportDeclaration::compile (QCompiler& compiler) {

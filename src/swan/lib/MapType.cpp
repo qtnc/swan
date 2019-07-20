@@ -118,6 +118,7 @@ BIND_F(toString, mapToString)
 BIND_F(iterator, mapIterator)
 BIND_L(clear, { f.getObject<QMap>(0).map.clear(); })
 BIND_F(remove, mapRemove)
+BIND_L(reserve, { f.getObject<QMap>(0).map.reserve(f.getNum(1)); })
 ;
 
 mapIteratorClass

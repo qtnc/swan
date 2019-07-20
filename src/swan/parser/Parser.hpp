@@ -90,9 +90,11 @@ std::shared_ptr<Statement> parseFunctionDecl ();
 std::shared_ptr<Statement> parseAsyncFunctionDecl (int varFlags);
 std::shared_ptr<Statement> parseAsync ();
 
-void parseMethodDecl (struct ClassDeclaration&, bool);
-void parseSimpleAccessor (struct ClassDeclaration&, bool);
-void parseDecoratedDecl (struct ClassDeclaration&, bool);
+void parseMethodDecl (struct ClassDeclaration&, int);
+void parseSimpleAccessor (struct ClassDeclaration&, int);
+void parseDecoratedDecl (struct ClassDeclaration&, int);
+void parseAsyncMethodDecl (struct ClassDeclaration&, int);
+void parseMethodDecl2 (struct ClassDeclaration&, int);
 };
 
 #endif
