@@ -28,12 +28,12 @@ if (!re) error<call_error>("%s has no method %s", cls.name, vm.methodSymbols[sym
 void QFiber::callSuperSymbol (int symbol, int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;
 QV receiver = stack.at(newStackBase);
-QClass* cls = receiver.getClass(vm) .parent;
+QClass* cls = stack.at(newStackBase -1).asObject<QClass>();
+stack.erase(stack.begin() + newStackBase -1);
 QV method = cls->findMethod(symbol);
 bool re = callFunc(method, nArgs);
-if (!re) {
-error<call_error>("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
-}}
+if (!re) error<call_error>("%s has no method %s", cls->name, vm.methodSymbols[symbol]);
+}
 
 inline bool QFiber::callFunc (QV& method, int nArgs) {
 uint32_t newStackBase = stack.size() -nArgs;

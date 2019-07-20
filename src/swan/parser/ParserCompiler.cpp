@@ -368,7 +368,7 @@ struct SuperExpression: Expression {
 QToken superToken;
 SuperExpression (const QToken& t): superToken(t) {}
 const QToken& nearestToken () override { return superToken; }
-void compile (QCompiler& compiler)  override { compiler.writeOp(OP_LOAD_THIS); }
+void compile (QCompiler& compiler)  override;
 };
 
 struct GenericMethodSymbolExpression: Expression {
@@ -2652,6 +2652,15 @@ if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compi
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
 }}
 
+void SuperExpression::compile (QCompiler& compiler) {
+auto cls = compiler.getCurClass();
+if (!cls) compiler.compileError(superToken, "Can't use 'super' outside of a class");
+else if (cls->parents.empty()) compiler.compileError(superToken, "Can't use 'super' when having no superclass");
+else {
+make_shared<NameExpression>(cls->parents[0])->optimize()->compile(compiler);
+compiler.writeOp(OP_LOAD_THIS); 
+}}
+
 bool LiteralSequenceExpression::isAssignable () {
 if (items.size()<1) return false;
 for (auto& item: items) {
@@ -2964,7 +2973,7 @@ string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 left->compile(compiler);
 assignedValue->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, symbol);
+compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
 compiler.compileError(right->nearestToken(), ("Bad operand for '.' operator in assignment"));
