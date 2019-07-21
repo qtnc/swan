@@ -206,6 +206,8 @@ Methods:
 - remove(...items): remove one or more items
 - removeAt(...indices): remove one or more items at specified indices. Indices can be numbers or ranges.
 - removeIf(predicate): remove all items from the list for which the predicate returned true
+- resize(newLength, value=undefined): resize the list to make it having the new length specified. If it is longer, fill the new elements with the given value.
+- reserve(capacity): prepare the collection to contain at least the given number of elements by allocating memory in advance.
 - reverse: reverse the elements in the list, so that the first becomes the last one and vice-versa.
 - rotate(distance): shift the items in the list; depending on distance, first elements become the last ones or last become the first ones.
 - shuffle(random=rand): randomly shuffles the elements in the list. AVailability depends on the Random class being available.
@@ -215,7 +217,7 @@ Methods:
 - toString: return a string like "[1, 2, 3, 4, 5]"
 - upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted according to the comparator given.
 
-## Map: is Iterable
+## Map: is Mapping
 A Map is an associative container where key/value pairs are held with no particular order. If keys need to be ordered, Dictionary must be used.
 IN order to be held in a Map, keys must all be hashable, i.e. implement the hashCode method. This is the case for Number, String, Bool and Tuple.
 
@@ -235,6 +237,7 @@ Methods:
 - keys: return an iterable sequence enumerating all existing keys
 - length: return the number of key/value pairs present in the map
 - remove(...keys): remove one or more keys from the map
+- reserve(capacity): prepare the collection to contain at least the given number of elements by allocating memory in advance.
 - toString: return a string like "{a: 1, b: 2, c: 3, d: 4}"
 - values: return an iterable sequence enumerating all values
 
@@ -344,6 +347,7 @@ Other methods:
 - Constructor: Random([seed]): construct a pseudo-random number generator with a given seed number, or use any system-dependent method of obtaining seed if seed is omited
 - normal(mu=0, sigma=1): generates a number according to normal/gaussian distribution with mean mu and deviation sigma. The generated number has ~65% chance to be between mu-sigma and mu+sigma, ~90% between mu -2sigma and mu +2sigma, and ~96% between mu -3sigma and mu +3sigma. There is no bounds, so a number as big as mu + 100sigma may be generated, though with an extremely low probability.
 - reset(seed): reset this random number generator to the seed provided
+
 ## Set: is Iterable
 A Set is a collection of items, in principle all of the same type (although nothing is enforced), where order has no importance and where any item may only be present once.
 Another characteristic of sets beside the uniqueness of held objects is their ability to make set opations: union, intersection, difference and symetric difference
@@ -361,6 +365,7 @@ Methods:
 - iterator: return an iterator to go through the elements of this set. The iteration is in an unspecified order.
 - length: return the number of elements present in the set
 - remove(...items): remove one or more items from the set
+- reserve(capacity): prepare the collection to contain at least the given number of elements by allocating memory in advance.
 - toString: return a string like "<1, 2, 3, 4, 5>"
 
 ## SortedSet: is Iterable

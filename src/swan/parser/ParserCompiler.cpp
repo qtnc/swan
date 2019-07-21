@@ -165,6 +165,14 @@ else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findC
 }
 };
 
+struct DupExpression: Expression  {
+QToken token;
+DupExpression(QToken x): token(x) {}
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler) override {
+compiler.writeOp(OP_DUP);
+}};
+
 struct LiteralSequenceExpression: Expression, Assignable {
 QToken type;
 vector<shared_ptr<Expression>> items;
@@ -422,13 +430,13 @@ void compile (QCompiler& compiler)override ;
 };
 
 struct SwitchExpression: Expression {
-shared_ptr<Expression> expr, comparator;
+shared_ptr<Expression> expr, var;
 vector<pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>> cases;
 shared_ptr<Expression> defaultCase;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 shared_ptr<Expression> optimize () override {
 expr=expr->optimize();
-if (comparator) comparator=comparator->optimize();
+if (var) var = var->optimize();
 if (defaultCase) defaultCase=defaultCase->optimize();
 for (auto& c: cases) {
 for (auto& i: c.first) i=i->optimize();
@@ -595,7 +603,7 @@ compiler.patchJump(skipIfJump);
 };
 
 struct SwitchStatement: Statement {
-shared_ptr<Expression> expr, comparator;
+shared_ptr<Expression> expr;
 vector<pair<shared_ptr<Expression>, vector<shared_ptr<Statement>>>> cases;
 vector<shared_ptr<Statement>> defaultCase;
 shared_ptr<Statement> optimizeStatement () override { 
@@ -605,7 +613,6 @@ p.first = p.first->optimize();
 for (auto& s: p.second) s = s->optimizeStatement();
 }
 for (auto& s: defaultCase) s=s->optimizeStatement();
-if (comparator) comparator = comparator->optimize();
 return shared_this(); 
 }
 const QToken& nearestToken () override { return expr->nearestToken(); }
@@ -614,18 +621,13 @@ vector<int> jumps;
 compiler.pushLoop();
 compiler.pushScope();
 compiler.writeDebugLine(expr->nearestToken());
-int caseSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
-int compSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
+//int caseSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
+//int compSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
 expr->compile(compiler);
-if (comparator) comparator->compile(compiler);
-else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.vm.findMethodSymbol("==") | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
 for (int i=0, n=cases.size(); i<n; i++) {
 auto caseExpr = cases[i].first;
 compiler.writeDebugLine(caseExpr->nearestToken());
-writeOpLoadLocal(compiler, compSlot);
-writeOpLoadLocal(compiler, caseSlot);
 caseExpr->compile(compiler);
-writeOpCallFunction(compiler, 2);
 jumps.push_back(compiler.writeOpJump(OP_JUMP_IF_TRUTY));
 }
 auto defaultJump = compiler.writeOpJump(OP_JUMP);
@@ -638,7 +640,7 @@ compiler.popScope();
 compiler.patchJump(defaultJump);
 compiler.pushScope();
 for (auto& s: defaultCase) s->compile(compiler);
-compiler.popScope();
+//compiler.popScope();
 compiler.popScope();
 compiler.loops.back().condPos = compiler.writePosition();
 compiler.loops.back().endPos = compiler.writePosition();
@@ -1531,6 +1533,7 @@ return make_shared<IfStatement>(condition, ifPart, elsePart);
 }
 
 shared_ptr<Statement> QParser::parseSwitchStatement () {
+auto dup = make_shared<DupExpression>(cur);
 auto sw = make_shared<SwitchStatement>();
 shared_ptr<Expression> activeCase;
 vector<shared_ptr<Statement>> statements;
@@ -1540,21 +1543,20 @@ else sw->defaultCase = statements;
 statements.clear();
 };
 sw->expr = parseExpression();
-if (match(T_WITH)) sw->comparator = parseExpression();
 skipNewlines();
 consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
 skipNewlines();
 if (match(T_CASE)) {
 clearStatements();
-activeCase = parseExpression();
+activeCase = parseSwitchCase(dup);
 while(match(T_COMMA)) {
 clearStatements();
-activeCase = parseExpression();
+activeCase = parseSwitchCase(dup);
 }
 match(T_COLON);
 }
-else if (matchOneOf(T_DEFAULT, T_ELSE)) {
+else if (match(T_DEFAULT)) {
 clearStatements();
 activeCase = nullptr;
 match(T_COLON);
@@ -2209,12 +2211,25 @@ if (args.size() >= std::numeric_limits<uint_local_index_t>::max() -2) parseError
 return make_shared<SubscriptExpression>(receiver, args);
 }
 
+shared_ptr<Expression> QParser::parseSwitchCase (shared_ptr<Expression> left) {
+auto& rule = rules[nextToken().type];
+if (rule.infix && rule.priority>=P_COMPARISON) {
+return (this->*rule.infix)(left);
+}
+else if (rule.prefix && rule.priority>=P_COMPARISON) {
+shared_ptr<Expression> right = (this->*rule.prefix)();
+return createBinaryOperation(left, T_EQEQ, right);
+}
+else parseError("Expected literal, identifier or infix expression after 'case'");
+return nullptr;
+}
+
 shared_ptr<Expression> QParser::parseSwitchExpression () {
 auto sw = make_shared<SwitchExpression>();
 pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>* activeCase;
 shared_ptr<Expression>* activeExpr;
+sw->var = make_shared<DupExpression>(cur);
 sw->expr = parseExpression(P_COMPREHENSION);
-if (match(T_WITH)) sw->comparator = parseExpression(P_COMPREHENSION);
 skipNewlines();
 consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
@@ -2223,11 +2238,11 @@ if (match(T_CASE)) {
 sw->cases.emplace_back();
 activeCase = &sw->cases.back();
 activeExpr = &activeCase->second;
-activeCase->first.push_back(parseExpression());
-while(match(T_COMMA)) activeCase->first.push_back(parseExpression());
+activeCase->first.push_back(parseSwitchCase(sw->var));
+while(match(T_COMMA)) activeCase->first.push_back(parseSwitchCase(sw->var));
 match(T_COLON);
 }
-else if (matchOneOf(T_DEFAULT, T_ELSE)) {
+else if (match(T_DEFAULT)) {
 activeCase = nullptr;
 activeExpr = &sw->defaultCase;
 match(T_COLON);
@@ -2892,8 +2907,9 @@ compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMeth
 }
 
 shared_ptr<Expression> BinaryOperation::optimize () { 
-left=left->optimize(); 
-right=right->optimize();
+if (left) left=left->optimize(); 
+if (right) right=right->optimize();
+if (!left || !right) return shared_this();
 shared_ptr<ConstantExpression> c1 = dynamic_pointer_cast<ConstantExpression>(left), c2 = dynamic_pointer_cast<ConstantExpression>(right);
 if (c1 && c2) {
 QV &v1 = c1->token.value, &v2 = c2->token.value;
@@ -2936,8 +2952,6 @@ compiler.patchJump(elseJump);
 
 void SwitchExpression::compile (QCompiler& compiler) {
 vector<int> endJumps;
-if (comparator) comparator->compile(compiler);
-else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.vm.findMethodSymbol("==") | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
 expr->compile(compiler);
 for (auto& c: cases) {
 bool notFirst=false;
@@ -2946,10 +2960,7 @@ for (auto& item: c.first) {
 if (notFirst) condJumps.push_back(compiler.writeOpJump(OP_OR));
 notFirst=true;
 compiler.writeDebugLine(item->nearestToken());
-compiler.writeOp(OP_DUP_M2);
-compiler.writeOp(OP_DUP_M2);
 item->compile(compiler);
-writeOpCallFunction(compiler, 2);
 }
 for (auto pos: condJumps) compiler.patchJump(pos);
 int ifJump = compiler.writeOpJump(OP_JUMP_IF_FALSY);
@@ -2960,7 +2971,6 @@ compiler.patchJump(ifJump);
 if (defaultCase) defaultCase->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto pos: endJumps) compiler.patchJump(pos);
-compiler.writeOp(OP_POP_M2);
 compiler.writeOp(OP_POP_M2);
 }
 

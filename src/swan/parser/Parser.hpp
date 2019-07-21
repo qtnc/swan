@@ -65,6 +65,7 @@ std::shared_ptr<Statement> parseBlock ();
 std::shared_ptr<Statement> parseIf ();
 std::shared_ptr<Statement> parseSwitchStatement ();
 std::shared_ptr<Expression> parseSwitchExpression ();
+std::shared_ptr<Expression> parseSwitchCase (std::shared_ptr<Expression> left);
 std::shared_ptr<Statement> parseFor ();
 std::shared_ptr<Statement> parseWhile ();
 std::shared_ptr<Statement> parseRepeatWhile ();
