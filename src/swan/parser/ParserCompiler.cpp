@@ -2935,14 +2935,15 @@ item->compile(compiler);
 }
 for (auto pos: condJumps) compiler.patchJump(pos);
 int ifJump = compiler.writeOpJump(OP_JUMP_IF_FALSY);
+compiler.writeOp(OP_POP);
 c.second->compile(compiler);
 endJumps.push_back(compiler.writeOpJump(OP_JUMP));
 compiler.patchJump(ifJump);
 }
+compiler.writeOp(OP_POP);
 if (defaultCase) defaultCase->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto pos: endJumps) compiler.patchJump(pos);
-compiler.writeOp(OP_POP_M2);
 }
 
 void SwitchStatement::compile (QCompiler& compiler) {
