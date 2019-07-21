@@ -165,11 +165,27 @@ default: ...
 }
 ```
 
-The test expression and the different case values are tested with the `==`operator by default. You can use another comparison function by specifying it: `switch testExpression with comparator { ... }`.
-This can be useful to be more strict (by using `is` instead of `==`, or to achieve a different effect).
+The test expression and the different case values are tested with the `==`operator by default. You can use another comparison function by specifying it as follows.
+This can be useful to be more strict (by using `is` instead of `==`, or to achieve a different effect):
 
-As in C/C++, Java and all other programming languages having the switch statement, the control jumps to the first matched value, and then the execution continues across all the following cases.
-To prevent the execution of following cases, use the break keyword.
+```
+# Example 1 using < and > in comparisons
+switch x {
+case <0: print('x is negative'); break
+case <10: print('x is small'); break
+case >100: print('x is big'); break
+}
+
+# Example 2 using is to test type
+switch value {
+case is Num: print('you gave a number'); break
+case is String: print('You gave a string'); break
+default: print('Please give a number or a string'); break
+}
+```
+
+As in C/C++, Java and all other programming languages having the switch statement, the control jumps to the first matched value, and then the execution continues across all the following cases; this behavior is commonly known as *fallthrough*.
+To prevent fallthrough, use the break keyword.
 But in the contrary of C/C++, Java and others, you can compare anything you want, you aren't restricted to numbers or strings.
 
 Switch can also be used as an expression:
@@ -186,6 +202,8 @@ default: 12
 ```
 
 When switch is used as an expression, the different cases must be single expressions as well (it is forbidden to have a block of statements). There is obviously no fallthrough once a result is selected.
+
+Switch provide no performance bonus compared to a chain of if/else.
 
 ## Iteration protocol
 A for loop written as:

@@ -113,6 +113,7 @@ OP(CONCAT, -1, 0, 0),
 */
 
 /* Mark the greatest possible opcode */
+//OP(DEBUG, 0, 0, 0),
 OP(END, 0, 0, 0)
 
 

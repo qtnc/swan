@@ -432,6 +432,10 @@ frame = callFrames.back();
 }
 BREAK
 
+//CASE(OP_DEBUG)
+//printStack(cout, stack, frame.stackBase);
+//BREAK
+
 CASE(OP_END)
 DEFAULT
 state = FiberState::FAILED;

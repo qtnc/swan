@@ -603,7 +603,7 @@ compiler.patchJump(skipIfJump);
 };
 
 struct SwitchStatement: Statement {
-shared_ptr<Expression> expr;
+shared_ptr<Expression> expr, var;
 vector<pair<shared_ptr<Expression>, vector<shared_ptr<Statement>>>> cases;
 vector<shared_ptr<Statement>> defaultCase;
 shared_ptr<Statement> optimizeStatement () override { 
@@ -616,36 +616,7 @@ for (auto& s: defaultCase) s=s->optimizeStatement();
 return shared_this(); 
 }
 const QToken& nearestToken () override { return expr->nearestToken(); }
-void compile (QCompiler& compiler) override {
-vector<int> jumps;
-compiler.pushLoop();
-compiler.pushScope();
-compiler.writeDebugLine(expr->nearestToken());
-//int caseSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
-//int compSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
-expr->compile(compiler);
-for (int i=0, n=cases.size(); i<n; i++) {
-auto caseExpr = cases[i].first;
-compiler.writeDebugLine(caseExpr->nearestToken());
-caseExpr->compile(compiler);
-jumps.push_back(compiler.writeOpJump(OP_JUMP_IF_TRUTY));
-}
-auto defaultJump = compiler.writeOpJump(OP_JUMP);
-for (int i=0, n=cases.size(); i<n; i++) {
-compiler.patchJump(jumps[i]);
-compiler.pushScope();
-for (auto& s: cases[i].second) s->compile(compiler);
-compiler.popScope();
-}
-compiler.patchJump(defaultJump);
-compiler.pushScope();
-for (auto& s: defaultCase) s->compile(compiler);
-//compiler.popScope();
-compiler.popScope();
-compiler.loops.back().condPos = compiler.writePosition();
-compiler.loops.back().endPos = compiler.writePosition();
-compiler.popLoop();
-}
+void compile (QCompiler& compiler) override;
 };
 
 struct ForStatement: Statement, Comprenable  {
@@ -1533,7 +1504,6 @@ return make_shared<IfStatement>(condition, ifPart, elsePart);
 }
 
 shared_ptr<Statement> QParser::parseSwitchStatement () {
-auto dup = make_shared<DupExpression>(cur);
 auto sw = make_shared<SwitchStatement>();
 shared_ptr<Expression> activeCase;
 vector<shared_ptr<Statement>> statements;
@@ -1543,16 +1513,17 @@ else sw->defaultCase = statements;
 statements.clear();
 };
 sw->expr = parseExpression();
+sw->var = make_shared<NameExpression>(createTempName());
 skipNewlines();
 consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
 skipNewlines();
 if (match(T_CASE)) {
 clearStatements();
-activeCase = parseSwitchCase(dup);
+activeCase = parseSwitchCase(sw->var);
 while(match(T_COMMA)) {
 clearStatements();
-activeCase = parseSwitchCase(dup);
+activeCase = parseSwitchCase(sw->var);
 }
 match(T_COLON);
 }
@@ -2972,6 +2943,41 @@ if (defaultCase) defaultCase->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto pos: endJumps) compiler.patchJump(pos);
 compiler.writeOp(OP_POP_M2);
+}
+
+void SwitchStatement::compile (QCompiler& compiler) {
+vector<int> jumps;
+compiler.pushLoop();
+compiler.pushScope();
+compiler.writeDebugLine(expr->nearestToken());
+make_shared<VariableDeclaration>(vector<shared_ptr<Variable>>({ make_shared<Variable>(var, expr) }))->optimizeStatement()->compile(compiler);
+for (int i=0, n=cases.size(); i<n; i++) {
+auto caseExpr = cases[i].first;
+compiler.writeDebugLine(caseExpr->nearestToken());
+caseExpr->compile(compiler);
+jumps.push_back(compiler.writeOpJump(OP_JUMP_IF_TRUTY));
+}
+auto defaultJump = compiler.writeOpJump(OP_JUMP);
+for (int i=0, n=cases.size(); i<n; i++) {
+compiler.patchJump(jumps[i]);
+compiler.pushScope();
+for (auto& s: cases[i].second) {
+s->compile(compiler);
+if (s->isExpression()) compiler.writeOp(OP_POP);
+}
+compiler.popScope();
+}
+compiler.patchJump(defaultJump);
+compiler.pushScope();
+for (auto& s: defaultCase) {
+s->compile(compiler);
+if (s->isExpression()) compiler.writeOp(OP_POP);
+}
+compiler.popScope();
+compiler.popScope();
+compiler.loops.back().condPos = compiler.writePosition();
+compiler.loops.back().endPos = compiler.writePosition();
+compiler.popLoop();
 }
 
 void SubscriptExpression::compile  (QCompiler& compiler) {
