@@ -24,6 +24,10 @@
 #define FD_ASYNC 16
 #define FD_CONST 0x200
 
+#define P_LEFT 0
+#define P_RIGHT 1
+#define P_SWAP_OPERANDS 2
+
 enum QOperatorPriority {
 P_LOWEST,
 P_ASSIGNMENT,

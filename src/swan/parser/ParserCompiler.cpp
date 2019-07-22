@@ -927,88 +927,89 @@ StatementFn statement = nullptr;
 MemberFn member = nullptr;
 const char* prefixOpName = nullptr;
 const char* infixOpName = nullptr;
-int priority = P_HIGHEST;
+uint8_t priority = P_HIGHEST;
+uint8_t flags = 0;
 };
 
 static std::unordered_map<int,ParserRule> rules = {
-#define PREFIX(token, prefix, name) { T_##token, { &QParser::parse##prefix, nullptr, nullptr, nullptr, (#name), nullptr, P_PREFIX }}
-#define PREFIX_OP(token, prefix, name) { T_##token, { &QParser::parse##prefix, nullptr, nullptr, &QParser::parseMethodDecl, (#name), nullptr, P_PREFIX }}
-#define INFIX(token, infix, name, priority) { T_##token, { nullptr, &QParser::parse##infix, nullptr, nullptr, nullptr, (#name), P_##priority }}
-#define INFIX_OP(token, infix, name, priority) { T_##token, { nullptr, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, nullptr,  (#name), P_##priority }}
-#define MULTIFIX(token, prefix, infix, prefixName, infixName, priority) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, nullptr, (#prefixName), (#infixName), P_##priority }}
-#define OPERATOR(token, prefix, infix, prefixName, infixName, priority) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, (#prefixName), (#infixName), P_##priority }}
-#define STATEMENT(token, func) { T_##token, { nullptr, nullptr, &QParser::parse##func, nullptr, nullptr, nullptr, P_PREFIX }}
+#define PREFIX(token, prefix, name) { T_##token, { &QParser::parse##prefix, nullptr, nullptr, nullptr, (#name), nullptr, P_PREFIX, P_LEFT  }}
+#define PREFIX_OP(token, prefix, name) { T_##token, { &QParser::parse##prefix, nullptr, nullptr, &QParser::parseMethodDecl, (#name), nullptr, P_PREFIX, P_LEFT }}
+#define INFIX(token, infix, name, priority, direction) { T_##token, { nullptr, &QParser::parse##infix, nullptr, nullptr, nullptr, (#name), P_##priority, P_##direction }}
+#define INFIX_OP(token, infix, name, priority, direction) { T_##token, { nullptr, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, nullptr,  (#name), P_##priority, P_##direction  }}
+#define MULTIFIX(token, prefix, infix, prefixName, infixName, priority, direction) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, nullptr, (#prefixName), (#infixName), P_##priority, P_##direction }}
+#define OPERATOR(token, prefix, infix, prefixName, infixName, priority, direction) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, (#prefixName), (#infixName), P_##priority, P_##direction  }}
+#define STATEMENT(token, func) { T_##token, { nullptr, nullptr, &QParser::parse##func, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT  }}
 
-OPERATOR(PLUS, PrefixOp, InfixOp, unp, +, TERM),
-OPERATOR(MINUS, PrefixOp, InfixOp, unm, -, TERM),
-INFIX_OP(STAR, InfixOp, *, FACTOR),
-INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR),
-INFIX_OP(PERCENT, InfixOp, %, FACTOR),
-INFIX_OP(STARSTAR, InfixOp, **, EXPONENT),
-INFIX_OP(AMP, InfixOp, &, BITWISE),
-INFIX_OP(CIRC, InfixOp, ^, BITWISE),
-INFIX_OP(LTLT, InfixOp, <<, BITWISE),
-INFIX_OP(GTGT, InfixOp, >>, BITWISE),
-INFIX_OP(DOTDOT, InfixOp, .., RANGE),
-INFIX(DOTDOTDOT, InfixOp, ..., RANGE),
-INFIX(AMPAMP, InfixOp, &&, LOGICAL),
-INFIX(BARBAR, InfixOp, ||, LOGICAL),
-INFIX(QUESTQUEST, InfixOp, ??, LOGICAL),
+OPERATOR(PLUS, PrefixOp, InfixOp, unp, +, TERM, LEFT),
+OPERATOR(MINUS, PrefixOp, InfixOp, unm, -, TERM, LEFT),
+INFIX_OP(STAR, InfixOp, *, FACTOR, LEFT),
+INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR, LEFT),
+INFIX_OP(PERCENT, InfixOp, %, FACTOR, LEFT),
+INFIX_OP(STARSTAR, InfixOp, **, EXPONENT, LEFT),
+INFIX_OP(AMP, InfixOp, &, BITWISE, LEFT),
+INFIX_OP(CIRC, InfixOp, ^, BITWISE, LEFT),
+INFIX_OP(LTLT, InfixOp, <<, BITWISE, LEFT),
+INFIX_OP(GTGT, InfixOp, >>, BITWISE, LEFT),
+INFIX_OP(DOTDOT, InfixOp, .., RANGE, LEFT),
+INFIX(DOTDOTDOT, InfixOp, ..., RANGE, LEFT),
+INFIX(AMPAMP, InfixOp, &&, LOGICAL, LEFT),
+INFIX(BARBAR, InfixOp, ||, LOGICAL, LEFT),
+INFIX(QUESTQUEST, InfixOp, ??, LOGICAL, LEFT),
 
-INFIX(EQ, InfixOp, =, ASSIGNMENT),
-INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT),
-INFIX(MINUSEQ, InfixOp, -=, ASSIGNMENT),
-INFIX(STAREQ, InfixOp, *=, ASSIGNMENT),
-INFIX(SLASHEQ, InfixOp, /=, ASSIGNMENT),
-INFIX(BACKSLASHEQ, InfixOp, \\=, ASSIGNMENT),
-INFIX(PERCENTEQ, InfixOp, %=, ASSIGNMENT),
-INFIX(STARSTAREQ, InfixOp, **=, ASSIGNMENT),
-INFIX(BAREQ, InfixOp, |=, ASSIGNMENT),
-INFIX(AMPEQ, InfixOp, &=, ASSIGNMENT),
-INFIX(CIRCEQ, InfixOp, ^=, ASSIGNMENT),
-INFIX(ATEQ, InfixOp, @=, ASSIGNMENT),
-INFIX(LTLTEQ, InfixOp, <<=, ASSIGNMENT),
-INFIX(GTGTEQ, InfixOp, >>=, ASSIGNMENT),
-INFIX(AMPAMPEQ, InfixOp, &&=, ASSIGNMENT),
-INFIX(BARBAREQ, InfixOp, ||=, ASSIGNMENT),
-INFIX(QUESTQUESTEQ, InfixOp, ?\x3F=, ASSIGNMENT),
+INFIX(EQ, InfixOp, =, ASSIGNMENT, RIGHT),
+INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT, RIGHT),
+INFIX(MINUSEQ, InfixOp, -=, ASSIGNMENT, RIGHT),
+INFIX(STAREQ, InfixOp, *=, ASSIGNMENT, RIGHT),
+INFIX(SLASHEQ, InfixOp, /=, ASSIGNMENT, RIGHT),
+INFIX(BACKSLASHEQ, InfixOp, \\=, ASSIGNMENT, RIGHT),
+INFIX(PERCENTEQ, InfixOp, %=, ASSIGNMENT, RIGHT),
+INFIX(STARSTAREQ, InfixOp, **=, ASSIGNMENT, RIGHT),
+INFIX(BAREQ, InfixOp, |=, ASSIGNMENT, RIGHT),
+INFIX(AMPEQ, InfixOp, &=, ASSIGNMENT, RIGHT),
+INFIX(CIRCEQ, InfixOp, ^=, ASSIGNMENT, RIGHT),
+INFIX(ATEQ, InfixOp, @=, ASSIGNMENT, RIGHT),
+INFIX(LTLTEQ, InfixOp, <<=, ASSIGNMENT, RIGHT),
+INFIX(GTGTEQ, InfixOp, >>=, ASSIGNMENT, RIGHT),
+INFIX(AMPAMPEQ, InfixOp, &&=, ASSIGNMENT, RIGHT),
+INFIX(BARBAREQ, InfixOp, ||=, ASSIGNMENT, RIGHT),
+INFIX(QUESTQUESTEQ, InfixOp, ?\x3F=, ASSIGNMENT, RIGHT),
 
-INFIX_OP(EQEQ, InfixOp, ==, COMPARISON),
-INFIX_OP(EXCLEQ, InfixOp, !=, COMPARISON),
-OPERATOR(LT, LiteralSet, InfixOp, <, <, COMPARISON),
-INFIX_OP(GT, InfixOp, >, COMPARISON),
-INFIX_OP(LTE, InfixOp, <=, COMPARISON),
-INFIX_OP(GTE, InfixOp, >=, COMPARISON),
-INFIX_OP(IS, InfixOp, is, COMPARISON),
-INFIX_OP(IN, InfixOp, in, COMPARISON),
+INFIX_OP(EQEQ, InfixOp, ==, COMPARISON, LEFT),
+INFIX_OP(EXCLEQ, InfixOp, !=, COMPARISON, LEFT),
+OPERATOR(LT, LiteralSet, InfixOp, <, <, COMPARISON, LEFT),
+INFIX_OP(GT, InfixOp, >, COMPARISON, LEFT),
+INFIX_OP(LTE, InfixOp, <=, COMPARISON, LEFT),
+INFIX_OP(GTE, InfixOp, >=, COMPARISON, LEFT),
+INFIX_OP(IS, InfixIs, is, COMPARISON, SWAP_OPERANDS),
+INFIX_OP(IN, InfixOp, in, COMPARISON, SWAP_OPERANDS),
 
-OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL),
-PREFIX_OP(EXCL, PrefixOp, !),
+OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL, LEFT),
+OPERATOR(EXCL, PrefixOp, InfixNot, !, !, COMPARISON, LEFT),
 PREFIX_OP(TILDE, PrefixOp, ~),
 PREFIX(DOLLAR, Lambda, $),
 
 #ifndef NO_REGEX
-OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR),
+OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR, LEFT),
 #else
-INFIX_OP(SLASH, InfixOp, /, FACTOR),
+INFIX_OP(SLASH, InfixOp, /, FACTOR, LEFT),
 #endif
 #ifndef NO_GRID
-OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE),
+OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE, LEFT),
 #else
-INFIX_OP(BAR, InfixOp, |, BITWISE),
+INFIX_OP(BAR, InfixOp, |, BITWISE, LEFT),
 #endif
 
-{ T_LEFT_PAREN, { &QParser::parseGroupOrTuple, &QParser::parseMethodCall, nullptr, &QParser::parseMethodDecl, nullptr, ("()"), P_CALL }},
-{ T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT }},
-{ T_LEFT_BRACE, { &QParser::parseLiteralMap, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX }},
-{ T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT }},
-{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, &QParser::parseMethodDecl2, "function", "function", P_PREFIX }},
-{ T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX }},
-INFIX(MINUSGT, ArrowFunction, ->, COMPREHENSION),
-INFIX(EQGT, ArrowFunction, =>, COMPREHENSION),
-INFIX(DOT, InfixOp, ., MEMBER),
-INFIX(DOTQUEST, InfixOp, .?, MEMBER),
-MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER),
+{ T_LEFT_PAREN, { &QParser::parseGroupOrTuple, &QParser::parseMethodCall, nullptr, &QParser::parseMethodDecl, nullptr, ("()"), P_CALL, P_LEFT }},
+{ T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT, P_LEFT }},
+{ T_LEFT_BRACE, { &QParser::parseLiteralMap, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT, P_LEFT }},
+{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, &QParser::parseMethodDecl2, "function", "function", P_PREFIX, P_LEFT }},
+{ T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX, P_LEFT }},
+INFIX(MINUSGT, ArrowFunction, ->, COMPREHENSION, RIGHT),
+INFIX(EQGT, ArrowFunction, =>, COMPREHENSION, RIGHT),
+INFIX(DOT, InfixOp, ., MEMBER, LEFT),
+INFIX(DOTQUEST, InfixOp, .?, MEMBER, LEFT),
+MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER, LEFT),
 PREFIX(UND, Field, _),
 PREFIX(UNDUND, StaticField, __),
 PREFIX(SUPER, Super, super),
@@ -1035,12 +1036,12 @@ STATEMENT(TRY, Try),
 STATEMENT(WITH, With),
 STATEMENT(WHILE, While),
 
-{ T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION }},
-{ T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX }},
-{ T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
-{ T_CONST, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX }},
-{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX }},
-{ T_ASYNC, { nullptr, nullptr, &QParser::parseAsync, &QParser::parseAsyncMethodDecl, nullptr, nullptr, P_PREFIX }}
+{ T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION, P_LEFT }},
+{ T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_CONST, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_ASYNC, { nullptr, nullptr, &QParser::parseAsync, &QParser::parseAsyncMethodDecl, nullptr, nullptr, P_PREFIX, P_LEFT }}
 #undef PREFIX
 #undef PREFIX_OP
 #undef INFIX
@@ -1052,8 +1053,6 @@ STATEMENT(WHILE, While),
 static std::unordered_map<string,QTokenType> KEYWORDS = {
 #define TOKEN(name, keyword) { (#keyword), T_##name }
 TOKEN(BARBAR, and),
-TOKEN(ASYNC, async),
-TOKEN(AWAIT, await),
 TOKEN(AS, as),
 TOKEN(ASYNC, async),
 TOKEN(AWAIT, await),
@@ -1077,6 +1076,7 @@ TOKEN(IMPORT, import),
 TOKEN(IN, in),
 TOKEN(IS, is),
 TOKEN(VAR, let),
+TOKEN(EXCL, not),
 TOKEN(NULL, null),
 TOKEN(AMPAMP, or),
 TOKEN(REPEAT, repeat),
@@ -1238,6 +1238,7 @@ return QV(vm, re);
 }
 
 static shared_ptr<BinaryOperation> createBinaryOperation (shared_ptr<Expression> left, QTokenType op, shared_ptr<Expression> right) {
+if (rules[op].flags&P_SWAP_OPERANDS) swap(left, right);
 switch(op){
 case T_EQ:
 case T_PLUSEQ: case T_MINUSEQ: case T_STAREQ: case T_STARSTAREQ: case T_SLASHEQ: case T_BACKSLASHEQ: case T_PERCENTEQ: case T_ATEQ:
@@ -1249,8 +1250,6 @@ case T_COLONCOLON:
 return make_shared<MethodLookupOperation>(left, right);
 case T_AMPAMP: case T_QUESTQUEST: case T_BARBAR:
 return make_shared<ShortCircuitingBinaryOperation>(left, op, right);
-case T_IN: case T_IS:
-return make_shared<BinaryOperation>(right, op, left);
 case T_DOTQUEST:
 return createBinaryOperation(left, T_AMPAMP, createBinaryOperation(left, T_DOT, right));
 default: 
@@ -2034,10 +2033,32 @@ return make_shared<UnaryOperation>(op, right);
 
 shared_ptr<Expression> QParser::parseInfixOp (shared_ptr<Expression> left) {
 QTokenType op =  cur.type;
-auto priority = rules[op].priority;
-if (op>=T_EQ && op<=T_BARBAREQ) priority--;
+auto& rule = rules[op];
+auto priority = rule.priority;
+//if (op>=T_EQ && op<=T_BARBAREQ) priority--;
+if (rule.flags&P_RIGHT) --priority;
 shared_ptr<Expression> right = parseExpression(priority);
 return createBinaryOperation(left, op, right);
+}
+
+shared_ptr<Expression> QParser::parseInfixIs (shared_ptr<Expression> left) {
+bool negate = match(T_EXCL);
+auto& rule = rules[T_IS];
+auto priority = rule.priority;
+if (rule.flags&P_RIGHT) --priority;
+shared_ptr<Expression> right = parseExpression(priority);
+right = createBinaryOperation(left, T_IS, right);
+if (negate) right = make_shared<UnaryOperation>(T_EXCL, right);
+return right;
+}
+
+shared_ptr<Expression> QParser::parseInfixNot (shared_ptr<Expression> left) {
+consume(T_IN, "Expected 'in' after infix not");
+auto& rule = rules[T_IN];
+auto priority = rule.priority;
+if (rule.flags&P_RIGHT) --priority;
+shared_ptr<Expression> right = parseExpression(priority);
+return make_shared<UnaryOperation>(T_EXCL, createBinaryOperation(left, T_IN, right));
 }
 
 shared_ptr<Expression> QParser::parseConditional  (shared_ptr<Expression> cond) {
@@ -2248,7 +2269,7 @@ return make_shared<NameExpression>(cur);
 }
 
 shared_ptr<Expression> QParser::parseField () {
-if (matchOneOf(T_COMMA, T_RIGHT_PAREN, T_RIGHT_BRACKET, T_RIGHT_BRACE)) {
+if (matchOneOf(T_COMMA, T_RIGHT_PAREN, T_RIGHT_BRACKET, T_RIGHT_BRACE, T_EQGT, T_MINUSGT, T_SEMICOLON, T_LINE)) {
 prevToken();
 cur.value = QV::UNDEFINED;
 return make_shared<ConstantExpression>(cur);

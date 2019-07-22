@@ -34,6 +34,8 @@ template<class... T> bool matchOneOf (T... tokens);
 std::shared_ptr<Expression> parseExpression (int priority = P_LOWEST);
 std::shared_ptr<Expression> parsePrefixOp ();
 std::shared_ptr<Expression> parseInfixOp (std::shared_ptr<Expression> left);
+std::shared_ptr<Expression> parseInfixIs (std::shared_ptr<Expression> left);
+std::shared_ptr<Expression> parseInfixNot (std::shared_ptr<Expression> left);
 std::shared_ptr<Expression> parseConditional  (std::shared_ptr<Expression> condition);
 std::shared_ptr<Expression> parseComprehension   (std::shared_ptr<Expression> body);
 std::shared_ptr<Expression> parseMethodCall (std::shared_ptr<Expression> receiver);

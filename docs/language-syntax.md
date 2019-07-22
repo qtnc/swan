@@ -26,6 +26,7 @@ Some people take the number of keywords to grade the complexity of a language.
 * in
 * is
 * let
+* not (as a synonym for `!`)
 * null
 * or (as a synonym for `||`)
 * repeat
@@ -389,6 +390,7 @@ print(third.length) # 5
 - A name starting with `__` denotes a static field.
 - A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid.
 - You can declare static methods by preceding its name by the static keyword.
+- The constructor is simply called `constructor`. You can also define a static constructor, which will be called immediately after the class is defined.
 
 Additionally to arithmetic, bitwise and comparison operators, you can also override prefix operators as well as call and indexing/subscript:
 
