@@ -1506,6 +1506,7 @@ shared_ptr<Statement> QParser::parseSwitchStatement () {
 auto sw = make_shared<SwitchStatement>();
 shared_ptr<Expression> activeCase;
 vector<shared_ptr<Statement>> statements;
+bool defaultDefined=false;
 auto clearStatements = [&]()mutable{
 if (activeCase) sw->cases.push_back(make_pair(activeCase, statements));
 else sw->defaultCase = statements;
@@ -1518,6 +1519,7 @@ consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
 skipNewlines();
 if (match(T_CASE)) {
+if (defaultDefined) parseError("Default case must be last");
 clearStatements();
 activeCase = parseSwitchCase(sw->var);
 while(match(T_COMMA)) {
@@ -1527,6 +1529,8 @@ activeCase = parseSwitchCase(sw->var);
 match(T_COLON);
 }
 else if (match(T_DEFAULT)) {
+if (defaultDefined) parseError("Duplicate default case");
+defaultDefined=true;
 clearStatements();
 activeCase = nullptr;
 match(T_COLON);
@@ -2218,8 +2222,9 @@ return nullptr;
 
 shared_ptr<Expression> QParser::parseSwitchExpression () {
 auto sw = make_shared<SwitchExpression>();
-pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>* activeCase;
-shared_ptr<Expression>* activeExpr;
+pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>* activeCase = nullptr;
+shared_ptr<Expression>* activeExpr = nullptr;
+bool defaultDefined = false;
 sw->var = make_shared<DupExpression>(cur);
 sw->expr = parseExpression(P_COMPREHENSION);
 skipNewlines();
@@ -2227,6 +2232,7 @@ consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
 skipNewlines();
 if (match(T_CASE)) {
+if (defaultDefined) parseError("Default case must appear last");
 sw->cases.emplace_back();
 activeCase = &sw->cases.back();
 activeExpr = &activeCase->second;
@@ -2235,14 +2241,18 @@ while(match(T_COMMA)) activeCase->first.push_back(parseSwitchCase(sw->var));
 match(T_COLON);
 }
 else if (match(T_DEFAULT)) {
+if (defaultDefined) parseError("Duplicated default case");
+defaultDefined=true;
 activeCase = nullptr;
 activeExpr = &sw->defaultCase;
 match(T_COLON);
 }
 else if (match(T_RIGHT_BRACE)) break;
+else if (match(T_END)) { result=CR_INCOMPLETE; break; }
 else {
+if (!activeCase) { parseError("Expected 'case' after beginnig of switch expression"); return nullptr; }
+if (!activeExpr || !*activeExpr) { result=CR_INCOMPLETE; return nullptr; }
 *activeExpr = parseExpression();
-if (!*activeExpr) { result=CR_INCOMPLETE; return nullptr; }
 }}
 return sw;
 }
