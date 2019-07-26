@@ -28,10 +28,47 @@ Methods:
 - name: name of the class, e.g. Num, Bool, etc.
 - toString: return a string representation of this object. For classes, this is equivalent to its name.
 
+## Deque: is Iterable
+A deque, abbreviation for double-ended queue, is a collection of items. Deque has the particularity to allow both constant time random access and insertion/removal at beginning and end of sequence. It is generally good in these cases. When elements have to be inserted or removed in the middle, linked list is better.
+Deque is often said as being a good compromise between list and linked list, where eachever drawbacks are balanced.
+
+- Constructor: Deque(sequences...): create a list from one or more concatenated sequences
+- Operators: `[], []=, +, in`
+- Comparison operators: ==, !=
+
+Like with list, items in a deque are indexed by their position, 0 being the first, 1 the second, etc. 
+Negative indices count from the end, thus -1 indicates the last item, -2 the one before the last, etc.
+Indexing with a range, i.e. `deque[2...5]` allow to return or overwrite a subsequence. The size of the deque is automatically adjusted when overwriting subsequences of different sizes.
+
+Methods:
+
+- static Deque.of(items...): create a deque from the given items
+- add(...items): add one or more items at the end of the deque
+- clear: clear the whole deque
+- fill(start, end, value): fills the range between start and end by the value given
+- fill(range, value): fills the range specified by the value given
+- fill(value): fill the entire deque with the specified value
+- insert(index, ...items): insert one or more items starting at the given position
+- indexOf(needle, start=0): search for needle in the deque, return its position if found, -1 if not
+- iterator: return an iterator to iterate through the elements of this deque in order
+- lastIndexOf(needle, start=length): search for needle in the deque from the end, return its position if found, -1 if not
+- length: return the number of element in the deque
+- lower(needle, comparator=::<): return the index of the greatest element less or equal than needle by doing a binary search. This suppose that the elements are sorted aoccording to the comparator given. 
+- pop: remove an item from the end of the deque and return it
+- push(...items): add one or more items at the end of the deque
+- remove(...items): remove one or more items
+- removeAt(...indices): remove one or more items at specified indices. Indices can be numbers or ranges.
+- removeIf(predicate): remove all items from the deque for which the predicate returned true
+- resize(newLength, value=undefined): resize the deque to make it having the new length specified. If it is longer, fill the new elements with the given value.
+- shift: remove and return the first item of the deque
+- toString: return a string like "[1, 2, 3, 4, 5]"
+- unshift(items...): insert one or more items at the beginning of the deque
+- upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted according to the comparator given.
+
 ## Dictionary: is Iterable
 A Dictionary is an associative container where keys are sorted.
 
-Constructor: Dictionary(sorter=::<, items...), where sorter is any kind of callable taking two arguments and returning true if the first argument goes before the second.
+Constructor: Dictionary([sorter=::<], mappings...), create a new dictionary from optional source mappings and optional sorter; sorter is any kind of callable taking two arguments and returning true if the first argument goes before the second.
 - Operators: [], []=, +, in
 
 Items in a dictionary are indexed by their key, i.e. `dictionary["somekey"]` returns or overwrites the value associated with "somekey".
@@ -39,7 +76,7 @@ If several values have been associated with the same key, the value returned whe
 
 Methods:
 
-- Dictionary.of(sorter, sequences...): create a dictionary from one or more source mappings
+- Dictionary.of([sorter], entries...): create a dictionary with an optional sorter and initial entries
 - clear: remove all entries from the dictionary
 - iterator: return an iterator to iterate through (key, value) pairs of the dictionary. The pairs are ordered by their key as defined by the sorter given at construction.
 - length: return the number of entries present in the dictionary
@@ -108,12 +145,12 @@ Storing items in heap order allows to quickly fetch the element with the highest
 It is generally faster than a sorted set, if you only need to access the greatest element, and don't care about the order of other items after the first one.
 Its downsides are that, removing elements other than the first greatest one may be slow, and elements aren't returned in their natural order when iterating.
 
-- Constructor: Heap(sorter=::<, ...items): construct an heap from a serie of items, sorting them by the sorter given
+- Constructor: Heap([sorter=::>], ...sources): construct an heap from an optional sorter and initial sources
 - Operators: none
 
 Methods:
 
-- static Heap.of(sorter, ...sequences): create an heap from a serie of concatenated sequences
+- static Heap.of([sorter=::>], ...items): create an heap from a serie of items and an optional sorter
 - clear: remove all elements from the heap
 - first: return the first item  of the heap (the greatest one according to the sort order defined by the sorter)
 - iterator: return an iterator to iterate through the elements of the queue. Elements are yielded in an unspecified order, *not* in the order given by the sorter.
@@ -158,12 +195,12 @@ When items are frequently added or removed at the beginning or at the end but ne
 
 Note: to prevent from possible slow operations, LinkedList doesn't provide `[]` and `[]=` indexing/subscripting  operators.
 
-- Constructor: LinkedList(items...): construct a linked list from a serie of given items
+- Constructor: LinkedList(sequences...): create a linked list from the concatenation of one or more sequences
 - Operators: +, in
 
 Methods:
 
-- static LinkedList.of(sequences...): create a linked list from the concatenation of one or more sequences
+- static LinkedList.of(items...): construct a linked list from a serie of given items
 - iterator: return an iterator to iterate through the elements of this linked list in order
 - push(...items): push one or more items at the end of the list
 - pop: pop an item from the end of the list and return it
@@ -176,7 +213,7 @@ Methods:
 ## List: is Iterable
 A list is a collection of items, in principe all of the same type (even if it isn't enforced). They are generally good, except when items are frequently added or removed in the beginning or in the middle of the list, in which case LinkedList is better.
 
-- Constructor: List(items...): create a list from the given items
+- Constructor: List(sequences...): create a list from one or more concatenated sequences
 - Implicit construction when using [...] notation
 - Operators: `[], []=, +, *, in`
 - Comparison operators: ==, !=
@@ -187,7 +224,7 @@ Indexing with a range, i.e. `list[2...5]` allow to return or overwrite a sublist
 
 Methods:
 
-- static List.of(sequences...): create a list from one or more concatenated sequences
+- static List.of(items...): create a list from the given items
 - add(...items): add one or more items at the end of the list
 - clear: clear the whole list
 - draw([random=rand], count=1): randomly draw the specified number of elements from the list. Drawn elements aren't removed from the source list. AVailability depends on the Random class being available.
@@ -221,7 +258,7 @@ Methods:
 A Map is an associative container where key/value pairs are held with no particular order. If keys need to be ordered, Dictionary must be used.
 IN order to be held in a Map, keys must all be hashable, i.e. implement the hashCode method. This is the case for Number, String, Bool and Tuple.
 
-- Constructor: Map(items...): where items can be a Dictionary, another Map, or any sequence of key/value pair tuples.
+- Constructor: Map(sequences...): construct a Map from one or more source mappings
 - Implicit construction when using {...} notation
 - Operators: [], []=, +, in
 
@@ -229,7 +266,7 @@ Items in a map are indexed by their key, i.e. `map["somekey"]` returns or overwr
 
 Methods: 
 
-- static Map.of(sequences...): construct a Map from one or more source mappings
+- static Map.of(entries...): construct a map from a serie of entries. Each entry must be an iterable with two elements, for example a 2-tuple.
 - clear: remove all items from the map
 - flipped: return a map where keys become values and values become keys.
 - getOrCompute(key, func): return this[key] if it is present in the map; otherwise, compute func(key) and store it in the map before returning it.
@@ -352,14 +389,14 @@ Other methods:
 A Set is a collection of items, in principle all of the same type (although nothing is enforced), where order has no importance and where any item may only be present once.
 Another characteristic of sets beside the uniqueness of held objects is their ability to make set opations: union, intersection, difference and symetric difference
 
-- Constructor: Set(...items): construct a set from individual elements
+- Constructor: Set(...sequences): construct a set from one or more concatenated sequences
 - Implicitly constructed when using `<...>` notation
 - Operators: `-, &, |, ^, in`
 - Comparison operators: ==, !=
 
 Methods: 
 
-- static Set.of(sequences...): construct a set from one or more concatenated sequences
+- static Set.of(items...): construct a set from individual elements
 - add(...items): add one or more items
 - clear: empty the whole set
 - iterator: return an iterator to go through the elements of this set. The iteration is in an unspecified order.
@@ -373,13 +410,13 @@ A sorted Set is a collection of items, in principle all of the same type (althou
 Normally, as with sets, items in a sorted set may only be present once, but the rule may be circumvented (do it with caution).
 Another characteristic of sets beside the uniqueness of held objects is their ability to make set opations: union, intersection, difference and symetric difference
 
-- Constructor: SortedSet(sorter=::<, ...items): construct a set from individual elements and sort them using the sorter given
+- Constructor: SortedSet([sorter=::<], ...items): construct a sorted set from one or more concatenated sequences, sorting the items by the sorter given
 - Operators: `-, &, |, ^, in`
 - Comparison operators: ==, !=
 
 Methods: 
 
-- static SortedSet.of(sorter, sequences...): construct a sorted set from one or more concatenated sequences, sorting the items by the sorter given
+- static SortedSet.of([sorter=::<], items...): construct a set from individual elements and sort them using the sorter given
 - add(...items, allowDuplicate=false): add one or more items. If allowDuplicate=true, then items are addded to the set regardless of they were already present; this breaks the uniqueness rule, it can be useful sometimes but do it with caution.
 - clear: empty the whole set
 - first: return the first (smallest) element of the set
@@ -430,7 +467,7 @@ A tuple is a sequence of items, generally of etherogeneous types, as opposed to 
 The order of the elements in a tuple are also often significant, i.e. `(1, 2)` means something else than `(2, 1)`, while it is often unsignificant for lists.
 The other big difference with lists is that tuples are immutable and override the hashCode method. They can thus be used as keys in unsorted sequences like Map and Set.
 
-- Constructor: Tuple(...items): construct a tuple from one or more individual items
+- Constructor: Tuple(...sequences): construct a tuple out of one or more source sequences
 - Implicitly constructed when using (...,) notation
 - Operators: `[], +, *, in`
 - Comparison operators: `<, <=, ==, >=, >, !=` via compare
@@ -440,7 +477,7 @@ Negative indices count from the end, thus -1 indicates the last item, -2 the one
 Indexing with a range, i.e. `tuple[2...5]` allow to return a subtuple.
 
 Methods:
-
+- static of(...items): construct a tuple from one or more individual items
 - compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - iterator: return an iterator going through the elements of this tuple in order

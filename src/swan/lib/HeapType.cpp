@@ -4,20 +4,28 @@
 using namespace std;
 
 
-static void heapInstantiate (QFiber& f) {
-QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
+static void heapInstantiateFromItems (QFiber& f) {
+int start=1, finish=f.getArgCount();
+QV sorter =  QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (finish>=2) {
+if (f.at(1).isCallable()) { sorter=f.at(1); start++; }
+else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
+}
 QHeap* heap = f.vm.construct<QHeap>(f.vm, sorter);
 f.returnValue(heap);
-for (int i=2, n=f.getArgCount(); i<n; i++) heap->push(f.at(i));
+for (int i=start, n=finish; i<n; i++) heap->push(f.at(i));
 }
 
-static void heapFromSequence (QFiber& f) {
-QV sorter = f.getArgCount()>=2? f.at(1) : QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
-if (!sorter.isCallable()) error<invalid_argument>("Sorter must be callable");
+static void heapInstantiateFromSequences (QFiber& f) {
+int start=1, finish=f.getArgCount();
+QV sorter =  QV(f.vm.findMethodSymbol("<") | QV_TAG_GENERIC_SYMBOL_FUNCTION);
+if (finish>=2) {
+if (f.at(1).isCallable()) { sorter=f.at(1); start++; }
+else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
+}
 QHeap* heap = f.vm.construct<QHeap>(f.vm, sorter);
 f.returnValue(heap);
-for (int i=2, l=f.getArgCount(); i<l; i++) {
+for (int i=start, l=finish; i<l; i++) {
 f.getObject<QSequence>(i) .copyInto(f, heap->data);
 }
 std::make_heap(heap->data.begin(), heap->data.end(), QVBinaryPredicate(f.vm, heap->sorter));
@@ -91,8 +99,8 @@ BIND_F(next, heapIteratorNext)
 
 heapClass ->type
 ->copyParentMethods()
-BIND_F( (), heapInstantiate)
-BIND_F(of, heapFromSequence)
+BIND_F( (), heapInstantiateFromSequences)
+BIND_F(of, heapInstantiateFromItems)
 ;
 }
 
