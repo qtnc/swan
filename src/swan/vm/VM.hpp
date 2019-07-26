@@ -39,8 +39,8 @@ QClass *iterableClass, *iteratorClass, *mappingClass, *listIteratorClass, *strin
 QClass *regexClass, *regexMatchResultClass, *regexIteratorClass, *regexTokenIteratorClass;
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-QClass *dictionaryClass, *linkedListClass, *heapClass, *sortedSetClass;
-QClass *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorClass, *heapIteratorClass;
+QClass *dequeClass, *dictionaryClass, *linkedListClass, *heapClass, *sortedSetClass;
+QClass *dequeIteratorClass, *dictionaryIteratorClass, *linkedListIteratorClass, *sortedSetIteratorClass, *heapIteratorClass;
 #endif
 #ifndef NO_RANDOM
 QClass *randomClass;
@@ -77,6 +77,7 @@ void initSetType();
 void initRangeType();
 #ifndef NO_OPTIONAL_COLLECTIONS
 void initLinkedListType();
+void initDequeType ();
 void initDictionaryType();
 void initSortedSetType ();
 void initHeapType ();

@@ -10,7 +10,7 @@ auto it = map.map.find(f.at(1));
 f.returnValue(it!=map.map.end());
 }
 
-static void mapInstantiate (QFiber& f) {
+static void mapInstantiateFromEntries (QFiber& f) {
 QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> tuple(f.vm);
@@ -21,7 +21,7 @@ if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }
 }
 
-static void mapFromSequence (QFiber& f) {
+static void mapInstantiateFromMappings (QFiber& f) {
 QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);
@@ -128,8 +128,8 @@ BIND_F(next, mapIteratorNext)
 
 mapClass ->type
 ->copyParentMethods()
-BIND_F( (), mapInstantiate)
-BIND_F(of, mapFromSequence)
+BIND_F( (), mapInstantiateFromMappings)
+BIND_F(of, mapInstantiateFromEntries)
 ;
 
 //println("sizeof(QMap)=%d", sizeof(QMap));

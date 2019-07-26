@@ -193,10 +193,9 @@ virtual void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
 if (isSingleSequence()) {
-int ofSymbol = compiler.vm.findMethodSymbol("of");
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, listSymbol);
 items[0]->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, ofSymbol);
+writeOpCallFunction(compiler, 1);
 } else {
 bool vararg = isVararg();
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
@@ -206,8 +205,9 @@ for (auto item: items) {
 compiler.writeDebugLine(item->nearestToken());
 item->compile(compiler);
 }
-if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
-else writeOpCallFunction(compiler, items.size());
+int ofSymbol = compiler.vm.findMethodSymbol("of");
+if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, ofSymbol);
+else writeOpCallMethod(compiler, items.size(), ofSymbol);
 }}
 };
 
@@ -217,10 +217,9 @@ void compile (QCompiler& compiler) override {
 int setSymbol = compiler.vm.findGlobalSymbol(("Set"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
-int ofSymbol = compiler.vm.findMethodSymbol("of");
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, setSymbol);
 items[0]->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, ofSymbol);
+writeOpCallFunction(compiler, 1);
 } else {
 bool vararg = isVararg();
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
@@ -230,8 +229,9 @@ for (auto item: items) {
 compiler.writeDebugLine(item->nearestToken());
 item->compile(compiler);
 }
-if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
-else writeOpCallFunction(compiler, items.size());
+int ofSymbol = compiler.vm.findMethodSymbol("of");
+if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, ofSymbol);
+else writeOpCallMethod(compiler, items.size(), ofSymbol);
 }}
 };
 
@@ -252,10 +252,9 @@ int subscriptSetterSymbol = compiler.vm.findMethodSymbol(("[]="));
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
 compiler.writeDebugLine(nearestToken());
 if (items.size()==1 && isComprehension(items[0].first)) {
-int ofSymbol = compiler.vm.findMethodSymbol("of");
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, mapSymbol);
 items[0].first->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, ofSymbol);
+writeOpCallFunction(compiler, 1);
 return;
 }
 for (auto it = items.begin(); it!=items.end(); ) {
@@ -273,7 +272,8 @@ for (auto item: unpacks) {
 compiler.writeDebugLine(item->nearestToken());
 item->compile(compiler);
 }
-if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
+int ofSymbol = compiler.vm.findMethodSymbol("of");
+if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, ofSymbol);
 else compiler.writeOp(OP_CALL_FUNCTION_0);
 for (auto item: items) {
 compiler.writeOp(OP_DUP);
@@ -294,10 +294,9 @@ virtual void compile (QCompiler& compiler) override {
 int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
-int ofSymbol = compiler.vm.findMethodSymbol("of");
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, tupleSymbol);
 items[0]->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, ofSymbol);
+writeOpCallFunction(compiler, 1);
 } else {
 bool vararg = any_of(items.begin(), items.end(), isUnpack);
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
@@ -307,8 +306,9 @@ for (auto item: items) {
 compiler.writeDebugLine(item->nearestToken());
 item->compile(compiler);
 }
-if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
-else writeOpCallFunction(compiler, items.size());
+int ofSymbol = compiler.vm.findMethodSymbol("of");
+if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, ofSymbol);
+else writeOpCallMethod(compiler, items.size(), ofSymbol);
 }}
 };
 
@@ -320,8 +320,9 @@ const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override {
 int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), LV_EXISTING | LV_FOR_READ);
 int size = data.size() * data[0].size();
+int argLimit = std::numeric_limits<uint_local_index_t>::max() -5;
 compiler.writeDebugLine(nearestToken());
-if (size>120) compiler.writeOp(OP_PUSH_VARARG_MARK);
+if (size>= argLimit) compiler.writeOp(OP_PUSH_VARARG_MARK);
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, gridSymbol);
 compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data[0].size());
 compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data.size());
@@ -329,7 +330,7 @@ for (auto& row: data) {
 for (auto& value: row) {
 value->compile(compiler);
 }}
-if (size>120) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
+if (size>argLimit) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, size+2);
 }
 };

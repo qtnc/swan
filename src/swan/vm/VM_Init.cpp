@@ -118,6 +118,9 @@ regexIteratorClass = QClass::create(*this, classClass, iteratorClass, "RegexIter
 regexTokenIteratorClass = QClass::create(*this, classClass, iteratorClass, "RegexTokenIterator", 0, -1);
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
+auto dequeMetaClass = QClass::create(*this, classClass, classClass, "DequeMetaClass", 0, -1);
+dequeClass = QClass::create(*this, dequeMetaClass, iterableClass, "Deque", 0, -1);
+dequeIteratorClass = QClass::create(*this, classClass, iteratorClass, "DequeIterator", 0, -1);
 auto dictionaryMetaClass = QClass::create(*this, classClass, classClass, "DictionaryMetaClass", 0, -1);
 dictionaryClass = QClass::create(*this, dictionaryMetaClass, mappingClass, "Dictionary", 0, -1);
 dictionaryIteratorClass = QClass::create(*this, classClass, iteratorClass, "DictionaryIterator", 0, -1);
@@ -177,6 +180,7 @@ initSetType();
 initRangeType();
 #ifndef NO_OPTIONAL_COLLECTIONS
 initLinkedListType();
+initDequeType();
 initDictionaryType();
 initSortedSetType();
 initHeapType();

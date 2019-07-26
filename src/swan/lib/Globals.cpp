@@ -98,7 +98,7 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 , regexClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-, dictionaryClass, linkedListClass, heapClass, sortedSetClass
+, dequeClass, dictionaryClass, linkedListClass, heapClass, sortedSetClass
 #endif
 #ifndef NO_GRID
 , gridClass

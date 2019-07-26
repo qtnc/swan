@@ -24,14 +24,14 @@ unordered_set_difference(union_, intersection, result);
 }
 
 
-static void setInstantiate (QFiber& f) {
+static void setInstantiateFromItems (QFiber& f) {
 int n = f.getArgCount() -1;
 QSet* set = f.vm.construct<QSet>(f.vm);
 f.returnValue(set);
 if (n>0) set->set.insert(&f.at(1), &f.at(1) +n);
 }
 
-static void setFromSequence (QFiber& f) {
+static void setInstantiateFromSequences (QFiber& f) {
 QSet* set = f.vm.construct<QSet>(f.vm);
 f.returnValue(set);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
@@ -146,8 +146,8 @@ BIND_F(next, setIteratorNext)
 
 setClass ->type
 ->copyParentMethods()
-BIND_F( (), setInstantiate)
-BIND_F(of, setFromSequence)
+BIND_F( (), setInstantiateFromSequences)
+BIND_F(of, setInstantiateFromItems)
 ;
 
 //println("sizeof(QSet)=%d", sizeof(QSet));

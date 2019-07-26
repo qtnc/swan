@@ -1,10 +1,10 @@
-#include "../../include/cpprintf.hpp"
 #ifndef NO_OPTIONAL_COLLECTIONS
+#include "../../include/cpprintf.hpp"
 #include "SwanLib.hpp"
 #include "../vm/LinkedList.hpp"
 using namespace std;
 
-static void linkedListInstantiate (QFiber& f) {
+static void linkedListInstantiateFromItems (QFiber& f) {
 int n = f.getArgCount() -1;
 QLinkedList* list = f.vm.construct<QLinkedList>(f.vm);
 f.returnValue(list);
@@ -98,7 +98,7 @@ auto it = remove_if(list.data.begin(), list.data.end(), pred);
 list.data.erase(it, list.data.end());
 }}
 
-static void linkedListFromSequence (QFiber& f) {
+static void linkedListInstantiateFromSequences (QFiber& f) {
 QLinkedList* list = f.vm.construct<QLinkedList>(f.vm);
 f.returnValue(list);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
@@ -138,8 +138,8 @@ BIND_F(remove, linkedListIteratorRemove)
 
 linkedListClass ->type
 ->copyParentMethods()
-BIND_F( (), linkedListInstantiate)
-BIND_F(of, linkedListFromSequence)
+BIND_F( (), linkedListInstantiateFromSequences)
+BIND_F(of, linkedListInstantiateFromItems)
 ;
 
 //println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));

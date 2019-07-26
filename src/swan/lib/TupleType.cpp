@@ -2,13 +2,13 @@
 #include "../vm/Tuple.hpp"
 using namespace std;
 
-static void tupleInstantiate (QFiber& f) {
+static void tupleInstantiateFromItems (QFiber& f) {
 int n = f.getArgCount() -1;
 QTuple* tuple = QTuple::create(f.vm, n, n? &f.at(1) : nullptr);
 f.returnValue(tuple);
 }
 
-static void tupleFromSequence (QFiber& f) {
+static void tupleInstantiateFromSequences (QFiber& f) {
 vector<QV, trace_allocator<QV>> items(f.vm);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 f.getObject<QSequence>(i) .copyInto(f, items);
@@ -142,7 +142,7 @@ BIND_F(previous, tupleIteratorPrevious)
 
 tupleClass ->type
 ->copyParentMethods()
-BIND_F( (), tupleInstantiate)
-BIND_F(of, tupleFromSequence)
+BIND_F( (), tupleInstantiateFromSequences)
+BIND_F(of, tupleInstantiateFromItems)
 ;
 }

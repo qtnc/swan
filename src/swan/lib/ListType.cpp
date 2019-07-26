@@ -3,7 +3,7 @@
 #include "../vm/List.hpp"
 using namespace std;
 
-static void listInstantiate (QFiber& f) {
+static void listInstantiateFromItems (QFiber& f) {
 int n = f.getArgCount() -1;
 QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
@@ -252,7 +252,7 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
-static void listFromSequence (QFiber& f) {
+static void listInstantiateFromSequences (QFiber& f) {
 QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
 for (int i=1, l=f.getArgCount(); i<l; i++) {
@@ -310,8 +310,8 @@ BIND_F(insert, listIteratorInsert)
 
 listClass -> type
 ->copyParentMethods()
-BIND_F( (), listInstantiate)
-BIND_F(of, listFromSequence)
+BIND_F( (), listInstantiateFromSequences)
+BIND_F( of, listInstantiateFromItems)
 ;
 
 //println("sizeof(QList)=%d", sizeof(QList));

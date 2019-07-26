@@ -140,8 +140,15 @@ return false;
 #include "Dictionary.hpp"
 #include "Heap.hpp"
 #include "SortedSet.hpp"
+#include "Deque.hpp"
 
 bool QLinkedList::gcVisit () {
+if (QObject::gcVisit()) return true;
+for (QV& val: data) val.gcVisit();
+return false;
+}
+
+bool QDeque::gcVisit () {
 if (QObject::gcVisit()) return true;
 for (QV& val: data) val.gcVisit();
 return false;
@@ -186,6 +193,12 @@ return false;
 bool QLinkedListIterator::gcVisit () {
 if (QObject::gcVisit()) return true;
 list.gcVisit();
+return false;
+}
+
+bool QDequeIterator::gcVisit () {
+if (QObject::gcVisit()) return true;
+deque.gcVisit();
 return false;
 }
 
@@ -285,8 +298,8 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-, dictionaryClass, linkedListClass, heapClass, sortedSetClass
-, dictionaryIteratorClass, linkedListIteratorClass, heapIteratorClass, sortedSetIteratorClass
+, dequeClass, dictionaryClass, linkedListClass, heapClass, sortedSetClass
+, dequeIteratorClass, dictionaryIteratorClass, linkedListIteratorClass, heapIteratorClass, sortedSetIteratorClass
 #endif
 #ifndef NO_GRID
 , gridClass, gridIteratorClass
