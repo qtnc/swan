@@ -42,7 +42,9 @@ f.getObject<QSequence>(i) .copyInto(f, *set);
 static void setAdd (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
 int n = f.getArgCount() -1;
+auto s = set.set.size();
 if (n>0) set.set.insert(&f.at(1), (&f.at(1))+n);
+f.returnValue(set.set.size() == n+s);
 }
 
 static void setIn (QFiber& f) {

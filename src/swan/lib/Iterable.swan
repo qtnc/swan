@@ -44,11 +44,6 @@ return val
 Iterable::sorted = $$: List.of(this).sort
 Iterable::reversed = $$: List.of(this).reverse
 
-Iterable::toList = $$: List.of(this)
-Iterable::toTuple = $$: Tuple.of(this)
-Iterable::toSet = $$: Set.of(this)
-Iterable::toMap = $$: Map.of(this)
-
 Iterable::map = $$f: f(x) for x in this
 Iterable::filter = $$f: x for x in this if f(x)
 

@@ -34,8 +34,10 @@ static void setAdd (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 bool multi = false;
 int n = f.getArgCount();
+bool re = true;
 if (f.isBool(-1)) { multi=f.getBool(-1); n--; }
-for (int i=1; i<n; i++) set.add(f.at(i), multi);
+for (int i=1; i<n; i++) re = set.add(f.at(i), multi) && re;
+f.returnValue(re);
 }
 
 static void setIn (QFiber& f) {

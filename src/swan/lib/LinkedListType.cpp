@@ -53,6 +53,7 @@ static void linkedListPush (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
 int n = f.getArgCount() -1;
 if (n>0) list.data.insert(list.data.end(), &f.at(1), (&f.at(1))+n);
+f.returnValue(true);
 }
 
 static void linkedListPop (QFiber& f) {
