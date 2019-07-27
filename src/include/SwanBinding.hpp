@@ -847,7 +847,6 @@ storeDestructor(&Swan::Binding::SwanDestructorWrapper<T>::destructor);
 /** Convert a property into a couple of Swan native functions to get/set the property. Use this when PROPERTY is unssuficient, for example when accessing a nested member */
 #define MEMBER(CLS,MEM) (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::getter), (&Swan::Binding::SwanPropertyByOffsetWrapper<CLS, decltype(reinterpret_cast<CLS*>(0)->MEM), offsetof(CLS, MEM)>::setter)
 
-
 /** Convert a regular function into a Swan native function. The Swan VM is unlocked while exeucting the function. */
 #define UNLOCKED_FUNCTION(...) (&Swan::Binding::SwanWrapper<decltype(__VA_ARGS__)>::unlocked_wrapper<&(__VA_ARGS__)>)
 
