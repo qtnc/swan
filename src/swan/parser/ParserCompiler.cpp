@@ -3176,12 +3176,15 @@ if ((var->flags&VD_GLOBAL)) slot = compiler.findGlobalVariable(name->token, LV_N
 else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
-if (var->value) var->value->compile(compiler);
+if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
+auto func = fdecl->compileFunction(compiler);
+func->name = string(name->token.start, name->token.length);
+}
+else if (var->value) var->value->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 for (auto& decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 if (var->flags&VD_GLOBAL) {
-//int globalSlot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
 compiler.writeOp(OP_POP);
 }
@@ -3331,8 +3334,9 @@ if (body->isExpression()) fc.writeOp(OP_POP);
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->vararg = (flags&FD_VARARG);
-func->name = string(name.start, name.length);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
+if (name.type==T_NAME) func->name = string(name.start, name.length);
+else func->name = "<closure>";
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));

@@ -144,6 +144,19 @@ static void functionBind (QFiber& f) {
 f.returnValue(QV(BoundFunction::create(f.vm, f.at(0), f.getArgCount() -1, &f.at(1)), QV_TAG_BOUND_FUNCTION));
 }
 
+static string getFuncName (QV f, QVM& vm) {
+if (f.isClosure()) return f.asObject<QClosure>()->func.name;
+else if (f.isNormalFunction()) return f.asObject<QFunction>()->name;
+else if (f.isGenericSymbolFunction()) return "::" + vm.methodSymbols[f.asInt<uint_method_symbol_t>()];
+else if (f.isNativeFunction() || f.isStdFunction()) return "<native>";
+else if (f.isFiber()) return getFuncName(QV(f.asObject<QFiber>() ->callFrames[0] .closure, QV_TAG_CLOSURE), vm) + ":<fiber>";
+else if (f.isBoundFunction()) {
+BoundFunction& bf = *f.asObject<BoundFunction>();
+return format("bound(%d):%s", bf.count, getFuncName(bf.method, vm));
+}
+else return "<unknown>";
+}
+
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
@@ -175,6 +188,7 @@ functionClass
 //##BIND_L( (), {  f.callFunc(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
 BIND_F(hashCode, objectHashCode)
 BIND_F(bind, functionBind)
+BIND_L(name, { f.returnValue(getFuncName(f.at(0), f.vm)); })
 ;
 
 boolClass
@@ -182,7 +196,6 @@ boolClass
 BIND_L(!, { f.returnValue(!f.getBool(0)); })
 BIND_N(?)
 BIND_L(toString, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
-BIND_L(toJSON, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
 BIND_F(hashCode, objectHashCode)
 ;
 
@@ -191,7 +204,6 @@ nullClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(?, { f.returnValue(QV::FALSE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4));  })
-BIND_L(toJSON, { f.returnValue(QV(f.vm, "null", 4));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;
@@ -201,7 +213,6 @@ undefinedClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(?, { f.returnValue(QV::FALSE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "undefined", 9));  })
-BIND_L(toJSON, { f.returnValue(QV(f.vm, "undefined", 9));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
 BIND_F(hashCode, objectHashCode)
 ;
