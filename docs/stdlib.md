@@ -1,9 +1,9 @@
 # Standard library
-Here's a very quick reference of the standard library included with the language.
+Here's a reference of the standard library included with the language.
 
 The following classes, objects, methods, functions, form the core part of the language.
 
-Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Dictionary/Heap/LinkedList/SortedSet, and Grid.
+Note that a few of these modules and methods related to them can be disabled at compile time with several options. This is the case for Regex, Random, Deque/Dictionary/Heap/LinkedList/SortedSet, and Grid.
 Unless so disabled, they are always available in the CLI as well as when embedding Swan into your own C++ application.
 
 ## Bool: is Object
@@ -65,7 +65,7 @@ Methods:
 - unshift(items...): insert one or more items at the beginning of the deque
 - upper(needle, comparator=::<): return the index of the greatest element strictly less than needle by doing a binary search. This suppose that the elements are sorted according to the comparator given.
 
-## Dictionary: is Iterable
+## Dictionary: is Mapping
 A Dictionary is an associative container where keys are sorted.
 
 Constructor: Dictionary([sorter=::<], mappings...), create a new dictionary from optional source mappings and optional sorter; sorter is any kind of callable taking two arguments and returning true if the first argument goes before the second.
@@ -268,14 +268,19 @@ Methods:
 
 - static Map.of(entries...): construct a map from a serie of entries. Each entry must be an iterable with two elements, for example a 2-tuple.
 - clear: remove all items from the map
-- flipped: return a map where keys become values and values become keys.
-- getOrCompute(key, func): return this[key] if it is present in the map; otherwise, compute func(key) and store it in the map before returning it.
 - iterator: return an iterator to iterate through (key, value) pairs of the map. The entries are iterated in an unspecified order.
-- keys: return an iterable sequence enumerating all existing keys
 - length: return the number of key/value pairs present in the map
 - remove(...keys): remove one or more keys from the map
 - reserve(capacity): prepare the collection to contain at least the given number of elements by allocating memory in advance.
 - toString: return a string like "{a: 1, b: 2, c: 3, d: 4}"
+
+## Mapping: is Iterable
+The Mapping class represent the parent of all mappable types, i.e. structures that hold a mapping of key/value pairs. Map and Dictionary are Mappable.
+
+- flipped: return a map where keys become values and values become keys.
+- get(key, func): return this[key] if it is present in the map; otherwise, compute func(key) and store it in the map before returning it.
+- keys: return an iterable sequence enumerating all existing keys
+- set(key, value, merger): assign `this[key]=value` if it isn't yet present in the map; otherwise, assign `this[key]=merger(oldValue, value)`; in any case, return the value previously associated to the key.
 - values: return an iterable sequence enumerating all values
 
 ## Null: is Object
@@ -559,3 +564,41 @@ This family of global functions is used to dynamically create classes, or access
 - loadMethod(object, name): access the named method of the object. Equivalent to `object::name` with a dynamic name.
 storeMethod(class, name, method): Store the given method to the class under its name. Equivalent to `class::name = method` where name would be dynamic.
 storeStaticMethod(class, name, method): Store a static method of the class under its name. Equivalent to `class.type::name = method` where name would be dynamic.
+
+## Collection operations complexity cheatsheet
+-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----
+Collection | In | Top | Get | Back | Unshift | Insert | Push | Shift | Remove | Pop | Ordered | Sorted | Multi
+List | O(n) | O(1) | O(1) | O(1) | O(n) | O(n) | O(1) | O(n) | O(n) | O(1) | Yes | No | Yes
+Tuple | O(n) | O(1) | O(1) | O(1) |  n/a | n/a |n/a |n/a |n/a |n/a | Yes | No | Yes
+LinkedList | O(n) | O(1) | O(n/2) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | Yes | No | Yes
+Deque | O(n) | O(1) | O(1) | O(1) | O(1) | O(n/2) | O(1) | O(1) | O(n/2) | O(1) | Yes | No | Yes
+Set | O(1) | n/a | n/a | n/a | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) |  No | No | No
+SortedSet | O(log(n)) | O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n)) | Yes | Yes | No
+Heap | O(n) | O(1) | O(n) | O(n) | O(log(n))| O(log(n))| O(log(n)) | O(n log(n)) | O(n log(n))| O(n log(n)) | No | Yes | Yes
+
+- In: containment check, i.e. check if an element is present in the sequence
+- Top: retriev the first element of the sequence
+- Get. retriev a random element from the sequence
+- Back: retriev the last element of the sequence
+- Unshift: insert a new element at the beginning of the sequence
+- Insert: insert an element at a random position in the sequence
+- Push: insert an element at the end of the sequence
+- Shift: remove the first element of the sequence
+- Remove: remove a random element in the middle of the sequence
+- Pop: remove an element at the end of the sequence
+- Ordered: whether or not the elements are returned in some defined order when iterating through the sequence
+- Sorted: whether or not the elements are sorted in the sequence
+- Multi: whether or not it is possible to insert several times the same element in the sequence
+
+## Mapping operations complexity cheatsheet
+-----|-----|-----|-----|-----|-----|------
+Collection | Lookup | Put | Remove | Ordered | Sorted | Multi
+Map | O(1) | O(1) | O(1) | No | No | No
+Dictionary | O(log(n)) |O(log(n)) |O(log(n)) | Yes | yes | Yes
+
+- Lookup: retrieving a mapping given its key
+- Put: insert a new mapping
+- Remove: remove a mapping given a key
+- Ordered: whether or not the elements are returned in some defined order when iterating through the sequence
+- Sorted: whether or not the elements are sorted in the sequence
+- Multi: whether or not it is possible to insert several times a mapping with the same key in the sequence
