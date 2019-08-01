@@ -568,14 +568,14 @@ storeStaticMethod(class, name, method): Store a static method of the class under
 ## Collection operations complexity cheatsheet
 
 Collection | In | Top | Get | Back | Unshift | Insert | Push | Shift | Remove | Pop | Ordered | Sorted | Multi
------|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----
+-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----
 List | O(n) | O(1) | O(1) | O(1) | O(n) | O(n) | O(1) | O(n) | O(n) | O(1) | Yes | No | Yes
-Tuple | O(n) | O(1) | O(1) | O(1) |  n/a | n/a |n/a |n/a |n/a |n/a | Yes | No | Yes
+Tuple | O(n) | O(1) | O(1) | O(1) | n/a | n/a | n/a | n/a | n/a | n/a | Yes | No | Yes
 LinkedList | O(n) | O(1) | O(n/2) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | Yes | No | Yes
 Deque | O(n) | O(1) | O(1) | O(1) | O(1) | O(n/2) | O(1) | O(1) | O(n/2) | O(1) | Yes | No | Yes
 Set | O(1) | n/a | n/a | n/a | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) |  No | No | No
-SortedSet | O(log(n)) | O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n))| O(log(n)) | Yes | Yes | No
-Heap | O(n) | O(1) | O(n) | O(n) | O(log(n))| O(log(n))| O(log(n)) | O(n log(n)) | O(n log(n))| O(n log(n)) | No | Yes | Yes
+SortedSet | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | O(log(n)) | Yes | Yes | No
+Heap | O(n) | O(1) | O(n) | O(n) | O(log(n)) | O(log(n)) | O(log(n)) | O(n log(n)) | O(n log(n)) | O(n log(n)) | No | Yes | Yes
 
 - In: containment check, i.e. check if an element is present in the sequence
 - Top: retriev the first element of the sequence
