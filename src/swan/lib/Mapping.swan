@@ -8,7 +8,7 @@ Mapping::set = $$(k,v,m){
 let o = this[k]
 if o is undefined: this[k]=v
 else if m is true: this[k]=v
-else if m is false: ;
+else if m is false: {}
 else if m: this[k]=m(o,v)
 return o
 }

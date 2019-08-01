@@ -31,6 +31,7 @@ println("-h:  print this help message and exit");
 println("-i:  run interactive REPL (default when no script file is specified)");
 println("-m:  import the following given module");
 println("-o:  output compiled bytecode to specified file");
+println("-x=image: generate a standalone executable by using the given image");
 }
 
 static void printCLIHelp () {
@@ -80,7 +81,7 @@ line.clear();
 
 int main (int argc, char** argv) {
 vector<string> args, importModules;
-string inFile, outFile, expression;
+string inFile, outFile, expression, toExeImage;
 bool runREPL=false, compileOnly=false;
 optional<bool> compileDbgInfo;
 int argIndex=1, exitCode=0;
@@ -94,6 +95,7 @@ else if (arg=="-h" || arg=="--help" || arg=="-?") { printHelp(argv[0]); return 0
 else if (arg=="-i") runREPL=true;
 else if (arg=="-m") importModules.push_back(argv[argIndex++]);
 else if (arg=="-o") outFile = argv[argIndex++];
+else if (starts_with(arg, "-x=")) toExeImage = arg.substr(3);
 else if (starts_with(arg, "-")) println(std::cerr, "Warning: unknown option: %s", arg);
 else { 
 if (inFile.empty()) inFile=arg;
@@ -148,8 +150,17 @@ fiber.pop();
 if (compileOnly && !inFile.empty()) {
 if (outFile.empty()) outFile = inFile + ".sb";
 ofstream out(outFile, ios::binary);
-fiber.importAndDumpBytecode("", inFile, out);
+if (toExeImage.size()) {
+ifstream eIn(toExeImage, ios::binary);
+out << eIn.rdbuf();
 }
+auto pos = out.tellp();
+fiber.importAndDumpBytecode("", inFile, out);
+if (toExeImage.size()) {
+uint32_t length = out.tellp() -pos;
+out.write(reinterpret_cast<char*>(&length), 4);
+out.write("Swan", 4);
+}}
 
 if (runREPL && !compileOnly) {
 vm.setOption(Swan::VM::Option::VAR_DECL_MODE, Swan::VM::Option::VAR_IMPLICIT_GLOBAL);
