@@ -566,8 +566,9 @@ storeMethod(class, name, method): Store the given method to the class under its 
 storeStaticMethod(class, name, method): Store a static method of the class under its name. Equivalent to `class.type::name = method` where name would be dynamic.
 
 ## Collection operations complexity cheatsheet
------|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----
+
 Collection | In | Top | Get | Back | Unshift | Insert | Push | Shift | Remove | Pop | Ordered | Sorted | Multi
+-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----
 List | O(n) | O(1) | O(1) | O(1) | O(n) | O(n) | O(1) | O(n) | O(n) | O(1) | Yes | No | Yes
 Tuple | O(n) | O(1) | O(1) | O(1) |  n/a | n/a |n/a |n/a |n/a |n/a | Yes | No | Yes
 LinkedList | O(n) | O(1) | O(n/2) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | O(1) | Yes | No | Yes
@@ -591,8 +592,9 @@ Heap | O(n) | O(1) | O(n) | O(n) | O(log(n))| O(log(n))| O(log(n)) | O(n log(n))
 - Multi: whether or not it is possible to insert several times the same element in the sequence
 
 ## Mapping operations complexity cheatsheet
------|-----|-----|-----|-----|-----|------
+
 Collection | Lookup | Put | Remove | Ordered | Sorted | Multi
+-----|-----|-----|-----|-----|-----|------
 Map | O(1) | O(1) | O(1) | No | No | No
 Dictionary | O(log(n)) |O(log(n)) |O(log(n)) | Yes | yes | Yes
 

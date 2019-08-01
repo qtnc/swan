@@ -532,13 +532,13 @@ In fact, Swan supports extended/advanced comprehension. The complete syntax of a
 - traditional for loops can also be used
 
 ```
-let l = List.of(1..5, 5...1) # [1, 2, 3, 4, 5, 4, 3, 2, 1]
+let l = List(1..5, 5...1) # [1, 2, 3, 4, 5, 4, 3, 2, 1]
 let l2 = [x**2 for x in l while x<=3] # [1, 4, 9] (stops as soon as x>3)
 let l2 = [x**2 for x in l break if x>3] # [1, 4, 9] (another way to say the same thing)
 let l3 = [x for x, count=0, it=l.iterator; (x=it.next) && count<6; count+=1 if count>=2] # [3, 4, 5, 4] (only yield from the 2nd to the 6th element)
 
 # Assuming filenames is a list of file names, this will gather all the lines from all the files, opening and closing them properly. This example requires the CLI.
-let lines = [line for filename in filenames with IO.open(filename, 'r') as file for line in file]
+let lines = [line for filename in filenames with FileReader(filename) as file for line in file]
 ```
 
 ## Decorators
@@ -613,7 +613,7 @@ let m1 = {one: 1, two: 2, three: 3}
 for [key, value] in m1: print(key+'='+value) 
 
 # This will produce { oneone: 1, twotwo: 4, threethree: 9 }
-let m2 = Map.of( (k+k, v*v) for [k, v] in m1) 
+let m2 = Map( (k+k, v*v) for [k, v] in m1) 
 
 # You can use destructuring with objects, too
 class Student {
