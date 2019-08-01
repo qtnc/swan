@@ -29,19 +29,18 @@ Swan::VM& vm = createVM();
 Swan::Fiber& fiber = vm.getActiveFiber();
 
 fiber.loadGlobal("List");
+fiber.pushCopy();
 for (int i=0; i<argc; i++) fiber.pushString(argv[i]);
-fiber.call(argc);
+fiber.callMethod("of", 1+argc);
 fiber.storeGlobal("argv");
 
-int count = fiber.loadString(buffer, "<main>");
+int count = fiber.loadString(buffer, "<embedded>");
 while(count--) {
 fiber.call(0);
 if (count) fiber.pop();
 }
 
-int exitCode = 0;
-if (fiber.isNum(-1)) exitCode = fiber.getNum(-1);
-
+int exitCode = fiber.getOptionalNum(-1, 0);
 vm.destroy();
 return exitCode;
 }
