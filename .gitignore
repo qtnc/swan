@@ -4,6 +4,7 @@
 *.a
 *.out
 *.lib
+*.bin
 *.txt
 *.tmp
 *.zip
