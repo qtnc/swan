@@ -3,12 +3,13 @@
  
 #include <stdlib.h>
 #include <locale.h>
+
  
 // Cache locale object
 static int c_locale_initialized = 0;
 static _locale_t c_locale;
  
-_locale_t get_c_locale()
+/* _locale_t get_c_locale()
 {
   if(!c_locale_initialized)
   {
@@ -21,6 +22,14 @@ _locale_t get_c_locale()
 double strtod_c(const char *nptr, char **endptr)
 {
   return _strtod_l(nptr, endptr, get_c_locale());
+}*/
+
+double strtod_c(const char *nptr, char **endptr) {
+if (!c_locale_initialized) {
+setlocale(LC_NUMERIC, "c");
+c_locale_initialized=1;
+}
+  return strtod(nptr, endptr);
 }
  
 #else
