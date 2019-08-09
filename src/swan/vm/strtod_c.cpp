@@ -1,59 +1,24 @@
-// Taken from https://gist.github.com/tknopp/9271244
-#ifdef __WIN32
- 
-#include <stdlib.h>
-#include <locale.h>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+// Locale-independent (but probably quite bad) implementation of strtod
 
- 
-// Cache locale object
-static int c_locale_initialized = 0;
-static _locale_t c_locale;
- 
-/* _locale_t get_c_locale()
-{
-  if(!c_locale_initialized)
-  {
-    c_locale_initialized = 1;
-    c_locale = _create_locale(LC_ALL,"C");
-  }
-  return c_locale;
+double strtod_c (const char* s, char** endptr = nullptr) {
+char* e = const_cast<char*>(s);
+long long frac=0, num = strtoll(s, &e, 10);
+int exponent=0, fraclen=0;
+if (s!=e) {
+if (*e=='.' && *++e>='0' && *e<='9') {
+frac = strtoull(s=e, &e, 10);
+fraclen=e-s;
 }
- 
-double strtod_c(const char *nptr, char **endptr)
-{
-  return _strtod_l(nptr, endptr, get_c_locale());
-}*/
-
-double strtod_c(const char *nptr, char **endptr) {
-if (!c_locale_initialized) {
-setlocale(LC_NUMERIC, "c");
-c_locale_initialized=1;
+if (*e=='e' || *e=='E') {
+exponent = strtol(++e, &e, 10);
 }
-  return strtod(nptr, endptr);
 }
- 
-#else
- 
-#include <stdlib.h>
-#include <xlocale.h>
- 
-// Cache locale object
-static int c_locale_initialized = 0;
-static locale_t c_locale;
- 
-locale_t get_c_locale()
-{
-  if(!c_locale_initialized)
-  {
-    c_locale_initialized = 1;
-    c_locale = newlocale(LC_ALL_MASK, NULL, NULL);
-  }
-  return c_locale;
+if (endptr) *endptr=e;
+double value = num;
+if (frac) value += frac/pow(10, fraclen);
+if (exponent) value *= pow(10, exponent);
+return value;
 }
- 
-double strtod_c(const char *nptr, char **endptr)
-{
-  return strtod_l(nptr, endptr, get_c_locale());
-}
- 
-#endif
