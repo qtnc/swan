@@ -160,6 +160,7 @@ else return "<unknown>";
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
+BIND_N(constructor)
 BIND_L(class, { f.returnValue(&f.at(0).getClass(f.vm)); })
 BIND_F(toString, objectToString)
 BIND_F(is, objectEquals)

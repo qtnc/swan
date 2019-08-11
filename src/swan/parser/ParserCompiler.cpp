@@ -886,7 +886,7 @@ return index;
 int findField (const QToken& name) {  return findField(fields, name); }
 int findStaticField (const QToken& name) { return findField(staticFields, name); }
 shared_ptr<FunctionDeclaration> findMethod (const QToken& name, bool isStatic);
-void handleAutoConstructor (unordered_map<string,Field>& memberFields, bool isStatic);
+void handleAutoConstructor (QCompiler& compiler, unordered_map<string,Field>& memberFields, bool isStatic);
 const QToken& nearestToken () override { return name; }
 shared_ptr<Expression> optimize () override { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
 void compile (QCompiler&)override ;
@@ -1053,7 +1053,7 @@ STATEMENT(WHILE, While),
 
 static std::unordered_map<string,QTokenType> KEYWORDS = {
 #define TOKEN(name, keyword) { (#keyword), T_##name }
-TOKEN(BARBAR, and),
+TOKEN(AMPAMP, and),
 TOKEN(AS, as),
 TOKEN(ASYNC, async),
 TOKEN(AWAIT, await),
@@ -1079,7 +1079,7 @@ TOKEN(IS, is),
 TOKEN(VAR, let),
 TOKEN(EXCL, not),
 TOKEN(NULL, null),
-TOKEN(AMPAMP, or),
+TOKEN(BARBAR, or),
 TOKEN(REPEAT, repeat),
 TOKEN(RETURN, return),
 TOKEN(STATIC, static),
@@ -3205,7 +3205,7 @@ return m->name.length==name.length && strncmp(name.start, m->name.start, name.le
 return it==methods.end()? nullptr : *it;
 }
 
-void ClassDeclaration::handleAutoConstructor (unordered_map<string,Field>& memberFields, bool isStatic) {
+void ClassDeclaration::handleAutoConstructor (QCompiler& compiler, unordered_map<string,Field>& memberFields, bool isStatic) {
 if (all_of(methods.begin(), methods.end(), [&](auto& m){ return isStatic!=!!(m->flags&FD_STATIC); })) return;
 auto inits = make_shared<BlockStatement>();
 vector<pair<string,Field>> initFields;
@@ -3223,10 +3223,17 @@ QToken ctorToken = { T_NAME, CONSTRUCTOR, 11, QV::UNDEFINED };
 auto ctor = findMethod(ctorToken, isStatic);
 if (!ctor && (!isStatic || inits->statements.size() )) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
+auto thisExpr = make_shared<NameExpression>(thisToken);
 ctor = make_shared<FunctionDeclaration>(ctorToken);
 ctor->flags = (isStatic? FD_STATIC : 0);
-ctor->params.push_back(make_shared<Variable>(make_shared<NameExpression>(thisToken)));
-ctor->body = make_shared<SimpleStatement>(ctorToken);
+ctor->params.push_back(make_shared<Variable>(thisExpr));
+if (isStatic) ctor->body = make_shared<SimpleStatement>(ctorToken);
+else {
+auto arg = make_shared<NameExpression>(compiler.parser.createTempName()); 
+ctor->params.push_back(make_shared<Variable>(arg, nullptr, VD_VARARG)); 
+ctor->flags |= FD_VARARG;
+ctor->body = createBinaryOperation(make_shared<SuperExpression>(ctorToken), T_DOT, make_shared<CallExpression>(make_shared<NameExpression>(ctorToken), vector<shared_ptr<Expression>>({ make_shared<UnpackExpression>(arg) }) ));
+}
 methods.push_back(ctor);
 }
 if (ctor && inits->statements.size()) {
@@ -3235,8 +3242,8 @@ ctor->body = inits;
 }}
 
 void ClassDeclaration::compile (QCompiler& compiler) {
-handleAutoConstructor(fields, false);
-handleAutoConstructor(staticFields, true);
+handleAutoConstructor(compiler, fields, false);
+handleAutoConstructor(compiler, staticFields, true);
 for (auto decoration: decorations) decoration->compile(compiler);
 struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
 ClassDeclaration* oldClassDecl = compiler.curClass;

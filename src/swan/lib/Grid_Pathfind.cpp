@@ -39,25 +39,35 @@ bool handleInitialized;
 AStarPointInfo(double f1=maxval, double g1=maxval, double h1=maxval, const point& x=point(-1,-1), const point& p=point(-1,-1), int d=-1, heap_handle hh = heap_handle(), bool hi=false): f(f1), g(g1), h(h1), pt(x), parent(p), dir(d), handle(hh), handleInitialized(hi)  {}
 };
 
-static void readPoints (QFiber& f, int& x1, int& y1, int& x2, int& y2, QV& value) {
+static void readPoints (QFiber& f, int& x1, int& y1, int& x2, int& y2, QV& value, QGrid& g) {
+Swan::Range h(x1, x2, 1, false), v(y1, y2, 1, false);
 if (f.getArgCount()==6) {
 x1 = f.getNum(1); y1 = f.getNum(2); x2 = f.getNum(3); y2 = f.getNum(4);
+h = Swan::Range(x1, x2, 1, false);
+v = Swan::Range(y1, y2, 1, false);
 value = f.at(5);
 }
 else if (f.getArgCount()==4) {
 value = f.at(3);
-if (f.isRange(1)) { auto& r = f.getRange(1); x1=r.start; x2=r.end; }
-else x1=x2=f.getNum(1);
-if (f.isRange(2)) { auto& r = f.getRange(2); y1=r.start; y2=r.end; }
-else y1=y2=f.getNum(2);
+if (f.isRange(1)) h = f.getRange(1);
+else {
+x1=x2=f.getNum(1);
+h = Swan::Range(x1, x2, 1, true);
 }
+if (f.isRange(2)) v = f.getRange(2);
+else {
+y1=y2=f.getNum(2);
+v = Swan::Range(y1, y2, 1, true);
+}}
+h.makeBounds(g.width, x1, x2);
+v.makeBounds(g.height, y1, y2);
 }
 
 static void gridFillRect (QFiber& f) {
 QGrid& g = f.getObject<QGrid>(0);
 int x1=0, y1=0, x2=g.width, y2=g.height; QV value=QV::UNDEFINED;
 if (f.getArgCount()==2) value=f.at(1);
-else readPoints(f, x1, y1, x2, y2, value);
+else readPoints(f, x1, y1, x2, y2, value, g);
 if (x1<0) x1+=g.width+1; if (x2<0) x2+=g.width+1;
 if (y1<0) y1+=g.height+1; if (y2<0) y2+=g.height+1;
 g.makeBounds(x1, y1);
@@ -75,7 +85,7 @@ g.at(x, y) = value;
 static void gridDrawLine (QFiber& f) {
 QGrid& g = f.getObject<QGrid>(0);
 int x1=0, y1=0, x2=0, y2=0; QV value=0;
-readPoints(f, x1, y1, x2, y2, value);
+readPoints(f, x1, y1, x2, y2, value, g);
 g.makeBounds(x1, y1);
 g.makeBounds(x2, y2);
 int e, dx = x2-x1, dy=y2-y1, incX=dx>0?1:-1, incY=dy>0?1:-1;

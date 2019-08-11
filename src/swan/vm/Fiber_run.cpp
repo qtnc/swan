@@ -363,8 +363,8 @@ CASE(OP_CALL_SUPER_VARARG)
 arg2 = countArgsToMark(stack);
 arg1 = frame.read<uint_method_symbol_t>();
 callFrames.back() = frame;
-callSuperSymbol(arg1, arg2);
-stack.erase(stack.end() -2);
+stack.erase(stack.end() -arg2 -1);
+callSuperSymbol(arg1, arg2 -1);
 frame = callFrames.back();
 BREAK
 
