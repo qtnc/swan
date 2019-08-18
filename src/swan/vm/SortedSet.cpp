@@ -6,13 +6,13 @@ using namespace std;
 
 QSortedSetIterator::QSortedSetIterator (QVM& vm, QSortedSet& m): 
 QObject(vm.sortedSetIteratorClass), set(m), 
-iterator(m.set.begin()), forward(false)
+iterator(m.set.begin()), version(m.version), forward(false)
 {}
 
 QSortedSet::QSortedSet (QVM& vm, QV& sorter0): 
 QSequence(vm.sortedSetClass), 
 set(QVBinaryPredicate(vm, sorter0), trace_allocator<QV>(vm)), 
-sorter(sorter0) 
+sorter(sorter0), version(0)
 {}
 
 QSortedSet::iterator QSortedSet::find (const QV& key) {
@@ -27,11 +27,13 @@ else return set.end();
 bool QSortedSet::add (const QV& key, bool allowDuplicate) {
 if (allowDuplicate) {
 set.insert(key);
+incrVersion();
 return true;
 }
 auto it = find(key);
 if (it!=set.end()) return false;
 set.insert(key);
+incrVersion();
 return true;
 }
 

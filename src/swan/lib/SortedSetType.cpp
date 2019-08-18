@@ -82,6 +82,7 @@ if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
+set.incrVersion();
 }}}
 
 static void setEquals (QFiber& f) {
@@ -102,6 +103,7 @@ f.returnValue(it);
 
 static void setIteratorNext (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+li.checkVersion();
 if (li.iterator==li.set.set.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 li.forward=true;
@@ -109,6 +111,7 @@ li.forward=true;
 
 static void setIteratorPrevious (QFiber& f) {
 QSortedSetIterator& li = f.getObject<QSortedSetIterator>(0);
+li.checkVersion();
 if (li.iterator==li.set.set.begin()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*--li.iterator);
 li.forward=false;
@@ -116,9 +119,11 @@ li.forward=false;
 
 static void setIteratorRemove (QFiber& f) {
 QSortedSetIterator& mi = f.getObject<QSortedSetIterator>(0);
+mi.checkVersion();
 if (mi.forward) --mi.iterator;
 f.returnValue(*mi.iterator);
 mi.set.set.erase(mi.iterator++);
+mi.set.incrVersion();
 }
 
 static void setLowerBound (QFiber& f) {
@@ -152,6 +157,7 @@ if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
+set.incrVersion();
 }}
 
 static void setPop (QFiber& f) {
@@ -160,6 +166,7 @@ if (set.set.size()) {
 auto it = set.set.end();
 f.returnValue(*--it);
 set.set.erase(it);
+set.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }

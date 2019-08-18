@@ -22,6 +22,7 @@ f.returnValue(it);
 
 static void linkedListIteratorNext (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+li.checkVersion();
 if (li.iterator==li.list.data.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 li.forward=true;
@@ -29,6 +30,7 @@ li.forward=true;
 
 static void linkedListIteratorPrevious (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+li.checkVersion();
 if (li.iterator==li.list.data.begin()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*--li.iterator);
 li.forward=false;
@@ -36,14 +38,17 @@ li.forward=false;
 
 static void linkedListIteratorRemove (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+li.checkVersion();
 if (li.forward) --li.iterator;
 f.returnValue(*li.iterator);
 if (li.forward) li.list.data.erase(li.iterator++);
 else li.list.data.erase(li.iterator--);
+li.incrVersion();
 }
 
 static void linkedListIteratorInsert (QFiber& f) {
 QLinkedListIterator& li = f.getObject<QLinkedListIterator>(0);
+li.checkVersion();
 QV value = f.at(1);
 li.iterator = li.list.data.insert(li.iterator, value);
 if (li.forward) ++li.iterator;
@@ -62,6 +67,7 @@ if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.back());
 list.data.pop_back();
+list.incrVersion();
 }}
 
 static void linkedListUnshift (QFiber& f) {
@@ -76,6 +82,7 @@ if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.front());
 list.data.pop_front();
+list.incrVersion();
 }}
 
 static void linkedListRemove (QFiber& f) {
@@ -87,16 +94,19 @@ auto it = find_if(list.data.begin(), list.data.end(), [&](const QV& v){ return e
 if (it!=list.data.end()) {
 f.returnValue(*it);
 list.data.erase(it);
+list.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }}
 
 static void linkedListRemoveIf (QFiber& f) {
 QLinkedList& list = f.getObject<QLinkedList>(0);
+list.version++;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 QVUnaryPredicate pred(f.vm, f.at(i));
 auto it = remove_if(list.data.begin(), list.data.end(), pred);
 list.data.erase(it, list.data.end());
+list.incrVersion();
 }}
 
 static void linkedListInstantiateFromSequences (QFiber& f) {

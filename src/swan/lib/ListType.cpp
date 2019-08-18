@@ -3,6 +3,10 @@
 #include "../vm/List.hpp"
 using namespace std;
 
+void checkVersion (uint32_t v1, uint32_t v2) {
+if (v1!=v2) error<invalid_argument>("Concurrent modification");
+}
+
 static void listInstantiateFromItems (QFiber& f) {
 int n = f.getArgCount() -1;
 QList* list = f.vm.construct<QList>(f.vm);
@@ -12,15 +16,22 @@ if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 
 static void listIterator (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-int index = f.getOptionalNum(1, 0);
-if (index<0) index += list.data.size() +1;
 auto it = f.vm.construct<QListIterator>(f.vm, list);
+if (f.isNum(1)) {
+int index = f.getNum(1);
+if (index<0) index += list.data.size() +1;
 if (index>0) std::advance(it->iterator, index);
+}
+else if (f.at(1).isObject() && f.at(1).isInstanceOf(f.vm.listIteratorClass) && &f.getObject<QListIterator>(1).list == &list) {
+auto& it2 = f.getObject<QListIterator>(1);
+it->iterator = it2.iterator;
+}
 f.returnValue(it);
 }
 
 static void listIteratorNext (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
 if (li.iterator==li.list.data.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 li.forward=true;
@@ -28,6 +39,7 @@ li.forward=true;
 
 static void listIteratorPrevious (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
 if (li.iterator==li.list.data.begin()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*--li.iterator);
 li.forward=false;
@@ -35,16 +47,46 @@ li.forward=false;
 
 static void listIteratorRemove (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
 if (li.forward) --li.iterator;
 f.returnValue(*li.iterator);
 li.iterator = li.list.data.erase(li.iterator);
+li.incrVersion();
 }
 
 static void listIteratorInsert (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
 QV value = f.at(1);
 li.iterator = li.list.data.insert(li.iterator, value);
 if (li.forward) ++li.iterator;
+li.incrVersion();
+}
+
+static void listIteratorIndex (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
+f.returnValue(static_cast<double>( li.iterator - li.list.data.begin() - (li.forward? 1 : 0) ));
+}
+
+static void listIteratorSet (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
+if (li.forward) --li.iterator;
+*li.iterator = f.at(1);
+if (li.forward) ++li.iterator;
+f.returnValue(f.at(1));
+}
+
+static void listIteratorMinus (QFiber& f) {
+QListIterator& li = f.getObject<QListIterator>(0);
+li.checkVersion();
+if (f.at(1).isObject() && f.at(1).isInstanceOf(f.vm.listIteratorClass) && &f.getObject<QListIterator>(1).list == &li.list) {
+QListIterator& it = f.getObject<QListIterator>(1);
+it.checkVersion();
+f.returnValue(static_cast<double>( li.iterator - it.iterator ));
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void listSubscript (QFiber& f) {
@@ -77,6 +119,7 @@ else if (f.isRange(1)) {
 int start, end;
 f.getRange(1).makeBounds(length, start, end);
 list.data.erase(list.data.begin()+start, list.data.begin()+end);
+list.incrVersion();
 f.getObject<QSequence>(2) .copyInto(f, list.data, start);
 f.returnValue(f.at(2));
 }
@@ -107,6 +150,7 @@ size_t newSize = f.getNum(1);
 QV value = f.getArgCount()>=3? f.at(2) : QV::UNDEFINED;
 size_t curSize = list.data.size();
 list.data.resize(newSize);
+list.incrVersion();
 if (newSize>curSize) std::fill(list.data.begin()+curSize, list.data.end(), value);
 }
 
@@ -120,6 +164,7 @@ static void listPush (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 int n = f.getArgCount() -1;
 if (n>0) list.data.insert(list.data.end(), &f.at(1), (&f.at(1))+n);
+list.incrVersion();
 f.returnValue(true);
 }
 
@@ -129,6 +174,7 @@ if (list.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(list.data.back());
 list.data.pop_back();
+list.incrVersion();
 }}
 
 static void listInsert (QFiber& f) {
@@ -136,6 +182,7 @@ QList& list = f.getObject<QList>(0);
 int n = f.getNum(1), count = f.getArgCount() -2;
 auto pos = n>=0? list.data.begin()+n : list.data.end()+n;
 list.data.insert(pos, &f.at(2), (&f.at(2))+count);
+list.incrVersion();
 }
 
 static void listRemoveAt (QFiber& f) {
@@ -145,11 +192,13 @@ if (f.isNum(i)) {
 int n = f.getNum(i);
 auto pos = n>=0? list.data.begin()+n : list.data.end()+n;
 list.data.erase(pos);
+list.incrVersion();
 }
 else if (f.isRange(i)) {
 int start, end;
 f.getRange(i).makeBounds(list.data.size(), start, end);
 list.data.erase(list.data.begin()+start, list.data.begin()+end);
+list.incrVersion();
 }
 }}
 
@@ -162,6 +211,7 @@ auto it = find_if(list.data.begin(), list.data.end(), [&](const QV& v){ return e
 if (it!=list.data.end()) {
 f.returnValue(*it);
 list.data.erase(it);
+list.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }}
@@ -172,6 +222,7 @@ for (int i=1, l=f.getArgCount(); i<l; i++) {
 QVUnaryPredicate pred(f.vm, f.at(i));
 auto it = remove_if(list.data.begin(), list.data.end(), pred);
 list.data.erase(it, list.data.end());
+list.incrVersion();
 }}
 
 static void listIndexOf (QFiber& f) {
@@ -280,6 +331,7 @@ BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QList>(0).data.si
 BIND_F(toString, listToString)
 BIND_L(clear, { f.getObject<QList>(0).data.clear(); })
 BIND_F(add, listPush)
+BIND_F(append, listPush)
 BIND_F(remove, listRemove)
 BIND_F(removeIf, listRemoveIf)
 BIND_F(push, listPush)
@@ -307,6 +359,9 @@ BIND_F(previous, listIteratorPrevious)
 BIND_F(remove, listIteratorRemove)
 BIND_F(add, listIteratorInsert)
 BIND_F(insert, listIteratorInsert)
+BIND_F(set, listIteratorSet)
+BIND_F(-, listIteratorMinus)
+BIND_F(unp, listIteratorIndex)
 ;
 
 listClass -> type

@@ -34,6 +34,7 @@ std::make_heap(heap->data.begin(), heap->data.end(), QVBinaryPredicate(f.vm, hea
 static void heapPush (QFiber& f) {
 QHeap& heap = f.getObject<QHeap>(0);
 for (int i=1, n=f.getArgCount(); i<n; i++) heap.push(f.at(i));
+heap.incrVersion();
 }
 
 static void heapRemove (QFiber& f) {
@@ -46,6 +47,7 @@ if (it==heap.data.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 heap.erase(it);
+heap.incrVersion();
 }}}
 
 static void heapIterator (QFiber& f) {
@@ -56,6 +58,7 @@ f.returnValue(it);
 
 static void heapIteratorNext (QFiber& f) {
 QHeapIterator& li = f.getObject<QHeapIterator>(0);
+li.checkVersion();
 if (li.iterator==li.heap.data.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 }
@@ -63,6 +66,7 @@ else f.returnValue(*li.iterator++);
 static void heapPop (QFiber& f) {
 QHeap& heap = f.getObject<QHeap>(0);
 f.returnValue(heap.pop());
+heap.incrVersion();
 }
 
 static void heapFirst (QFiber& f) {

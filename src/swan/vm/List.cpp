@@ -5,7 +5,8 @@ using namespace std;
 
 QList::QList (QVM& vm): 
 QSequence(vm.listClass),
-data(trace_allocator<QV>(vm))
+data(trace_allocator<QV>(vm)),
+version(0)
 {}
 
 void QList::join (QFiber& f, const string& delim, string& re) {

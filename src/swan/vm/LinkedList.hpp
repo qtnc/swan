@@ -8,12 +8,16 @@
 #include "Allocator.hpp"
 #include<list>
 
+void checkVersion (uint32_t v1, uint32_t v2);
+
 
 struct QLinkedList: QSequence {
 typedef std::list<QV, trace_allocator<QV>> list_type;
 typedef list_type::iterator iterator;
 list_type data;
+uint32_t version;
 QLinkedList (QVM& vm);
+inline void incrVersion () { version++; }
 inline QV& at (int n) {
 int size = data.size();
 iterator origin = data.begin();
@@ -41,8 +45,11 @@ virtual size_t getMemSize () override { return sizeof(*this); }
 struct QLinkedListIterator: QObject {
 QLinkedList& list;
 QLinkedList::iterator iterator;
+uint32_t version;
 bool forward;
-QLinkedListIterator (QVM& vm, QLinkedList& m): QObject(vm.linkedListIteratorClass), list(m), iterator(m.data.begin()), forward(false)  {}
+QLinkedListIterator (QVM& vm, QLinkedList& m): QObject(vm.linkedListIteratorClass), list(m), iterator(m.data.begin()), version(m.version), forward(false)  {}
+inline void incrVersion () { version++; list.incrVersion(); }
+inline void checkVersion () { ::checkVersion(version, list.version); }
 virtual bool gcVisit () override;
 virtual ~QLinkedListIterator() = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

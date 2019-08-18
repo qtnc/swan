@@ -58,6 +58,7 @@ f.returnValue(it);
 
 static void dictionaryIteratorNext (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+mi.checkVersion();
 if (mi.iterator==mi.map.map.end()) f.returnValue(QV::UNDEFINED);
 else {
 QV data[] = { mi.iterator->first, mi.iterator->second };
@@ -69,6 +70,7 @@ mi.forward=true;
 
 static void dictionaryIteratorPrevious (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+mi.checkVersion();
 if (mi.iterator==mi.map.map.begin()) f.returnValue(QV::UNDEFINED);
 else {
 --mi.iterator;
@@ -80,9 +82,11 @@ mi.forward=false;
 
 static void dictionaryIteratorRemove (QFiber& f) {
 QDictionaryIterator& mi = f.getObject<QDictionaryIterator>(0);
+mi.checkVersion();
 if (mi.forward) --mi.iterator;
 f.returnValue(mi.iterator->second);
 mi.map.map.erase(mi.iterator++);
+mi.incrVersion();
 }
 
 static void dictionaryToString (QFiber& f) {
@@ -120,12 +124,14 @@ if (it==map.map.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(it->second);
 map.map.erase(it);
+map.incrVersion();
 }}}
 
 static void dictionaryPut (QFiber& f) {
 QDictionary& map = f.getObject<QDictionary>(0);
 map.map.insert(make_pair(f.at(1), f.at(2)));
 f.returnValue(f.at(2));
+map.incrVersion();
 }
 
 static void dictionaryLowerBound (QFiber& f) {

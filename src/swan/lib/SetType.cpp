@@ -45,6 +45,7 @@ int n = f.getArgCount() -1;
 auto s = set.set.size();
 if (n>0) set.set.insert(&f.at(1), (&f.at(1))+n);
 f.returnValue(set.set.size() == n+s);
+set.incrVersion();
 }
 
 static void setIn (QFiber& f) {
@@ -89,6 +90,7 @@ if (it==set.set.end()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(*it);
 set.set.erase(it);
+set.incrVersion();
 }}}
 
 static void setEquals (QFiber& f) {
@@ -109,6 +111,7 @@ f.returnValue(it);
 
 static void setIteratorNext (QFiber& f) {
 QSetIterator& li = f.getObject<QSetIterator>(0);
+li.checkVersion();
 if (li.iterator==li.set.set.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 }

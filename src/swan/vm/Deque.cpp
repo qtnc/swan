@@ -6,7 +6,8 @@ using namespace std;
 
 QDeque::QDeque (QVM& vm): 
 QSequence(vm.dequeClass),
-data(trace_allocator<QV>(vm))
+data(trace_allocator<QV>(vm)),
+version(0) 
 {}
 
 void QDeque::join (QFiber& f, const string& delim, string& re) {

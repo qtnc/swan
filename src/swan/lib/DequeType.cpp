@@ -22,6 +22,7 @@ f.returnValue(it);
 
 static void dequeIteratorNext (QFiber& f) {
 QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
 if (li.iterator==li.deque.data.end()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*li.iterator++);
 li.forward=true;
@@ -29,6 +30,7 @@ li.forward=true;
 
 static void dequeIteratorPrevious (QFiber& f) {
 QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
 if (li.iterator==li.deque.data.begin()) f.returnValue(QV::UNDEFINED);
 else f.returnValue(*--li.iterator);
 li.forward=false;
@@ -36,16 +38,46 @@ li.forward=false;
 
 static void dequeIteratorRemove (QFiber& f) {
 QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
 if (li.forward) --li.iterator;
 f.returnValue(*li.iterator);
 li.iterator = li.deque.data.erase(li.iterator);
+li.incrVersion();
 }
 
 static void dequeIteratorInsert (QFiber& f) {
 QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
 QV value = f.at(1);
 li.iterator = li.deque.data.insert(li.iterator, value);
 if (li.forward) ++li.iterator;
+li.incrVersion();
+}
+
+static void dequeIteratorSet (QFiber& f) {
+QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
+if (li.forward) --li.iterator;
+*li.iterator = f.at(1);
+if (li.forward) ++li.iterator;
+f.returnValue(f.at(1));
+}
+
+static void dequeIteratorIndex (QFiber& f) {
+QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
+f.returnValue(static_cast<double>( li.iterator - li.deque.data.begin() - (li.forward? 1 : 0) ));
+}
+
+static void dequeIteratorMinus (QFiber& f) {
+QDequeIterator& li = f.getObject<QDequeIterator>(0);
+li.checkVersion();
+if (f.at(1).isObject() && f.at(1).isInstanceOf(f.vm.dequeIteratorClass) && &f.getObject<QDequeIterator>(1).deque == &li.deque) {
+QDequeIterator& it = f.getObject<QDequeIterator>(1);
+it.checkVersion();
+f.returnValue(static_cast<double>( li.iterator - it.iterator ));
+}
+else f.returnValue(QV::UNDEFINED);
 }
 
 static void dequeSubscript (QFiber& f) {
@@ -82,6 +114,7 @@ vector<QV, trace_allocator<QV>> tmp(f.vm);
 f.getObject<QSequence>(2) .copyInto(f, tmp);
 deque.data.insert(deque.data.begin()+start, tmp.begin(), tmp.end());
 f.returnValue(f.at(2));
+deque.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }
@@ -111,12 +144,14 @@ QV value = f.getArgCount()>=3? f.at(2) : QV::UNDEFINED;
 size_t curSize = deque.data.size();
 deque.data.resize(newSize);
 if (newSize>curSize) std::fill(deque.data.begin()+curSize, deque.data.end(), value);
+deque.incrVersion();
 }
 
 static void dequePush (QFiber& f) {
 QDeque& deque = f.getObject<QDeque>(0);
 int n = f.getArgCount() -1;
 if (n>0) deque.data.insert(deque.data.end(), &f.at(1), (&f.at(1))+n);
+deque.incrVersion();
 }
 
 static void dequePop (QFiber& f) {
@@ -125,12 +160,14 @@ if (deque.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(deque.data.back());
 deque.data.pop_back();
+deque.incrVersion();
 }}
 
 static void dequeUnshift (QFiber& f) {
 QDeque& deque = f.getObject<QDeque>(0);
 int n = f.getArgCount() -1;
 if (n>0) deque.data.insert(deque.data.begin(), &f.at(1), (&f.at(1))+n);
+deque.incrVersion();
 }
 
 static void dequeShift (QFiber& f) {
@@ -139,6 +176,7 @@ if (deque.data.empty()) f.returnValue(QV::UNDEFINED);
 else {
 f.returnValue(deque.data.front());
 deque.data.pop_front();
+deque.incrVersion();
 }}
 
 static void dequeInsert (QFiber& f) {
@@ -146,6 +184,7 @@ QDeque& deque = f.getObject<QDeque>(0);
 int n = f.getNum(1), count = f.getArgCount() -2;
 auto pos = n>=0? deque.data.begin()+n : deque.data.end()+n;
 deque.data.insert(pos, &f.at(2), (&f.at(2))+count);
+deque.incrVersion();
 }
 
 static void dequeRemoveAt (QFiber& f) {
@@ -155,11 +194,13 @@ if (f.isNum(i)) {
 int n = f.getNum(i);
 auto pos = n>=0? deque.data.begin()+n : deque.data.end()+n;
 deque.data.erase(pos);
+deque.incrVersion();
 }
 else if (f.isRange(i)) {
 int start, end;
 f.getRange(i).makeBounds(deque.data.size(), start, end);
 deque.data.erase(deque.data.begin()+start, deque.data.begin()+end);
+deque.incrVersion();
 }
 }}
 
@@ -172,6 +213,7 @@ auto it = find_if(deque.data.begin(), deque.data.end(), [&](const QV& v){ return
 if (it!=deque.data.end()) {
 f.returnValue(*it);
 deque.data.erase(it);
+deque.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }}
@@ -182,6 +224,7 @@ for (int i=1, l=f.getArgCount(); i<l; i++) {
 QVUnaryPredicate pred(f.vm, f.at(i));
 auto it = remove_if(deque.data.begin(), deque.data.end(), pred);
 deque.data.erase(it, deque.data.end());
+deque.incrVersion();
 }}
 
 static void dequeIndexOf (QFiber& f) {
@@ -292,6 +335,9 @@ BIND_F(previous, dequeIteratorPrevious)
 BIND_F(remove, dequeIteratorRemove)
 BIND_F(add, dequeIteratorInsert)
 BIND_F(insert, dequeIteratorInsert)
+BIND_F(set, dequeIteratorSet)
+BIND_F(unp, dequeIteratorIndex)
+BIND_F(-, dequeIteratorMinus)
 ;
 
 dequeClass -> type

@@ -6,7 +6,8 @@ using namespace std;
 
 QLinkedList::QLinkedList (QVM& vm): 
 QSequence(vm.linkedListClass),
-data(trace_allocator<QV>(vm))
+data(trace_allocator<QV>(vm)),
+version(0) 
 {}
 
 void QLinkedList::join (QFiber& f, const string& delim, string& re) {
