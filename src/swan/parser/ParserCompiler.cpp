@@ -381,6 +381,14 @@ const QToken& nearestToken () override { return superToken; }
 void compile (QCompiler& compiler)  override;
 };
 
+struct AnonymousLocalExpression: Expression, Assignable  {
+QToken token;
+AnonymousLocalExpression (QToken x): token(x) {}
+const QToken& nearestToken () override { return token; }
+void compile (QCompiler& compiler)override  { writeOpLoadLocal(compiler, token.value.d); }
+void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override  { assignedValue->compile(compiler); writeOpStoreLocal(compiler, token.value.d); }
+};
+
 struct GenericMethodSymbolExpression: Expression {
 QToken token;
 GenericMethodSymbolExpression (const QToken& t): token(t) {}
@@ -1681,6 +1689,19 @@ return make_shared<BlockStatement>(statements);
 }
 
 shared_ptr<Expression> QParser::parseDecoratedExpression () {
+auto tp = nextToken().type;
+if (tp==T_NUM) return make_shared<AnonymousLocalExpression>(cur);
+else if (((tp>=T_PLUS && tp<=T_GTE) || (tp>=T_DOT && tp<=T_DOTQUEST)) && rules[tp].infix) {
+prevToken();
+cur.type=T_NAME;
+prevToken();
+auto func = make_shared<FunctionDeclaration>(cur);
+auto nm = make_shared<NameExpression>(cur);
+func->params.push_back(make_shared<Variable>(nm));
+func->body = parseExpression(P_COMPREHENSION);
+return func;
+}
+else prevToken();
 auto decoration = parseExpression(P_PREFIX);
 auto expr = parseExpression();
 if (expr->isDecorable()) {
