@@ -806,19 +806,20 @@ compiler.writeOp(OP_END_FINALLY);
 
 struct BlockStatement: Statement, Comprenable  {
 vector<shared_ptr<Statement>> statements;
-BlockStatement (const vector<shared_ptr<Statement>>& sta = {}): statements(sta) {}
+bool makeScope;
+BlockStatement (const vector<shared_ptr<Statement>>& sta = {}, bool s = true): statements(sta), makeScope(s)  {}
 void chain (const shared_ptr<Statement>& st) final override { statements.push_back(st); }
 shared_ptr<Statement> optimizeStatement () override { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
 const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override { return any_of(statements.begin(), statements.end(), [&](auto s){ return s && s->isUsingExports(); }); }
 void compile (QCompiler& compiler) override {
-compiler.pushScope();
+if (makeScope) compiler.pushScope();
 for (auto sta: statements) {
 compiler.writeDebugLine(sta->nearestToken());
 sta->compile(compiler);
 if (sta->isExpression()) compiler.writeOp(OP_POP);
 }
-compiler.popScope();
+if (makeScope) compiler.popScope();
 }
 };
 
@@ -1994,7 +1995,7 @@ if (varDecl) {
 auto name = varDecl->vars[0]->name;
 exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
 vector<shared_ptr<Statement>> sta = { varDecl, exportDecl };
-return make_shared<BlockStatement>(sta);
+return make_shared<BlockStatement>(sta, false);
 }
 else {
 do {
@@ -2021,11 +2022,48 @@ if (parent) consume(T_RIGHT_PAREN, "Expected ')' to close function call");
 return result;
 }
 
+static shared_ptr<Expression> nameExprToConstant (QParser& parser, shared_ptr<Expression> key) {
+auto bop = dynamic_pointer_cast<BinaryOperation>(key);
+if (bop && bop->op==T_EQ) key = bop->left;
+while (bop && bop->op==T_DOT) {
+key = bop->right;
+bop = dynamic_pointer_cast<BinaryOperation>(key);
+}
+auto name = dynamic_pointer_cast<NameExpression>(key);
+if (name) {
+QToken token = name->token;
+token.type = T_STRING;
+token.value = QV(parser.vm, string(token.start, token.length));
+key = make_shared<ConstantExpression>(token);
+}
+return key;
+}
+
+static void multiVarExprToSingleLiteralMap (QParser& parser, vector<shared_ptr<Variable>>& vars, int flags) {
+if (vars.size()==1 && dynamic_pointer_cast<LiteralMapExpression>(vars[0]->name)) return;
+auto map = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken()), defmap = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken());
+for (auto& var: vars) {
+shared_ptr<Expression> key=nullptr, value=nullptr, name = nameExprToConstant(parser, var->name);
+if (var->value) {
+key = createBinaryOperation(name, T_EQ, var->value);
+value = createBinaryOperation(var->name, T_EQ, var->value);
+}
+else {
+key = name;
+value = var->name;
+}
+map->items.push_back(make_pair(key, value));
+}
+vars.clear();
+vars.push_back(make_shared<Variable>(map, defmap, flags));
+}
+
 shared_ptr<Statement> QParser::parseImportDecl () {
 auto importSta = make_shared<ImportDeclaration>();
-int flags = VD_SINGLE;
+int flags = 0;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 parseVarList(importSta->imports, flags);
+multiVarExprToSingleLiteralMap(*this, importSta->imports, flags);
 consume(T_IN, "Expected 'in' after import variables");
 importSta->from = parseExpression(P_COMPREHENSION);
 return importSta;
@@ -2179,19 +2217,6 @@ else break;
 }
 expr->chain(leafExpr);
 return make_shared<ComprehensionExpression>(rootStatement, loopExpr);
-}
-
-static shared_ptr<Expression> nameExprToConstant (QParser& parser, shared_ptr<Expression> key) {
-auto bop = dynamic_pointer_cast<BinaryOperation>(key);
-if (bop && bop->op==T_EQ) key = bop->left;
-auto name = dynamic_pointer_cast<NameExpression>(key);
-if (name) {
-QToken token = name->token;
-token.type = T_STRING;
-token.value = QV(parser.vm, string(token.start, token.length));
-key = make_shared<ConstantExpression>(token);
-}
-return key;
 }
 
 shared_ptr<Expression> QParser::parseMethodCall (shared_ptr<Expression> receiver) {
@@ -2566,23 +2591,6 @@ int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 compiler.writeOp(OP_CALL_FUNCTION_1);
-}
-
-void ImportDeclaration::compile (QCompiler& compiler) {
-doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-compiler.writeDebugLine(imports[0]->name->nearestToken());
-make_shared<VariableDeclaration>(imports)->optimizeStatement()->compile(compiler);
-compiler.pushScope();
-auto importVar = make_shared<NameExpression>(compiler.createTempName());
-compiler.writeDebugLine(imports[0]->name->nearestToken());
-int valueSlot = compiler.findLocalVariable(importVar->token, LV_NEW);
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING)));
-from->compile(compiler);
-compiler.writeOp(OP_CALL_FUNCTION_2);
-createBinaryOperation(imports[0]->name, T_EQ, importVar)->optimize()->compile(compiler);
-compiler.writeOp(OP_POP);
-compiler.popScope();
 }
 
 void NameExpression::compile (QCompiler& compiler) {
@@ -3229,6 +3237,17 @@ compiler.writeOp(OP_POP);
 }
 }//end VariableDeclaration::compile
 
+void ImportDeclaration::compile (QCompiler& compiler) {
+doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
+QToken importToken = { T_NAME, "import", 6, QV::UNDEFINED }, fnToken = { T_STRING, "", 0, QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING) };
+auto importName = make_shared<NameExpression>(importToken);
+auto fnConst = make_shared<ConstantExpression>(fnToken);
+vector<shared_ptr<Expression>> importArgs = { fnConst, from };
+auto importCall = make_shared<CallExpression>(importName, importArgs);
+imports[0]->value = importCall;
+make_shared<VariableDeclaration>(imports)->optimizeStatement()->compile(compiler);
+}
+
 shared_ptr<FunctionDeclaration> ClassDeclaration::findMethod (const QToken& name, bool isStatic) {
 auto it = find_if(methods.begin(), methods.end(), [&](auto& m){ 
 return m->name.length==name.length && strncmp(name.start, m->name.start, name.length)==0
@@ -3248,7 +3267,7 @@ auto& f = fp.second;
 shared_ptr<Expression> fieldExpr;
 if (isStatic) fieldExpr = make_shared<StaticFieldExpression>(f.token);
 else fieldExpr = make_shared<FieldExpression>(f.token);
-auto assignment = createBinaryOperation(fieldExpr, T_EQ, f.defaultValue);
+auto assignment = createBinaryOperation(fieldExpr, T_QUESTQUESTEQ, f.defaultValue) ->optimize();
 inits->statements.push_back(assignment);
 }
 QToken ctorToken = { T_NAME, CONSTRUCTOR, 11, QV::UNDEFINED };
