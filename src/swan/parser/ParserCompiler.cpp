@@ -3329,35 +3329,31 @@ if (multi) compiler.writeOp(OP_POP);
 }
 
 void FunctionDeclaration::compileParams (QCompiler& compiler) {
-vector<shared_ptr<Variable>> destructured;
-vector<shared_ptr<NameExpression>> newVars;
+vector<shared_ptr<Variable>> destructuring;
 compiler.writeDebugLine(nearestToken());
 for (auto& var: params) {
 auto name = dynamic_pointer_cast<NameExpression>(var->name);
-QToken nameToken = name? name->token : compiler.createTempName();
-int slot = compiler.findLocalVariable(nameToken, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+int slot;
 if (!name) {
-decompose(compiler, var->name, newVars);
-destructured.push_back(var);
+name = make_shared<NameExpression>(compiler.createTempName());
+slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+var->value = var->value? createBinaryOperation(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
+destructuring.push_back(var);
 }
-else compiler.writeDebugLine(name->nearestToken());
+else {
+slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+if (var->value) createBinaryOperation(name, T_QUESTQUESTEQ, var->value) ->optimize() ->compile(compiler);
+}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 writeOpLoadLocal(compiler, slot);
-for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+for (auto& decoration: var->decorations) writeOpCallFunction(compiler, 1);
 writeOpStoreLocal(compiler, slot);
-compiler.writeOp(OP_POP);
+var->decorations.clear();
 }
-if (!name) name = make_shared<NameExpression>(nameToken);
-if (var->value) { createBinaryOperation(name, T_QUESTQUESTEQ, var->value)->optimize()->compile(compiler); compiler.writeOp(OP_POP); }
-var->value = name;
 }
-for (auto& name: newVars) compiler.findGlobalVariable(name->token, LV_NEW);
-for (auto& var: destructured) {
-auto assignable = dynamic_pointer_cast<Assignable>(var->name);
-if (!assignable || !assignable->isAssignable()) continue;
-assignable->compileAssignment(compiler, var->value);
-compiler.writeOp(OP_POP);
+if (destructuring.size()) {
+make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(compiler);
 }
 }
 
