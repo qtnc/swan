@@ -7,7 +7,7 @@
 using namespace std;
 
 #define ALIGNMENT 8
-#define POOL_SIZE_MAX 256
+#define POOL_SIZE_MAX 0
 #define RESERVE_SIZE_MAX 1048576
 
 struct aligned_user_allocator {
@@ -58,6 +58,7 @@ return boost::alignment::aligned_alloc(ALIGNMENT, n);
 void QVM::deallocate (void* p, size_t n) {
 gcMemUsage -= n;
 round_upwards(n);
+memset(p, 0, n);
 if (n<=POOL_SIZE_MAX) getpool(n).free(p);
 else if (n<=RESERVE_SIZE_MAX) freeList.insert(make_pair(n, p));
 else boost::alignment::aligned_free(p);

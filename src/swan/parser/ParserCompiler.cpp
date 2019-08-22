@@ -2651,6 +2651,17 @@ else if (slot==LV_ERR_ALREADY_EXIST) {
 compiler.compileError(token, ("Already existing variable"));
 return;
 }
+int atLevel = 0;
+ClassDeclaration* cls = compiler.getCurClass(&atLevel);
+if (cls) {
+if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
+string setterName(token.length+1, '=');
+memcpy(const_cast<char*>(setterName.data()), token.start, token.length);
+assignedValue->compile(compiler);
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(setterName));
+return;
+}
 compiler.compileError(token, ("Undefined variable"));
 }
 

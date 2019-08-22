@@ -150,13 +150,13 @@ init();
 }
 
 QVM::~QVM () {
-globalVariables.clear();
-globalSymbols.clear();
-methodSymbols.clear();
+fibers.clear();
 imports.clear();
+keptHandles.clear();
+globalVariables.clear();
 stringCache.clear();
 foreignClassIds.clear();
-keptHandles.clear();
+garbageCollect();
 for (QObject* ptr=firstGCObject; ptr; ) {
 size_t size = ptr->getMemSize();
 auto next = ptr->gcNext();
@@ -164,6 +164,8 @@ ptr->~QObject();
 deallocate(ptr, size);
 ptr=next;
 }
+globalSymbols.clear();
+methodSymbols.clear();
 purgeMem();
 unlock();
 }

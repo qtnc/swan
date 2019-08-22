@@ -256,15 +256,14 @@ return obj;
 }
 
 static inline void unmarkAll (QObject* initial) {
-for (auto it=initial; it; it = it->gcNext()) it->gcUnmark();
-}
+for (auto it=initial; it; it = it->gcNext()) {
+it->gcUnmark();
+}}
 
 static inline void doSweep (QVM& vm, QObject*& initial) {
 QObject* prev = nullptr;
 size_t used=0, collected=0, total = 0;
 for (QObject* ptr = initial; ptr; ) {
-//QV val = makeqv(&*ptr);
-//println(std::cerr, "%d. %s, %s", count, val.print(), marked(*ptr)?"used":"collectable");
 total++;
 if (ptr->gcMarked()) {
 if (!prev) initial=ptr;
@@ -283,7 +282,7 @@ collected++;
 }
 }
 if (prev) prev->gcNext(nullptr);
-//println(std::cerr, "%d/%d used (%d%%), %d/%d collected (%d%%)", used, total, 100*used/total, collected, total, 100*collected/total);
+//println(std::cerr, "GC: %d/%d used (%d%%), %d/%d collected (%d%%)", used, total, 100*used/total, collected, total, 100*collected/total);
 }
 
 void QVM::garbageCollect () {
@@ -312,7 +311,9 @@ roots.insert(roots.end(), fibers.begin(), fibers.end());
 for (QObject* obj: roots) obj->gcVisit();
 for (QV& gv: globalVariables) gv.gcVisit();
 for (auto& kh: keptHandles) QV(kh.first).gcVisit();
-for (auto& im: imports) im.second.gcVisit();
+for (auto& im: imports) {
+im.second.gcVisit();
+}
 
 auto prevMemUsage = gcMemUsage;
 doSweep(*this, firstGCObject);
