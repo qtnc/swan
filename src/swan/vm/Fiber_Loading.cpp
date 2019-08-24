@@ -12,7 +12,7 @@ string source = vm.fileLoader(filename);
 return loadString(source, filename);
 }
 
-int QFiber::loadString (const string& source, const string& filename) {
+int QFiber::loadString  (const string& source, const string& filename) {
 GCLocker gcLocker(vm);
 string displayName = "<string>";
 if (!filename.empty()) {
@@ -36,9 +36,11 @@ return loadString(str, filename, displayName);
 }
 }
 
-int QFiber::loadString (const string& source, const string& filename, const string& displayName) {
+int QFiber::loadString (const string& source, const string& filename, const string& displayName, const QV& adctx) {
+GCLocker gcLocker(vm);
 QParser parser(vm, source, filename, displayName);
 QCompiler compiler(parser);
+compiler.additionalContextVar = adctx;
 QFunction* func = compiler.getFunction();
 if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
 QClosure* closure = vm.construct<QClosure>(vm, *func);

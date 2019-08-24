@@ -129,7 +129,8 @@ f.returnValue(!re);
 static void functionInstantiate (QFiber& f) {
 f.returnValue(QV::UNDEFINED);
 if (f.isString(1)) {
-f.loadString(f.getString(1), "<eval>");
+QV adctx = f.getArgCount()>=3? f.at(2) : QV::UNDEFINED;
+f.loadString(f.getString(1), "<eval>", "<eval>", adctx);
 f.returnValue(f.at(-1));
 }
 else if (f.isNum(1)) {
