@@ -996,7 +996,7 @@ INFIX_OP(IN, InfixOp, in, COMPARISON, SWAP_OPERANDS),
 OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL, LEFT),
 OPERATOR(EXCL, PrefixOp, InfixNot, !, !, COMPARISON, LEFT),
 PREFIX_OP(TILDE, PrefixOp, ~),
-PREFIX(DOLLAR, Lambda, $),
+//PREFIX(DOLLAR, Lambda, $),
 
 #ifndef NO_REGEX
 OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR, LEFT),
@@ -1892,7 +1892,7 @@ return parseLambda(0);
 shared_ptr<Expression> QParser::parseLambda  (int flags) {
 auto func = make_shared<FunctionDeclaration>(cur);
 func->flags |= flags;
-if (matchOneOf(T_DOLLAR, T_UND)) func->flags |= FD_METHOD;
+if (match(T_GT)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
 else if (match(T_AMP)) flags |= FD_ASYNC;
 parseFunctionParameters(func);
@@ -1906,8 +1906,15 @@ shared_ptr<Expression> QParser::parseArrowFunction (shared_ptr<Expression> fargs
 auto functionnable = dynamic_pointer_cast<Functionnable>(fargs);
 if (!functionnable || !functionnable->isFunctionnable()) parseError("Expression can't be considered as the argument list for an anonymous function");
 auto func = make_shared<FunctionDeclaration>(cur);
+if (match(T_GT)) func->flags |= FD_METHOD;
+if (match(T_STAR)) func->flags |= FD_FIBER;
+else if (match(T_AMP)) func->flags |= FD_ASYNC;
+if (func->flags&FD_METHOD) {
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
+func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
+}
 functionnable->makeFunctionParameters(func->params);
-func->body = parseExpression();
+func->body = parseStatement();
 return func;
 }
 
@@ -1925,9 +1932,10 @@ return parseFunctionDecl(VD_CONST);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, int funcFlags) {
-if (!matchOneOf(T_NAME, T_ASYNC, T_IMPORT)) parseError("Expected function name after 'function'");
+bool hasName = matchOneOf(T_NAME, T_STRING);
 QToken name = cur;
 auto fnDecl = parseLambda(funcFlags);
+if (!hasName) return fnDecl;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) varFlags |= VD_GLOBAL;
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, varFlags) };
 return make_shared<VariableDeclaration>(vars);

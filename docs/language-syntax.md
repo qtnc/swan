@@ -4,10 +4,12 @@ Here is a description of the language's syntax.
 ## Reserved keywords
 Some people take the number of keywords to grade the complexity of a language.
 
-33 actual keywords currently in use (synonyms aren't counted):
+35 actual keywords currently in use (synonyms aren't counted):
 
 * and (as a synonym for `&&`)
 * as
+* async
+* await
 * break
 * case
 * class
@@ -42,11 +44,6 @@ Some people take the number of keywords to grade the complexity of a language.
 * with
 * while
 * yield
-
-2 keywords currently not used but reserved for potential future use:
-
-* async
-* await
 
 ## Literal values and basic types
 ### Numbers
@@ -281,7 +278,7 @@ You may mix the two forms, though it's quite unusual.
 
 ## Functions and closures
 Functions can capture variables to form closures.
-The `$` sign is a shorter synonym for the keyword `function`.
+The `def` keyword is a shorter synonym for `function`.
 
 ```
 # Declaring a function
@@ -291,18 +288,17 @@ return x/2
 var five = half(10) # five is 5
 
 # Declaring a function like a lambda
-var double = $(x): return x*2
+var double = def(x): return x*2
 var twenty = double(10) # twenty is 20
 
 # Declaring a function as a lambda with implicit `this` argument
-var triple = $${ return this*3 }
+var triple = def>{ return this*3 }
 var thirty = triple(10) # thirty is 30
 ```
 
-- By using `$$` instead of `$`, you get an implicit `this` as first parameter of the function.
+- By using `>`, you get an implicit `this` as first parameter of the function. You may also use `*` as a shortcut for fiber (see below) or `&` for async.
 - Parentesis are optional if the lambda takes no explicit parameter or just a single one.
 - If the last instruction of the function is an expression, it is taken as the return value
-
 
 IF the last parameter is prefixed or suffixed by `...`, the excess parameters passed to the function are packed into a tuple. This enables variadict functions:
 
@@ -317,28 +313,28 @@ printItems(1, 2, 3, 4, 5)
 
 The tuple can be empty (if less parameters are passed to the function), but never null.
 
-Lambdas can be expressed using the Java or JavaScript syntax as well.
+Lambdas can be expressed using the arrow syntax, as popularized by Java and JavaScript as well:
 
 ```
 # The following expression are all equal
 x => x+1
 x -> x+1
-$x: x+1
-$(x){ return x+1 }
+def(x): x+1
+def(x){ return x+1 }
 function (x) { return x+1 }
 
 # The following expression are all equal
 (a,b) => (b,a)
 (a,b) -> (b,a)
-$(a,b): (b,a)
-$(a,b){ return (b,a) }
+def(a,b): (b,a)
+def(a,b){ return (b,a) }
 function (a, b) { return (b, a) }
 
 # However, beware that the following three are **NOT** equal
 # See further below in chapter destructuring for more info
-(a,b)=>a+b # is equivalent to $(a,b): a+b
-[a,b]=>a+b # is equivalent to $([a,b]): a+b
-{a,b}=>a+b # is equivalent to $({a,b}): a+b
+(a,b)=>a+b # is equivalent to def(a,b): a+b
+[a,b]=>a+b # is equivalent to def([a,b]): a+b
+{a,b}=>a+b # is equivalent to def({a,b}): a+b
 ```
 
 ## Classes
@@ -387,10 +383,11 @@ print(third.length) # 5
 
 - A  class can inherit from a single parent superclass. Everything is at least an Object If no other parent is explicitely specified.
 - A name starting with `_` denotes an instance field. They are implicitely declared at their first use.
-- A name starting with `__` denotes a static field.
-- A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid.
+- A name starting with `__` denotes a static field. They are implicitely declared at their first use.
+- A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid. This provides built-in encapsulation.
 - You can declare static methods by preceding its name by the static keyword.
-- The constructor is simply called `constructor`. You can also define a static constructor, which will be called immediately after the class is defined.
+- Each method take an implicit `this` first parameter.
+- The constructor is simply called `constructor`. You can also define a static constructor, which will be called immediately after the class is defined. 
 
 Additionally to arithmetic, bitwise and comparison operators, you can also override prefix operators as well as call and indexing/subscript:
 
@@ -404,19 +401,19 @@ Additionally to arithmetic, bitwise and comparison operators, you can also overr
 ```
 # We can take a function corresponding to an operator. 
 # This is called generic method or method symbol
-# ::+ is a kind of shortcut for $(a,b): a+b
+# ::+ is a kind of shortcut for def(a,b): a+b
 let plus = ::+
 print(plus(7, 9)) # 16
 print(plus('ab', 'cd')) # abcd
 
 # We can take a method from a class and use it as a standalone function:
-# Num::+ is a kind of shortcut for $(a,b): a+b
+# Num::+ is a kind of shortcut for def(a,b): a+b
 var plus = Num::+, multiply = Num::*
 print(plus(4, 3)) #7
 print(multiply(3, 4)) #12
 
 # We can also bind an object to a function:
-# 3::* is a kind of shortcut for $(x): 3*x
+# 3::* is a kind of shortcut for def(x): 3*x
 var triple = 3::*
 print(triple(9)) #27
 
@@ -476,7 +473,7 @@ Can be shortened into a simple `var x` inside the class:
 Fibers are better known under the name coroutine:
 
 ```
-let fibonacci = Fiber(${
+let fibonacci = Fiber(def{
 let a=1, b=0
 while true {
 let tmp = a
@@ -491,6 +488,9 @@ for i in 1...10 {
 print(fibonacci)
 }
 ```
+
+By following the `def` keyword or the name of the function by `*`, a Fiber is created.
+`def*(x){...}` is a shortcut for `Fiber(def(x){...})`.
 
 ## Comprehension syntax
 You can create simple generators using the by comprhension syntax, similarely with what you can do in python.
@@ -507,21 +507,23 @@ The general syntax is: *expression* for *loop variable* in *iterable* if *filter
 
 - *Expression* is the value of the successive items to be generated; this expression normally uses the loop variable
 - *Loop variable* is the name of the variable which will contain the successive values yielded by the *iterable*
-- *Iterable* is an expression taht can be iterated over, such as a range, a list, a tuple, or a generator
+- *Iterable* is an expression taht can be iterated over, such as a range, a list, a tuple, or a fiber
 - *Filter* is an optional filter condition; if the result of the condition is true for a given item, it will be generated in the final sequence; if not it will be skipped.
 - Multiple for loops can be nested as shown in the example above.
 
 A comprehension expression is compiled down to a code similar to the following:
 
 ```
-$*{
+def*{
 for loopVariable in iterable {
 if condition: yield expression
 }
 }
 ```
 
-In fact, Swan supports extended/advanced comprehension. The complete syntax of a by comprhension expression is:
+Therefore, a comprehention expression returns a Fiber.
+
+In fact, Swan supports extended/advanced comprehension. The complete syntax of an expression by comprehension is:
 *expression* for *loop variable* in *iterable* *nested elements*, where nested elements can be zero, one, or more of:
 
 - nested for loop
@@ -547,7 +549,7 @@ Here's another popular construction inspired by python:
 ```
 function logged (value) {
 print('' + value + ' has been decorated')
-return $(...args) {
+return def(...args) {
 print('Calling ' + value + ' with arguments ' + args)
 let returnValue = value(...args)
 print('Called ' + value + ' with arguments ' + args + ' returned ' + returnValue)
@@ -602,7 +604,7 @@ let {a=false, b=true, c=false, d=true} = map
 let [a, b, c, d, e] = list
 
 # You can use destructuring in function parameters
-let f = $({one=1, two=2, three=3}) {
+let f = def({one=1, two=2, three=3}) {
 return one+two+three
 }
 f(three: 333, two: 222, one: 111) # 666

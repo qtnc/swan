@@ -1,71 +1,71 @@
-Iterable::all = $$f{
+Iterable::all = def>f{
 for x in this: if !f(x): return false
 return true
 }
 
-Iterable::any = $$f{
+Iterable::any = def>f{
 for x in this: if f(x): return true
 return false;
 }
 
-Iterable::none = $$f: !this.any(f)
+Iterable::none = def>f: !this.any(f)
 
-Iterable::find = $$(f,asitr){
+Iterable::find = def>(f,asitr){
 let it = this.iterator, value
 while !((value = it.next) is undefined) {
 if f(value) return asitr? it : value
 }}
 
-Iterable::count = $$f{
+Iterable::count = def>f{
 var count = 0
 for x in this: if x==f: count+=1
 return count
 }
 
-Iterable::countIf = $$f{
+Iterable::countIf = def>f{
 var count = 0
 for x in this: if f(x): count+=1
 return count
 }
 
-Iterable::in = $$f{
+Iterable::in = def>f{
 for x in this: if x==f: return true
 return false
 }
 
-Iterable::first = $$: for i in this: return i
+Iterable::first = def>: for i in this: return i
 
-Iterable::last = $${
+Iterable::last = def>{
 let val = null
 for x in this: val=x
 return val
 }
 
-Iterable::sorted = $$: List.of(this).sort
-Iterable::reversed = $$: List.of(this).reverse
+Iterable::sorted = def>: List.of(this).sort
+Iterable::reversed = def>: List.of(this).reverse
 
-Iterable::map = $$f: f(x) for x in this
-Iterable::filter = $$f: x for x in this if f(x)
+Iterable::map = def>f: f(x) for x in this
+Iterable::filter = def>f: x for x in this if f(x)
 
-Iterable::reduce = $$(f,a){
+Iterable::reduce = def>(f,a){
 for x in this: a = a==null ? x : f(a,x)
 return a
 }
 
-Iterable::min = $$(f=min): this.reduce(f)
-Iterable::max = $$(f=max): this.reduce(f)
+Iterable::min = def>(f=min): this.reduce(f)
+Iterable::max = def>(f=max): this.reduce(f)
 
-Iterable::dropWhile = $$f: x for x in this while f(x)
-Iterable::skipWhile = $$f: x for x in this continue while f(x)
+Iterable::dropWhile = def>f: x for x in this while f(x)
+Iterable::skipWhile = def>f: x for x in this continue while f(x)
 
-Iterable::skip = $$n: $*{
+Iterable::skip = def>n: def*{
 let i = 0
 for x in this {
 if i>=n: yield x
 i+=1
 }}
 
-Iterable::limit = $$n: $*{
+Iterable::limit = def>n: def*{
 let i=0
 for x in this {
 if i>=n: break
@@ -73,7 +73,7 @@ i+=1
 yield x
 }}
 
-Iterable::enumerate = $$(n=0): $*{
+Iterable::enumerate = def>(n=0): def*{
 for x in this {
 yield (n, x)
 n+=1

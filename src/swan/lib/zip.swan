@@ -5,8 +5,8 @@ else if !(seqs[-1] is Iterable) {
 zipper = seqs[-1]
 seqs = seqs[0..-1]
 }
-else zipper = $(...x): x
-return $*{
+else zipper = def(...x): x
+return def*{
 var iterators = [], values = []
 for seq in seqs { iterators.push(seq.iterator); values.push(undefined); }
 while true {

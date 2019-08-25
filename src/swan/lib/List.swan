@@ -1,7 +1,8 @@
-let slice = $$(start, end): this[Range(start, end, end<0)]
+let slice = def>(start, end): this[Range(start, end, end<0)]
 List::slice = slice
 Tuple::slice = slice
+Deque::slice = slice
 
-List::splice = $$(start, end, items...): this[Range(start, end, end<0)] = items
+List::splice = def>(start, end, items...): this[Range(start, end, end<0)] = items
 
-List::rotated = $$n: List.of(this).rotate(n)
+List::rotated = def>n: List.of(this).rotate(n)

@@ -1,10 +1,10 @@
-Mapping::get = $$(k,d){
+Mapping::get = def>(k,d){
 let v = this[k]
 if v is undefined and k is not undefined: this[k] =(v=d)
 return v
 }
 
-Mapping::set = $$(k,v,m){
+Mapping::set = def>(k,v,m){
 let o = this[k]
 if o is undefined: this[k]=v
 else if m is true: this[k]=v
@@ -13,6 +13,6 @@ else if m: this[k]=m(o,v)
 return o
 }
 
-Mapping::keys = $$: k for [k, v] in this
-Mapping::values = $$: v for [k, v] in this
-Mapping::flipped = $$: (v,k) for [k, v] in this
+Mapping::keys = def>: k for [k, v] in this
+Mapping::values = def>: v for [k, v] in this
+Mapping::flipped = def>: (v,k) for [k, v] in this

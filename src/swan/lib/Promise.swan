@@ -37,15 +37,15 @@ onReject(_value)
 return this 
 }
 let resolve, reject
-_next = $value {
+_next = def value {
 if onResolve is Promise: onResolve.then(resolve)
 else: resolve(onResolve(value))
 }
-_error = $value {
+_error = def value {
 if onReject is Promise: onReject.then(resolve)
 else: reject(onReject(value))
 }
-return Promise($(res,rej){
+return Promise(def(res,rej){
 resolve=res
 reject = rej
 })
