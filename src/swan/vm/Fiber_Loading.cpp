@@ -1,6 +1,7 @@
 #include "../../include/cpprintf.hpp"
 #include "Fiber.hpp"
 #include "VM.hpp"
+#include "Upvalue.hpp"
 #include "../parser/Compiler.hpp"
 #include<boost/algorithm/string.hpp>
 #include<utf8.h>
@@ -39,11 +40,33 @@ return loadString(str, filename, displayName);
 int QFiber::loadString (const string& source, const string& filename, const string& displayName, const QV& adctx) {
 GCLocker gcLocker(vm);
 QParser parser(vm, source, filename, displayName);
-QCompiler compiler(parser);
-compiler.additionalContextVar = adctx;
+QCompiler compiler(parser), parent(parser);
+vector<pair<QV,QV>> upvalues;
+
+if (!adctx.isNullOrUndefined()) {
+compiler.parent = &parent;
+vector<QV, trace_allocator<QV>> items(vm), tmp(vm);
+adctx.asObject<QSequence>() ->copyInto(*this, items);
+for (auto& val: items) {
+tmp.clear();
+val.asObject<QSequence>() ->copyInto(*this, tmp);
+if (tmp.size()<1 || !tmp.begin()->isString()) continue;
+upvalues.push_back(make_pair(*tmp.begin(), *tmp.rbegin() ));
+}
+for (auto& upv: upvalues) {
+auto s = upv.first.asObject<QString>();
+parent.localVariables.push_back({ { T_NAME, s->begin(), s->length, upv.first }, 3, false, false });
+}}
+
 QFunction* func = compiler.getFunction();
 if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
-QClosure* closure = vm.construct<QClosure>(vm, *func);
+QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func->upvalues.size(), vm, *func);
+
+if (func->upvalues.size()) for (int i=0, n=func->upvalues.size(); i<n; i++) {
+int j = func->upvalues[i].slot;
+closure->upvalues[i] = vm.construct<Upvalue>(*this, upvalues[j].second);
+}
+
 stack.push_back(QV(closure, QV_TAG_CLOSURE));
 return 1;
 }

@@ -14,6 +14,10 @@ Upvalue::Upvalue (QFiber& f, int slot):
 QObject(f.vm.objectClass), fiber(&f), value(QV(static_cast<uint64_t>(QV_TAG_OPEN_UPVALUE | reinterpret_cast<uintptr_t>(&f.stack.at(stackpos(f, slot)))))) 
 {}
 
+Upvalue::Upvalue (QFiber& f, const QV& v): 
+QObject(f.vm.objectClass), fiber(&f), value(v) 
+{}
+
 QObject::QObject (QClass* tp):
 type(tp), next(nullptr) {
 if (type && &type->vm) type->vm.addToGC(this);

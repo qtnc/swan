@@ -2583,7 +2583,6 @@ compiler.popScope();
 void ComprehensionExpression::compile (QCompiler  & compiler) {
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
-fc.additionalContextVar =  compiler.additionalContextVar;
 rootStatement->optimizeStatement()->compile(fc);
 QFunction* func = fc.getFunction(0);
 func->name = "<comprehension>";
@@ -2615,17 +2614,6 @@ if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
 return;
 }
-if (!compiler.additionalContextVar.isNullOrUndefined() && compiler.vm.activeFiber) {
-auto& f = *compiler.vm.activeFiber;
-f.push(compiler.additionalContextVar);
-f.push(QV(f.vm, token.start, token.length));
-f.callMethod("[]", 2);
-QV result = f.at(-1);
-f.pop();
-if (!result.isUndefined()) { 
-compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(result)); 
-return; 
-}}
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
@@ -3391,7 +3379,6 @@ make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(co
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
-fc.additionalContextVar = compiler.additionalContextVar;
 compiler.parser.curMethodNameToken = name;
 compileParams(fc);
 body=body->optimizeStatement();

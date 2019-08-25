@@ -9,6 +9,7 @@ struct QFiber* fiber;
 QV value;
 static inline int stackpos (const QFiber& f, int n) { return f.callFrames.back().stackBase+n; }
 Upvalue (QFiber& f, int slot);
+explicit Upvalue (QFiber& f, const QV& value);
 inline QV& get () {
 if (value.isOpenUpvalue()) return *value.asPointer<QV>();
 else return value;

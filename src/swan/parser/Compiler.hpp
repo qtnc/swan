@@ -38,7 +38,6 @@ std::vector<LocalVariable> localVariables;
 std::vector<QFunction::Upvalue> upvalues;
 std::vector<Loop> loops;
 std::vector<QV> constants;
-QV additionalContextVar;
 QOpCode lastOp = OP_LOAD_NULL;
 CompilationResult result = CR_SUCCESS;
 int curScope = 0;
