@@ -3369,8 +3369,10 @@ destructuring.push_back(var);
 }
 else {
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-if (var->value) createBinaryOperation(name, T_QUESTQUESTEQ, var->value) ->optimize() ->compile(compiler);
-}
+if (var->value) {
+createBinaryOperation(name, T_QUESTQUESTEQ, var->value) ->optimize() ->compile(compiler);
+compiler.writeOp(OP_POP);
+}}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 writeOpLoadLocal(compiler, slot);
