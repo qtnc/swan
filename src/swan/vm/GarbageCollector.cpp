@@ -274,9 +274,10 @@ used++;
 else {
 auto next = ptr->gcNext();
 if (prev) prev->gcNext(next);
+void* origin = ptr->gcOrigin();
 size_t size = ptr->getMemSize();
 ptr->~QObject();
-vm.deallocate(ptr, size);
+vm.deallocate(origin, size);
 ptr = next;
 collected++;
 }

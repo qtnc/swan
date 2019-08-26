@@ -17,6 +17,7 @@ inline void gcUnmark (int n=1) { next = reinterpret_cast<QObject*>( reinterpret_
 inline QObject* gcNext () { return reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(next) &~3); }
 inline void gcNext (QObject* p) { next = reinterpret_cast<QObject*>(reinterpret_cast<uintptr_t>(p) | (reinterpret_cast<uintptr_t>(next)&3)); }
 virtual bool gcVisit ();
+virtual void* gcOrigin ();
 virtual size_t getMemSize () = 0;
 
 virtual ~QObject() = default;

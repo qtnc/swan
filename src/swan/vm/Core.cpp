@@ -23,6 +23,10 @@ type(tp), next(nullptr) {
 if (type && &type->vm) type->vm.addToGC(this);
 }
 
+void* QObject::gcOrigin () {
+return static_cast<QObject*>(this); 
+}
+
 QFunction::QFunction (QVM& vm): 
 QObject(vm.functionClass), 
 nArgs(0), vararg(false),

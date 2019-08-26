@@ -23,7 +23,11 @@ stack.reserve(8);
 callFrames.reserve(4);
 }
 
-QFiber::~QFiber () { }
+QFiber::~QFiber () {}
+
+void* QFiber::gcOrigin () {
+return static_cast<QFiber*>(this); 
+}
 
 void QFiber::release () {
 vm.fibers.erase(find(vm.fibers.begin(), vm.fibers.end(), this));

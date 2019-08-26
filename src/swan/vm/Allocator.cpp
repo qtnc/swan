@@ -44,22 +44,26 @@ freeList.clear();
 void* QVM::allocate (size_t n) {
 gcMemUsage += n;
 round_upwards(n);
-if (n<=POOL_SIZE_MAX) return getpool(n).malloc();
-else {
+/*if (n<=POOL_SIZE_MAX) return getpool(n).malloc();
+else  {
 auto it = freeList.find(n);
 if (it!=freeList.end()) {
 void* ptr = it->second;
 freeList.erase(it);
 return ptr;
+}*/
+void* p = boost::alignment::aligned_alloc(ALIGNMENT, n);
+memset(p, 0, n);
+return p;
+//}
 }
-return boost::alignment::aligned_alloc(ALIGNMENT, n);
-}}
 
 void QVM::deallocate (void* p, size_t n) {
 gcMemUsage -= n;
 round_upwards(n);
-memset(p, 0, n);
-if (n<=POOL_SIZE_MAX) getpool(n).free(p);
-else if (n<=RESERVE_SIZE_MAX) freeList.insert(make_pair(n, p));
-else boost::alignment::aligned_free(p);
+//memset(p, 0, n);
+//if (n<=POOL_SIZE_MAX) getpool(n).free(p);
+//else if (n<=RESERVE_SIZE_MAX) freeList.insert(make_pair(n, p));
+//else 
+boost::alignment::aligned_free(p);
 }

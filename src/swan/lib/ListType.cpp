@@ -17,12 +17,12 @@ if (n>0) list->data.insert(list->data.end(), &f.at(1), &f.at(1) +n);
 static void listIterator (QFiber& f) {
 QList& list = f.getObject<QList>(0);
 auto it = f.vm.construct<QListIterator>(f.vm, list);
-if (f.isNum(1)) {
+if (f.getArgCount()>=2 && f.isNum(1)) {
 int index = f.getNum(1);
 if (index<0) index += list.data.size() +1;
 if (index>0) std::advance(it->iterator, index);
 }
-else if (f.at(1).isObject() && f.at(1).isInstanceOf(f.vm.listIteratorClass) && &f.getObject<QListIterator>(1).list == &list) {
+else if (f.getArgCount()>=2 && f.at(1).isObject() && f.at(1).isInstanceOf(f.vm.listIteratorClass) && &f.getObject<QListIterator>(1).list == &list) {
 auto& it2 = f.getObject<QListIterator>(1);
 it->iterator = it2.iterator;
 }
@@ -33,7 +33,10 @@ static void listIteratorNext (QFiber& f) {
 QListIterator& li = f.getObject<QListIterator>(0);
 li.checkVersion();
 if (li.iterator==li.list.data.end()) f.returnValue(QV::UNDEFINED);
-else f.returnValue(*li.iterator++);
+else { 
+f.returnValue(*li.iterator); 
+++li.iterator; 
+}
 li.forward=true;
 }
 
