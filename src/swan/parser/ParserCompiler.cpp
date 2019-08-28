@@ -402,8 +402,10 @@ struct BinaryOperation: Expression {
 shared_ptr<Expression> left, right;
 QTokenType op;
 BinaryOperation (shared_ptr<Expression> l, QTokenType o, shared_ptr<Expression> r): left(l), right(r), op(o)  {}
+bool isComparison () { return op>=T_LT && op<=T_GTE; }
 const QToken& nearestToken () override { return left->nearestToken(); }
 shared_ptr<Expression> optimize ()override ;
+shared_ptr<Expression> optimizeChainedComparisons ();
 void compile (QCompiler& compiler)override ;
 };
 
@@ -2962,6 +2964,7 @@ compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMeth
 }
 
 shared_ptr<Expression> BinaryOperation::optimize () { 
+if (left && right && isComparison()) if (auto cc = optimizeChainedComparisons()) return cc->optimize();
 if (left) left=left->optimize(); 
 if (right) right=right->optimize();
 if (!left || !right) return shared_this();
@@ -2979,6 +2982,40 @@ else if (c1 && op==T_BARBAR) return c1->token.value.isFalsy()? right : left;
 else if (c1 && op==T_QUESTQUEST) return c1->token.value.isNullOrUndefined()? right : left;
 else if (c1 && op==T_AMPAMP) return c1->token.value.isFalsy()? left: right;
 return shared_this(); 
+}
+
+shared_ptr<Expression> BinaryOperation::optimizeChainedComparisons () {
+vector<shared_ptr<Expression>> all = { right };
+vector<QTokenType> ops = { op };
+shared_ptr<Expression> next = left;
+while(true){
+auto bop = dynamic_pointer_cast<BinaryOperation>(next);
+if (bop && bop->left && bop->right && bop->isComparison()) { 
+all.push_back(bop->right);
+ops.push_back(bop->op);
+next = bop->left;
+}
+else {
+all.push_back(next);
+break;
+}
+}
+if (all.size()>=3) {
+shared_ptr<Expression> expr = all.back();
+all.pop_back(); 
+expr = createBinaryOperation(expr, ops.back(), all.back());
+ops.pop_back();
+while(all.size() && ops.size()) {
+shared_ptr<Expression> l = all.back();
+all.pop_back();
+shared_ptr<Expression> r = all.back();
+auto b = createBinaryOperation(l, ops.back(), r);
+ops.pop_back();
+expr = createBinaryOperation(expr, T_AMPAMP, b);
+}
+return expr->optimize();
+}
+return nullptr;
 }
 
 void BinaryOperation::compile  (QCompiler& compiler) {
