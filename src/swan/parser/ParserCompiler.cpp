@@ -806,10 +806,11 @@ compiler.writeOp(OP_END_FINALLY);
 
 struct BlockStatement: Statement, Comprenable  {
 vector<shared_ptr<Statement>> statements;
-bool makeScope;
-BlockStatement (const vector<shared_ptr<Statement>>& sta = {}, bool s = true): statements(sta), makeScope(s)  {}
+bool makeScope, optimized;
+BlockStatement (const vector<shared_ptr<Statement>>& sta = {}, bool s = true): statements(sta), makeScope(s), optimized(false)   {}
 void chain (const shared_ptr<Statement>& st) final override { statements.push_back(st); }
-shared_ptr<Statement> optimizeStatement () override { for (auto& sta: statements) sta=sta->optimizeStatement(); return shared_this(); }
+shared_ptr<Statement> optimizeStatement () override;
+void doHoisting ();
 const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override { return any_of(statements.begin(), statements.end(), [&](auto s){ return s && s->isUsingExports(); }); }
 void compile (QCompiler& compiler) override {
@@ -1942,7 +1943,7 @@ return make_shared<VariableDeclaration>(vars);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl () {
-return parseClassDecl(VD_CONST);
+return parseClassDecl(0);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl (int classFlags) {
@@ -2939,8 +2940,7 @@ params.push_back(make_shared<Variable>(shared_this(), nullptr, VD_NODEFAULT));
 
 shared_ptr<Expression> UnaryOperation::optimize () { 
 expr=expr->optimize();
-shared_ptr<ConstantExpression> cst = dynamic_pointer_cast<ConstantExpression>(expr);
-if (cst) {
+if (auto cst = dynamic_pointer_cast<ConstantExpression>(expr)) {
 QV& value = cst->token.value;
 if (value.isNum() && BASE_NUMBER_UNOPS[op]) {
 QToken token = cst->token;
@@ -3417,6 +3417,32 @@ for (auto decoration: decorations) decoration->compile(compiler);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 return func;
+}
+
+shared_ptr<Statement> BlockStatement::optimizeStatement () { 
+if (optimized) return shared_this(); 
+for (auto& sta: statements) sta=sta->optimizeStatement(); 
+doHoisting();
+optimized = true;
+return shared_this(); 
+}
+
+void BlockStatement::doHoisting () {
+vector<shared_ptr<Statement>> statementsToAdd;
+for (auto& sta: statements) {
+auto vd = dynamic_pointer_cast<VariableDeclaration>(sta);
+if (vd  && vd->vars.size()==1
+&& !(vd->vars[0]->flags&VD_CONST)
+&& dynamic_pointer_cast<NameExpression>(vd->vars[0]->name) 
+&& (dynamic_pointer_cast<FunctionDeclaration>(vd->vars[0]->value) || dynamic_pointer_cast<ClassDeclaration>(vd->vars[0]->value))
+) {
+auto name = vd->vars[0]->name;
+auto value = vd->vars[0]->value;
+vd->vars[0]->value = nullptr;
+statementsToAdd.push_back(vd->optimizeStatement());
+sta = createBinaryOperation(name, T_EQ, value) ->optimize();
+}}
+if (statementsToAdd.size()) statements.insert(statements.begin(), statementsToAdd.begin(), statementsToAdd.end());
 }
 
 ClassDeclaration* QCompiler::getCurClass (int* atLevel) {
