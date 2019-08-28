@@ -142,6 +142,8 @@ void callCallable (int nArgs);
 inline void callClosure (QClosure& closure, int nArgs);
 void callFiber (QFiber& f, int nArgs);
 
+void unpackSequence ();
+void loadPushClosure (QClosure* curClosure, uint_constant_index_t constantIndex);
 Upvalue* captureUpvalue (int slot);
 void closeUpvalues (int startSlot);
 void adjustUpvaluePointers (const QV* oldPtr, const QV* newPtr);

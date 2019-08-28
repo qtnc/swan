@@ -35,7 +35,7 @@ struct FunctionDeclaration* curMethod = nullptr;
 QCompiler* parent = nullptr;
 std::ostringstream out;
 std::vector<LocalVariable> localVariables;
-std::vector<QFunction::Upvalue> upvalues;
+std::vector<Upvariable> upvalues;
 std::vector<Loop> loops;
 std::vector<QV> constants;
 QOpCode lastOp = OP_LOAD_NULL;

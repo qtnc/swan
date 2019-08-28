@@ -209,6 +209,14 @@ push(f.top());
 f.pop();
 }
 
+void QFiber::unpackSequence () {
+QV val = top();
+pop();
+vector<QV, trace_allocator<QV>> buffer(vm);
+val.asObject<QSequence>()->copyInto(*this, buffer);
+stack.insert(stack.end(), buffer.begin(), buffer.end());
+}
+
 Upvalue* QFiber::captureUpvalue (int slot) {
 QV val = QV(QV_TAG_OPEN_UPVALUE | reinterpret_cast<uintptr_t>(&stack.at(callFrames.back().stackBase + slot)));
 auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==this && x->value.i==val.i; });
@@ -216,4 +224,14 @@ if (it!=openUpvalues.end()) return *it;
 auto upvalue = vm.construct<Upvalue>(*this, slot);
 openUpvalues.push_back(upvalue);
 return upvalue;
+}
+
+void QFiber::loadPushClosure (QClosure* curClosure, uint_constant_index_t constantIndex) {
+QFunction& func = *curClosure->func.constants[constantIndex].asObject<QFunction>();
+QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+for (int i=0, n=func.upvalues.size(); i<n; i++) {
+auto& upvalue = func.upvalues[i];
+newClosure->upvalues[i] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
+}
+push(QV(newClosure, QV_TAG_CLOSURE));
 }

@@ -380,26 +380,12 @@ CASE(OP_PUSH_VARARG_MARK)
 push(QV(QV_VARARG_MARK));
 BREAK
 
-CASE(OP_UNPACK_SEQUENCE) {
-QV val = top();
-pop();
-vector<QV, trace_allocator<QV>> buffer(vm);
-val.asObject<QSequence>()->copyInto(*this, buffer);
-stack.insert(stack.end(), buffer.begin(), buffer.end());
-}
+CASE(OP_UNPACK_SEQUENCE) 
+unpackSequence();
 BREAK
 
-CASE(OP_LOAD_CLOSURE) {
-QV& val = frame.closure->func.constants[frame.read<uint_constant_index_t>()];
-QFunction& func = *val.asObject<QFunction>();
-QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
-QClosure* curClosure = frame.closure;
-for (arg1=0, arg2=func.upvalues.size(); arg1<arg2; arg1++) {
-auto& upvalue = func.upvalues[arg1];
-newClosure->upvalues[arg1] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
-}
-push(QV(newClosure, QV_TAG_CLOSURE));
-}
+CASE(OP_LOAD_CLOSURE) 
+loadPushClosure(frame.closure, frame.read<uint_constant_index_t>());
 BREAK
 
 CASE(OP_NEW_CLASS) {

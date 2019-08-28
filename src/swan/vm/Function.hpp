@@ -6,15 +6,16 @@
 #include<string>
 #include<vector>
 
-struct QFunction: QObject {
-struct Upvalue {
+struct Upvariable {
 int slot;
 bool upperUpvalue;
 };
+
+struct QFunction: QObject {
 std::string bytecode, name, file;
-std::vector<Upvalue, trace_allocator<Upvalue>> upvalues;
+std::vector<Upvariable, trace_allocator<Upvariable>> upvalues;
 std::vector<QV, trace_allocator<QV>> constants;
-uint8_t nArgs;
+uint_local_index_t nArgs;
 bool vararg;
 
 QFunction (QVM& vm);
