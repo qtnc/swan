@@ -1923,12 +1923,12 @@ return parseAsyncFunctionDecl(VD_CONST);
 }
 
 shared_ptr<Statement> QParser::parseAsyncFunctionDecl (int varFlags) {
-if (!matchOneOf(T_FUNCTION, T_DOLLAR)) parseError("Expected 'function' after 'async'");
+consume(T_FUNCTION, "Expected 'function' after 'async'");
 return parseFunctionDecl(varFlags, FD_ASYNC);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
-return parseFunctionDecl(VD_CONST);
+return parseFunctionDecl(0);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, int funcFlags) {
@@ -1982,7 +1982,7 @@ return parseVarDecl(VD_GLOBAL);
 else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_GLOBAL);
 }
-else if (matchOneOf(T_DOLLAR, T_FUNCTION)) {
+else if (match(T_FUNCTION)) {
 return parseFunctionDecl(VD_CONST | VD_GLOBAL);
 }
 else if (match(T_ASYNC)) {
@@ -1997,7 +1997,7 @@ auto exportDecl = make_shared<ExportDeclaration>();
 shared_ptr<VariableDeclaration> varDecl;
 if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VD_CONST));
 else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VD_CONST));
-else if (matchOneOf(T_DOLLAR, T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST));
+else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST));
 else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VD_CONST));
 if (varDecl) {
 auto name = varDecl->vars[0]->name;
@@ -2451,8 +2451,12 @@ return make_shared<LiteralRegexExpression>(cur, pattern, options);
 shared_ptr<Expression> QParser::parseGroupOrTuple () {
 auto initial = cur;
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, vector<shared_ptr<Expression>>() );
-shared_ptr<Expression> expr = parseExpression();
-if (match(T_COMMA)) {
+shared_ptr<Expression> expr = parseUnpackOrExpression();
+bool isTuple = isUnpack(expr);
+skipNewlines();
+if (isTuple) consume(T_COMMA, "Expected ',' for single-item tuple");
+else isTuple = match(T_COMMA);
+if (isTuple) {
 vector<shared_ptr<Expression>> items = { expr };
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
 do {
