@@ -78,6 +78,7 @@ bindGlobal("gcd", numGCD);
 bindGlobal("lcm", numLCM);
 bindGlobal("min", genericComp<'<'>);
 bindGlobal("max", genericComp<'>'>);
+
 numClass
 BIND_F(log, numLog)
 BIND_L(frac, { double unused; f.returnValue(modf(f.getNum(0), &unused)); })
@@ -86,7 +87,9 @@ BIND_L(sign, { double d=f.getNum(0); f.returnValue(copysign(d==0?0:1,d)); })
 ;
 
 bindGlobal("NaN", QV(QV_NAN));
-bindGlobal("PlusInf", QV(QV_PLUS_INF));
-bindGlobal("MinusInf", QV(QV_MINUS_INF));
-bindGlobal("Pi", acos(-1));
+bindGlobal("INFINITY", QV(QV_PLUS_INF));
+bindGlobal("POSITIVE_INFINITY", QV(QV_PLUS_INF));
+bindGlobal("NEGATIVE_INFINITY", QV(QV_MINUS_INF));
+bindGlobal("PI", acos(-1));
+bindGlobal("\xCF\x80", acos(-1));
 }

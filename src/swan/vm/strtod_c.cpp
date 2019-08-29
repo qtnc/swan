@@ -18,7 +18,7 @@ exponent = strtol(++e, &e, 10);
 }
 if (endptr) *endptr=e;
 double value = num;
-if (frac) value += frac/pow(10, fraclen);
+if (frac) value += (num<0?-1:1) * frac/pow(10, fraclen);
 if (exponent) value *= pow(10, exponent);
 return value;
 }

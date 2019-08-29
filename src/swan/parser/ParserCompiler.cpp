@@ -1133,7 +1133,7 @@ static unordered_map<int, double(*)(double)> BASE_NUMBER_UNOPS = {
 };
 
 static inline bool isSpace (uint32_t c) {
-return c==' ' || c=='\t' || c=='\r';
+return c==' ' || c=='\t' || c=='\r' || c==160;
 }
 
 static inline bool isLine (uint32_t c) {
@@ -1141,7 +1141,11 @@ return c=='\n';
 }
 
 bool isName (uint32_t c) {
-return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' || c>=128;
+return (c>='a' && c<='z') || (c>='A' && c<='Z') || c=='_' 
+||(c>=0xC0 && c<0x2000 && c!=0xD7 && c!=0xF7)
+|| (c>=0x2C00 && c<0x2E00)
+|| (c>=0x2E80 && c<0xFFF0)
+|| c>=0x10000;
 }
 
 bool isUpper (uint32_t c) {
@@ -1357,7 +1361,7 @@ return cur;
 #define RET22(C1,C2,R11,R12,R21,R22) if (utf8peek(in, end)==C1) { utf8::next(in, end); RET2(C2,R11,R12) } else RET2(C2,R21,R22)
 const char *start = in;
 if (in>=end || !*in) RET(T_END)
-int c;
+uint32_t c;
 do {
 c = utf8::next(in, end);
 } while(isSpaceOrIgnorableLine(c, in, end) && *(start=in) && in<end);
@@ -1389,7 +1393,9 @@ case '!': RET2('=', T_EXCLEQ, T_EXCL)
 case '=': RET3('=', T_EQEQ, '>', T_EQGT, T_EQ) 
 case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
-case '?': RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) 
+case '?': 
+if (utf8peek(in, end)=='.') { utf8::next(in, end); RET(T_DOTQUEST) } 
+else { RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) }
 case '/': 
 switch (utf8peek(in, end)) {
 case '/': case '*': skipComment(in, end, '/'); return nextToken();
@@ -1406,6 +1412,20 @@ QV str = parseString(*this, vm, in, end, getStringEndingChar(c));
 RETV(T_STRING, str)
 }
 case '#': skipComment(in, end, '#'); return nextToken();
+case 183: case 215: case 8901: RET(T_STAR)
+case 247: RET(T_SLASH)
+case 8722: RET(T_MINUS)
+case 8734: RETV(T_NUM, 1.0/0.0)
+case 8800: RET(T_EXCLEQ)
+case 8801: RET(T_EQEQ)
+case 8804: RET(T_LTE)
+case 8805: RET(T_GTE)
+case 8712: RET(T_IN)
+case 8743: RET(T_AMPAMP)
+case 8744: RET(T_BARBAR)
+case 8745: RET(T_AMP)
+case 8746: RET(T_BAR)
+case 8891: RET(T_CIRC)
 }
 if (isDigit(c)) {
 double d = parseNumber(--in);
