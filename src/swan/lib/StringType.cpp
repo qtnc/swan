@@ -141,7 +141,7 @@ int start = f.getOptionalNum(2, 0), length = utf8::distance(s->begin(), s->end()
 if (start<0) start += length;
 auto endPos = s->end(), startPos = s->begin();
 utf8::advance(startPos, start, endPos);
-auto re = search(startPos, endPos, needle->begin(), needle->end());
+auto re = search(startPos, endPos, std::boyer_moore_searcher(needle->begin(), needle->end()));
 if (re==endPos) f.returnValue(-1.0);
 else f.returnValue(static_cast<double>(utf8::distance(s->begin(), re)));
 }
