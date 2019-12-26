@@ -55,18 +55,15 @@ L(0), L(1), L(2), L(3), L(4), L(5), L(6), L(7),
 #undef L
 
 #define C(N) OP(CALL_METHOD_##N, 1-N, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t))
-C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), C(8),
-C(9), C(10), C(11), C(12), C(13), C(14), C(15),
+C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), 
 #undef C
 
 #define C(N) OP(CALL_SUPER_##N, 1-N, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t))
-C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), C(8),
-C(9), C(10), C(11), C(12), C(13), C(14), C(15),
+C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7),
 #undef C
 
 #define C(N) OP(CALL_FUNCTION_##N, -N, 0, 0)
-C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), C(8),
-C(9), C(10), C(11), C(12), C(13), C(14), C(15),
+C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), 
 #undef C
 
 OP(CALL_METHOD, 255, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | (sizeof(uint_method_symbol_t)<<0)),

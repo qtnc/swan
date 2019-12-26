@@ -49,6 +49,8 @@ return QV::UNDEFINED;
 
 
 FiberState QFiber::run ()  {
+static bool ff1 = false; 
+if (!ff1) { ff1=true; println("OP_END = %d", OP_END); }
 //println(std::cerr, "Running fiber: parent=%s, cur=%s, this=%s", (parentFiber? QV(parentFiber, QV_TAG_FIBER) : QV()).print(), (curFiber? QV(curFiber, QV_TAG_FIBER) : QV()).print(), QV(this, QV_TAG_FIBER).print() );
 vm.activeFiber = this;
 state = FiberState::RUNNING;
@@ -157,8 +159,7 @@ stack.at(frame.stackBase + frame.read<uint_local_index_t>()) = top();
 BREAK
 
 #define C(N) CASE(OP_CALL_METHOD_##N)
-C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
-C(9) C(10) C(11) C(12) C(13) C(14) C(15)
+C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 arg1 = frame.read<uint_method_symbol_t>();
 callFrames.back() = frame;
@@ -167,8 +168,7 @@ frame = callFrames.back();
 BREAK
 
 #define C(N) CASE(OP_CALL_SUPER_##N)
-C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
-C(9) C(10) C(11) C(12) C(13) C(14) C(15)
+C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 arg1 = frame.read<uint_method_symbol_t>();
 callFrames.back() = frame;
@@ -177,8 +177,7 @@ frame = callFrames.back();
 BREAK
 
 #define C(N) CASE(OP_CALL_FUNCTION_##N)
-C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
-C(9) C(10) C(11) C(12) C(13) C(14) C(15)
+C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 callFrames.back() = frame;
 callCallable(op - OP_CALL_FUNCTION_0);

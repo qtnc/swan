@@ -21,7 +21,7 @@
 /** Swan version in use: hexadecimal number 0xVVYYMMPP, where V=major version, Y=year, M=month, P=patch.
 Compatibility is ensured if the version only differ in patch, i.e. 0.19.4a is compatible with 0.19.4b, but not with 0.19.5.
 */
-#define SWAN_VERSION 0x00130C00UL
+#define SWAN_VERSION 0x00140100UL
 
 namespace Swan {
 

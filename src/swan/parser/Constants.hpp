@@ -54,4 +54,8 @@ CR_FAILED,
 CR_INCOMPLETE
 };
 
+#define TP_OTHER 0
+#define TP_NUM 1
+#define TP_BOOL 2
+
 #endif

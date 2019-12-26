@@ -84,6 +84,7 @@ void parseVarList (std::vector<std::shared_ptr<struct Variable>>& vars, int flag
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();
+std::shared_ptr<Statement> parseImportDecl2 ();
 std::shared_ptr<Expression> parseImportExpression ();
 std::shared_ptr<Statement> parseGlobalDecl ();
 std::shared_ptr<Statement> parseClassDecl (int flags);

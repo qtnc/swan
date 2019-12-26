@@ -66,17 +66,17 @@ else return -1;
 }
 
 static inline void writeOpCallFunction (QCompiler& compiler, uint8_t nArgs) {
-if (nArgs<16) compiler.writeOp(static_cast<QOpCode>(OP_CALL_FUNCTION_0 + nArgs));
+if (nArgs<8) compiler.writeOp(static_cast<QOpCode>(OP_CALL_FUNCTION_0 + nArgs));
 else compiler.writeOpArg<uint_local_index_t>(OP_CALL_FUNCTION, nArgs);
 }
 
 static inline void writeOpCallMethod (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
-if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
+if (nArgs<8) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
 else compiler.writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_METHOD, symbol, nArgs+1);
 }
 
 static inline void writeOpCallSuper  (QCompiler& compiler, uint8_t nArgs, uint_method_symbol_t symbol) {
-if (nArgs<16) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
+if (nArgs<8) compiler.writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
 else compiler.writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_SUPER, symbol, nArgs+1);
 }
 
@@ -129,6 +129,7 @@ bool isExpression () final override { return true; }
 inline shared_ptr<Expression> shared_this () { return static_pointer_cast<Expression>(shared_from_this()); }
 virtual shared_ptr<Expression> optimize () { return shared_this(); }
 shared_ptr<Statement> optimizeStatement () override { return optimize(); }
+virtual int getExprType () { return TP_OTHER; }
 };
 
 struct Assignable {
@@ -163,7 +164,12 @@ else if (value.isTrue()) compiler.writeOp(OP_LOAD_TRUE);
 else if (value.isInt8()) compiler.writeOpArg<int8_t>(OP_LOAD_INT8, static_cast<int>(value.d));
 else compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(token.value));
 }
-};
+int getExprType () override {
+auto& value = token.value;
+if (value.isNum()) return TP_NUM;
+else if (value.isBool()) return TP_BOOL;
+else return TP_OTHER;
+}};
 
 struct DupExpression: Expression  {
 QToken token;
@@ -407,6 +413,7 @@ const QToken& nearestToken () override { return left->nearestToken(); }
 shared_ptr<Expression> optimize ()override ;
 shared_ptr<Expression> optimizeChainedComparisons ();
 void compile (QCompiler& compiler)override ;
+int getExprType () override;
 };
 
 struct UnaryOperation: Expression {
@@ -416,6 +423,7 @@ UnaryOperation  (QTokenType op0, shared_ptr<Expression> e0): op(op0), expr(e0) {
 shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
 const QToken& nearestToken () override { return expr->nearestToken(); }
+int getExprType () override;
 };
 
 struct ShortCircuitingBinaryOperation: BinaryOperation {
@@ -436,6 +444,11 @@ if (cst->token.value.isFalsy()) return elsePart;
 else return ifPart;
 }
 return shared_this(); 
+}
+int getExprType () override {
+if (!elsePart) return ifPart->getExprType();
+int tp1 = ifPart->getExprType(), tp2 = elsePart->getExprType();
+return tp1==tp2? tp1 : TP_OTHER;
 }
 void compile (QCompiler& compiler)override ;
 };
@@ -476,6 +489,11 @@ expr->compile(compiler);
 compiler.writeOp(OP_UNPACK_SEQUENCE);
 }
 const QToken& nearestToken () override { return expr->nearestToken(); }
+};
+
+struct TypeHintExpression: BinaryOperation {
+TypeHintExpression (shared_ptr<Expression> left = nullptr, shared_ptr<Expression> right = nullptr): BinaryOperation(left, T_AS, right) {}
+void compile (QCompiler& compiler)  override { left->compile(compiler); } //todo: actually exploit the type hint
 };
 
 struct AbstractCallExpression: Expression {
@@ -548,11 +566,11 @@ compiler.writeOp(OP_CALL_FUNCTION_2);
 }};
 
 struct Variable {
-shared_ptr<Expression> name, value;
+shared_ptr<Expression> name, value, typeHint;
 vector<shared_ptr<Expression>> decorations;
 int flags;
 Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
-name(nm), value(val), flags(flgs), decorations(decos) {}
+name(nm), value(val), flags(flgs), decorations(decos), typeHint(nullptr) {}
 void optimize () {
 name = name->optimize();
 if (value) value = value->optimize();
@@ -858,8 +876,9 @@ struct FunctionDeclaration: Expression, Decorable {
 QToken name;
 vector<shared_ptr<Variable>> params;
 shared_ptr<Statement> body;
+shared_ptr<Expression> returnTypeHint;
 int flags;
-FunctionDeclaration (const QToken& nm, int fl = 0, const vector<shared_ptr<Variable>>& fp = {}, shared_ptr<Statement> b = nullptr): name(nm), params(fp), body(b), flags(fl)     {}
+FunctionDeclaration (const QToken& nm, int fl = 0, const vector<shared_ptr<Variable>>& fp = {}, shared_ptr<Statement> b = nullptr): name(nm), params(fp), body(b), returnTypeHint(nullptr), flags(fl)     {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 QFunction* compileFunction (QCompiler& compiler);
@@ -969,6 +988,7 @@ INFIX(AMPAMP, InfixOp, &&, LOGICAL, LEFT),
 INFIX(BARBAR, InfixOp, ||, LOGICAL, LEFT),
 INFIX(QUESTQUEST, InfixOp, ??, LOGICAL, LEFT),
 
+INFIX(AS, InfixOp, as, ASSIGNMENT, RIGHT),
 INFIX(EQ, InfixOp, =, ASSIGNMENT, RIGHT),
 INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT, RIGHT),
 INFIX(MINUSEQ, InfixOp, -=, ASSIGNMENT, RIGHT),
@@ -1269,6 +1289,8 @@ case T_AMPAMP: case T_QUESTQUEST: case T_BARBAR:
 return make_shared<ShortCircuitingBinaryOperation>(left, op, right);
 case T_DOTQUEST:
 return createBinaryOperation(left, T_AMPAMP, createBinaryOperation(left, T_DOT, right));
+case T_AS:
+return make_shared<TypeHintExpression>(left, right);
 default: 
 return make_shared<BinaryOperation>(left, op, right);
 }}
@@ -1679,17 +1701,22 @@ return make_shared<TryStatement>(tryPart, catchPart, finallyPart, catchVar);
 }
 
 shared_ptr<Statement> QParser::parseWith () {
-QToken varToken = cur, catchVar = cur;
+QToken catchVar = cur;
 skipNewlines();
-shared_ptr<Expression> openExpr = parseExpression(P_COMPREHENSION);
-shared_ptr<Statement> catchSta = nullptr;
-if (!openExpr) { result=CR_INCOMPLETE; return nullptr; }
-if (match(T_AS)) {
-consume(T_NAME, "Expected variable name after 'as'");
-varToken = cur;
+shared_ptr<Expression> openExpr, varExpr = parseExpression(P_COMPREHENSION);
+if (match(T_EQ)) openExpr = parseExpression(P_COMPREHENSION);
+else {
+openExpr = varExpr;
+varExpr = make_shared<NameExpression>(createTempName());
 }
+//#######
+if (!dynamic_pointer_cast<NameExpression>(varExpr)) {
+varExpr = openExpr = nullptr;
+parseError("Invalid variable name for 'with' expression");
+}
+if (!varExpr || !openExpr) { result=CR_INCOMPLETE; return nullptr; }
 match(T_COLON);
-shared_ptr<Statement> body = parseStatement();
+shared_ptr<Statement> catchSta=nullptr, body = parseStatement();
 if (!body) { result=CR_INCOMPLETE; return nullptr; }
 skipNewlines();
 if (match(T_CATCH)) {
@@ -1703,7 +1730,6 @@ if (!catchSta) { result=CR_INCOMPLETE; return nullptr; }
 }
 QString* closeName = QString::create(vm, ("close"), 5);
 QToken closeToken = { T_NAME, closeName->data, closeName->length, QV(closeName, QV_TAG_STRING) };
-auto varExpr = make_shared<NameExpression>(varToken);
 vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
 auto varDecl = make_shared<VariableDeclaration>(varDecls);
 auto closeExpr = createBinaryOperation(varExpr, T_DOT, make_shared<NameExpression>(closeToken));
@@ -1739,7 +1765,7 @@ return expr;
 shared_ptr<Statement> QParser::parseDecoratedStatement () {
 auto decoration = parseExpression(P_PREFIX);
 auto expr = parseStatement();
-if (expr->isDecorable()) {
+if (expr && expr->isDecorable()) {
 auto decorable = dynamic_pointer_cast<Decorable>(expr);
 decorable->decorations.insert(decorable->decorations.begin(), decoration);
 }
@@ -1769,8 +1795,9 @@ default: parseError("Expecting identifier, '(', '[' or '{' in variable declarati
 }
 if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
-if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression();
+if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
 else var->flags |= VD_NODEFAULT;
+if (match(T_AS)) var->typeHint = parseExpression(P_MEMBER);
 vars.push_back(var);
 if (flags&VD_SINGLE) break;
 } while(match(T_COMMA));
@@ -1800,6 +1827,7 @@ else if (match(T_NAME)) {
 prevToken();
 parseVarList(func->params, VD_SINGLE);
 }
+if (match(T_AS)) func->returnTypeHint = parseExpression(P_MEMBER);
 if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
 
@@ -1927,7 +1955,10 @@ return func;
 
 shared_ptr<Expression> QParser::parseArrowFunction (shared_ptr<Expression> fargs) {
 auto functionnable = dynamic_pointer_cast<Functionnable>(fargs);
-if (!functionnable || !functionnable->isFunctionnable()) parseError("Expression can't be considered as the argument list for an anonymous function");
+if (!functionnable || !functionnable->isFunctionnable()) {
+parseError("Expression can't be considered as the argument list for an anonymous function");
+return fargs;
+}
 auto func = make_shared<FunctionDeclaration>(cur);
 if (match(T_GT)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
@@ -2100,6 +2131,17 @@ importSta->from = parseExpression(P_COMPREHENSION);
 return importSta;
 }
 
+shared_ptr<Statement> QParser::parseImportDecl2 () {
+auto importSta = make_shared<ImportDeclaration>();
+int flags = 0;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+importSta->from = parseExpression(P_COMPREHENSION);
+consume(T_IMPORT, "Expected 'import' after import source");
+parseVarList(importSta->imports, flags);
+multiVarExprToSingleLiteralMap(*this, importSta->imports, flags);
+return importSta;
+}
+
 shared_ptr<Statement> QParser::parseStatement () {
 skipNewlines();
 const ParserRule& rule = rules[nextToken().type];
@@ -2130,7 +2172,6 @@ shared_ptr<Expression> QParser::parseInfixOp (shared_ptr<Expression> left) {
 QTokenType op =  cur.type;
 auto& rule = rules[op];
 auto priority = rule.priority;
-//if (op>=T_EQ && op<=T_BARBAREQ) priority--;
 if (rule.flags&P_RIGHT) --priority;
 shared_ptr<Expression> right = parseExpression(priority);
 return createBinaryOperation(left, op, right);
@@ -2225,6 +2266,7 @@ expr->chain(bs);
 expr = bs;
 }}
 else if (match(T_WITH)) {
+//#########
 auto openExpr = parseExpression(P_COMPREHENSION);
 QToken varToken;
 if (match(T_AS)) {
@@ -2960,6 +3002,13 @@ void NameExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& param
 params.push_back(make_shared<Variable>(shared_this(), nullptr, VD_NODEFAULT));
 }
 
+int UnaryOperation::getExprType () {
+if (op==T_EXCL) return TP_BOOL;
+int tp = expr->getExprType();
+if (tp==TP_NUM && op==T_TILDE) return TP_NUM;
+return TP_OTHER;
+}
+
 shared_ptr<Expression> UnaryOperation::optimize () { 
 expr=expr->optimize();
 if (auto cst = dynamic_pointer_cast<ConstantExpression>(expr)) {
@@ -2981,6 +3030,17 @@ return shared_this();
 void UnaryOperation::compile (QCompiler& compiler) {
 expr->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(rules[op].prefixOpName));
+}
+
+int BinaryOperation::getExprType () {
+if (op>=T_EQEQ && op<=T_GTE) return TP_BOOL;
+int tp1 = left->getExprType(), tp2 = right->getExprType();
+if (tp1==TP_NUM && tp2==TP_NUM && (
+(op>=T_PLUS && op<=T_GTGT)
+|| (op>=T_EQ && op<=T_GTGTEQ)
+|| op==T_TILDE || op==T_PLUSPLUS || op==T_MINUSMINUS)
+) return TP_NUM;
+return TP_OTHER;
 }
 
 shared_ptr<Expression> BinaryOperation::optimize () { 
