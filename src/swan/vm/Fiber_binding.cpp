@@ -5,6 +5,7 @@
 #include "Value.hpp"
 #include "Iterable.hpp"
 #include "ExtraAlgorithms.hpp"
+#include "Array.hpp"
 #include "OpCodeInfo.hpp"
 #include "Fiber_inlines.hpp"
 #include<string>
@@ -207,7 +208,7 @@ vm.importHook(*this, finalFile, Swan::VM::ImportHookState::BEFORE_RUN, count);
 while(--count>=0) {
 const QClosure* closure = at(-1).isClosure()? at(-1).asObject<QClosure>() : nullptr;
 const QFunction* func = closure? &closure->func : (at(-1).isNormalFunction()? at(-1).asObject<QFunction>() : nullptr);
-string funcFile = func? func->file : "";
+string funcFile = func? func->file.str() : "";
 call(0); 
 if (funcFile.size()) vm.imports[funcFile] = top();
 if (count>0) pop(); 

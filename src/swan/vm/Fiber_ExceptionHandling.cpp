@@ -28,7 +28,7 @@ uint8_t op = *bc++;
 if (op==OP_DEBUG_LINE) line = *reinterpret_cast<const int16_t*>(bc);
 bc += OPCODE_INFO[op].nArgs;
 }
-stackTrace.push_back({ func.name, func.file, line });
+stackTrace.push_back({ func.name.str(), func.file.str(), line });
 }
 
 

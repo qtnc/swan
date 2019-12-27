@@ -107,7 +107,7 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 , randomClass
 #endif
 };
-for (auto cls: globalClasses) bindGlobal(cls->name, cls);
+for (auto cls: globalClasses) bindGlobal(cls->name.str(), cls);
 
 bindGlobal("import", import_);
 bindGlobal("format", stringFormat);

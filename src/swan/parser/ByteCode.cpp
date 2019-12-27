@@ -89,8 +89,8 @@ out << 'F';
 writeVLN(out, reinterpret_cast<uintptr_t>(&func));
 write(out, func.nArgs);
 write<uint8_t>(out, func.vararg);
-writeString(out, func.file);
-writeString(out, func.name);
+writeString(out, func.file.str());
+writeString(out, func.name.str());
 writeVLN(out, func.constants.size());
 for (auto& cst: func.constants) writeQVBytecode(cst, out, references);
 writeVLN(out, func.upvalues.size());
@@ -98,7 +98,7 @@ for (auto& upv: func.upvalues) {
 writeVLN(out, upv.slot);
 write<uint8_t>(out, upv.upperUpvalue);
 }
-writeString(out, func.bytecode);
+writeString(out, string(func.bytecode.begin(), func.bytecode.end()));
 //println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
 }
 
@@ -110,14 +110,17 @@ func.vararg = read<uint8_t>(in);
 func.file = readString(in);
 func.name = readString(in);
 int nConsts = readVLN(in);
-func.constants.reserve(nConsts);
-for (int i=0; i<nConsts; i++) func.constants.push_back(readQVBytecode(vm, in, references, globalTable, methodTable));
+
+func.constants.reset(nConsts);
+QV* qvptr = func.constants.begin();
+for (int i=0; i<nConsts; i++) *qvptr++ = (readQVBytecode(vm, in, references, globalTable, methodTable));
 int nUpvalues = readVLN(in);
-func.upvalues.reserve(nUpvalues);
+func.upvalues.reset(nUpvalues);
+Upvariable* upvptr = func.upvalues.begin();
 for (int i=0; i<nUpvalues; i++) {
 int slot = readVLN(in);
 bool upper = read<uint8_t>(in);
-func.upvalues.push_back({ slot, upper });
+*upvptr++ = { slot, upper };
 }
 func.bytecode = readString(in);
 //println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
@@ -133,8 +136,7 @@ case OP_STORE_METHOD:
 case OP_STORE_STATIC_METHOD:
 #define C(N) case OP_CALL_METHOD_##N: \
 case OP_CALL_SUPER_##N: 
-C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7) C(8)
-C(9) C(10) C(11) C(12) C(13) C(14) C(15)
+C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 case OP_CALL_METHOD:
 case OP_CALL_SUPER:

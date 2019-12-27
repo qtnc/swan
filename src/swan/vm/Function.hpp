@@ -3,6 +3,7 @@
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
+#include "Array.hpp"
 #include<string>
 #include<vector>
 
@@ -12,9 +13,9 @@ bool upperUpvalue;
 };
 
 struct QFunction: QObject {
-std::string bytecode, name, file;
-std::vector<Upvariable, trace_allocator<Upvariable>> upvalues;
-std::vector<QV, trace_allocator<QV>> constants;
+simple_string bytecode, name, file;
+simple_array<Upvariable, trace_allocator<char>> upvalues;
+simple_array<QV, trace_allocator<char>> constants;
 uint_local_index_t nArgs;
 bool vararg;
 

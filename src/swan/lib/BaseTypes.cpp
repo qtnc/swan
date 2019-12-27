@@ -146,8 +146,8 @@ f.returnValue(QV(BoundFunction::create(f.vm, f.at(0), f.getArgCount() -1, &f.at(
 }
 
 static string getFuncName (QV f, QVM& vm) {
-if (f.isClosure()) return f.asObject<QClosure>()->func.name;
-else if (f.isNormalFunction()) return f.asObject<QFunction>()->name;
+if (f.isClosure()) return f.asObject<QClosure>()->func.name.str();
+else if (f.isNormalFunction()) return f.asObject<QFunction>()->name.str();
 else if (f.isGenericSymbolFunction()) return "::" + vm.methodSymbols[f.asInt<uint_method_symbol_t>()];
 else if (f.isNativeFunction() || f.isStdFunction()) return "<native>";
 else if (f.isFiber()) return getFuncName(QV(f.asObject<QFiber>() ->callFrames[0] .closure, QV_TAG_CLOSURE), vm) + ":<fiber>";
@@ -180,9 +180,9 @@ classClass
 ->copyParentMethods()
 BIND_F( (), objectInstantiate)
 BIND_F(is, instanceofOperator)
-BIND_L(toString, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name)); })
+BIND_L(toString, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
 BIND_F(hashCode, objectHashCode)
-BIND_L(name, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name)); })
+BIND_L(name, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
 ;
 
 functionClass

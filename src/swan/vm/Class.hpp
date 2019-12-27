@@ -3,11 +3,12 @@
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
+#include "Array.hpp"
 
 struct QClass: QObject {
 QVM& vm;
 QClass* parent;
-std::string name;
+simple_string name;
 std::vector<QV, trace_allocator<QV>> methods;
 int nFields;
 QV staticFields[0];

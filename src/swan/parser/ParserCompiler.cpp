@@ -3816,11 +3816,13 @@ QFunction* QCompiler::getFunction (int nArgs) {
 compile();
 QFunction* function = vm.construct<QFunction>(vm);
 function->nArgs = nArgs;
-function->constants.clear();
-function->constants.insert(function->constants.end(), constants.begin(), constants.end());
+//function->constants.clear();
+//function->constants.insert(function->constants.end(), constants.begin(), constants.end());
+function->constants.reset(constants.begin(), constants.end());
 function->bytecode = out.str();
-function->upvalues.clear();
-function->upvalues.insert(function->upvalues.end(), upvalues.begin(), upvalues.end());
+//function->upvalues.clear();
+//function->upvalues.insert(function->upvalues.end(), upvalues.begin(), upvalues.end());
+function->upvalues.reset(upvalues.begin(), upvalues.end());
 function->file = parent&&!vm.compileDbgInfo? "" : parser.filename;
 result = result? result : parser.result;
 return function;

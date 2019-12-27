@@ -30,8 +30,8 @@ return static_cast<QObject*>(this);
 QFunction::QFunction (QVM& vm): 
 QObject(vm.functionClass), 
 nArgs(0), vararg(false),
-constants(trace_allocator<QV>(vm)),
-upvalues(trace_allocator<Upvalue>(vm))
+constants(trace_allocator<char>(vm)),
+upvalues(trace_allocator<char>(vm))
 {}
 
 QClosure::QClosure (QVM& vm, QFunction& f):
