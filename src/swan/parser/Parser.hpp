@@ -99,6 +99,8 @@ void parseSimpleAccessor (struct ClassDeclaration&, int);
 void parseDecoratedDecl (struct ClassDeclaration&, int);
 void parseAsyncMethodDecl (struct ClassDeclaration&, int);
 void parseMethodDecl2 (struct ClassDeclaration&, int);
+
+std::shared_ptr<struct TypeInfo> parseTypeInfo ();
 };
 
 #endif

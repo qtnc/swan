@@ -19,8 +19,7 @@ std::shared_ptr<struct TypeInfo> type;
 int scope;
 bool hasUpvalues ;
 bool isConst;
-inline LocalVariable (): name({ T_END, nullptr, 0, QV::UNDEFINED }), type(nullptr), scope(0), hasUpvalues(false), isConst(false) {}
-inline LocalVariable (const QToken& n, int s, bool ic): name(n), scope(s), type(nullptr), hasUpvalues(false), isConst(ic) {}
+LocalVariable (const QToken& n, int s, bool ic);
 };
 
 struct Loop {
