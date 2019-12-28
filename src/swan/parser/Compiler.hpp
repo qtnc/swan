@@ -15,9 +15,12 @@ struct QParser;
 
 struct LocalVariable {
 QToken name;
+std::shared_ptr<struct TypeInfo> type;
 int scope;
 bool hasUpvalues ;
 bool isConst;
+inline LocalVariable (): name({ T_END, nullptr, 0, QV::UNDEFINED }), type(nullptr), scope(0), hasUpvalues(false), isConst(false) {}
+inline LocalVariable (const QToken& n, int s, bool ic): name(n), scope(s), type(nullptr), hasUpvalues(false), isConst(ic) {}
 };
 
 struct Loop {
@@ -75,8 +78,8 @@ void popLoop ();
 void pushScope ();
 void popScope ();
 int countLocalVariablesInScope (int scope = -1);
-int findLocalVariable (const QToken& name, int flags);
-int findUpvalue (const QToken& name, int flags);
+int findLocalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
+int findUpvalue (const QToken& name, int flags, LocalVariable** ptr = nullptr);
 int findGlobalVariable (const QToken& name, int flags);
 int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);

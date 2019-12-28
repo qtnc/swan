@@ -86,7 +86,7 @@ OP(NEW_CLASS, -1, 3*sizeof(uint_field_index_t), (sizeof(uint_field_index_t)<<8)|
 OP(DEBUG_LINE, 0, sizeof(uint16_t), sizeof(uint16_t)),
 
 /* Not yet used, but reserved. These instructions are going to be faster if we are sure to operate on numbers */
-/*OP(ADD, -1, 0, 0),
+OP(ADD, -1, 0, 0),
 OP(SUB, -1, 0, 0),
 OP(MUL, -1, 0, 0),
 OP(DIV, -1, 0, 0),
@@ -97,17 +97,16 @@ OP(BINAND, -1, 0, 0),
 OP(BINXOR, -1, 0, 0),
 OP(LSH, -1, 0, 0),
 OP(RSH, -1, 0, 0),
-OP(BINCOMPL, 0, 0, 0),
-OP(UNM, 0, 0, 0),
-OP(UNP, 0, 0, 0),
+OP(INTDIV, -1, 0, 0),
 OP(LT, -1, 0, 0),
 OP(LTE, -1, 0, 0),
 OP(GT, -1, 0, 0),
 OP(GTE, -1, 0, 0),
 OP(EQ, -1, 0, 0),
 OP(NEQ, -1, 0, 0),
-OP(CONCAT, -1, 0, 0),
-*/
+OP(BINNOT, 0, 0, 0),
+OP(NEG, 0, 0, 0),
+OP(NOT, 0, 0, 0),
 
 /* Mark the greatest possible opcode */
 //OP(DEBUG, 0, 0, 0),

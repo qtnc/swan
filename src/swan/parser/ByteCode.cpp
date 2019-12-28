@@ -87,44 +87,42 @@ return;
 references.insert(&func);
 out << 'F';
 writeVLN(out, reinterpret_cast<uintptr_t>(&func));
+writeVLN(out, func.constantsEnd - func.constants);
+writeVLN(out, func.upvaluesEnd - func.upvalues);
+writeVLN(out, func.bytecodeEnd - func.bytecode);
 write(out, func.nArgs);
 write<uint8_t>(out, func.vararg);
 writeString(out, func.file.str());
 writeString(out, func.name.str());
-writeVLN(out, func.constants.size());
-for (auto& cst: func.constants) writeQVBytecode(cst, out, references);
-writeVLN(out, func.upvalues.size());
-for (auto& upv: func.upvalues) {
-writeVLN(out, upv.slot);
-write<uint8_t>(out, upv.upperUpvalue);
+for (auto cst = func.constants, end = func.constantsEnd; cst<end; ++cst) writeQVBytecode(*cst, out, references);
+for (auto upv = func.upvalues, end = func.upvaluesEnd; upv<end; ++upv) {
+writeVLN(out, upv->slot);
+write<uint8_t>(out, upv->upperUpvalue);
 }
-writeString(out, string(func.bytecode.begin(), func.bytecode.end()));
+out.write(func.bytecode, func.bytecodeEnd-func.bytecode);
 //println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
 }
 
 static QV readFunctionBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
-QFunction& func = *vm.construct<QFunction>(vm);
-references[readVLN(in)] = &func;
+size_t fnref = readVLN(in);
+int nConsts = readVLN(in);
+int nUpvalues = readVLN(in);
+int bcSize = readVLN(in);
+QFunction& func = *QFunction::create(vm, nConsts, nUpvalues, bcSize);
+references[fnref] = &func;
 func.nArgs = read<uint8_t>(in);
 func.vararg = read<uint8_t>(in);
 func.file = readString(in);
 func.name = readString(in);
-int nConsts = readVLN(in);
-
-func.constants.reset(nConsts);
-QV* qvptr = func.constants.begin();
-for (int i=0; i<nConsts; i++) *qvptr++ = (readQVBytecode(vm, in, references, globalTable, methodTable));
-int nUpvalues = readVLN(in);
-func.upvalues.reset(nUpvalues);
-Upvariable* upvptr = func.upvalues.begin();
-for (int i=0; i<nUpvalues; i++) {
+for (auto [i, ptr] = tuple{ 0, func.constants }; i<nConsts; ++i, ++ptr) *ptr = (readQVBytecode(vm, in, references, globalTable, methodTable));
+for (auto [i, ptr] = tuple{ 0, func.upvalues }; i<nUpvalues; ++i, ++ptr) {
 int slot = readVLN(in);
 bool upper = read<uint8_t>(in);
-*upvptr++ = { slot, upper };
+*ptr = { slot, upper };
 }
-func.bytecode = readString(in);
+in.read(func.bytecode, bcSize);
 //println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
-for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<end; ) {
+for (auto bc = func.bytecode, end = func.bytecodeEnd; bc<end; ) {
 uint8_t op = *bc++;
 switch(op) {
 case OP_LOAD_GLOBAL:
@@ -151,7 +149,7 @@ return QV(&func, QV_TAG_NORMAL_FUNCTION);
 }
 
 static void writeClosureBytecode (QClosure& closure, ostream& out, unordered_set<void*>& references) {
-if (closure.func.upvalues.size()>0) throw std::logic_error("Couldn't save closures with upvalues");
+if (closure.func.upvaluesEnd-closure.func.upvalues>0) throw std::logic_error("Couldn't save closures with upvalues");
 if (references.find(&closure)!=references.end()) {
 out << 'Q';
 writeVLN(out, reinterpret_cast<uintptr_t>(&closure));
@@ -166,7 +164,7 @@ writeQVBytecode(QV(&closure.func, QV_TAG_NORMAL_FUNCTION), out, references);
 static QV readClosureBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
 size_t ref = readVLN(in);
 QFunction& func = *readQVBytecode(vm, in, references, globalTable, methodTable).asObject<QFunction>();
-QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
+QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func.upvaluesEnd - func.upvalues, vm, func);
 references[ref] = closure;
 return QV(closure, QV_TAG_CLOSURE);
 }

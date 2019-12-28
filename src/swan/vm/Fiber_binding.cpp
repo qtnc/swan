@@ -162,7 +162,7 @@ stack.back().asObject<QForeignClass>() ->destructor = destr;
 }
 
 void adjustFieldOffset (QFunction& func, int offset) {
-for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<end; ) {
+for (auto bc = func.bytecode, end = func.bytecodeEnd; bc<end; ) {
 uint8_t op = *bc++;
 switch(op) {
 case OP_LOAD_THIS_FIELD:

@@ -55,14 +55,16 @@ upvalues.push_back(make_pair(*tmp.begin(), *tmp.rbegin() ));
 }
 for (auto& upv: upvalues) {
 auto s = upv.first.asObject<QString>();
-parent.localVariables.push_back({ { T_NAME, s->begin(), s->length, upv.first }, 3, false, false });
+QToken token = { T_NAME, s->begin(), s->length, upv.first };
+parent.localVariables.emplace_back( token, 3, false );
 }}
 
 QFunction* func = compiler.getFunction();
 if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
-QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(func->upvalues.size(), vm, *func);
+auto nUpvalues = func->upvaluesEnd - func->upvalues;
+QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(nUpvalues, vm, *func);
 
-if (func->upvalues.size()) for (int i=0, n=func->upvalues.size(); i<n; i++) {
+if (nUpvalues) for (int i=0;  i<nUpvalues; i++) {
 int j = func->upvalues[i].slot;
 closure->upvalues[i] = vm.construct<Upvalue>(*this, upvalues[j].second);
 }

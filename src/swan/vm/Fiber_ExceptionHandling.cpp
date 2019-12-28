@@ -23,7 +23,7 @@ static void buildStackTraceLine (QCallFrame& frame, std::vector<Swan::StackTrace
 if (!frame.closure) return;
 const QFunction& func = frame.closure->func;
 int line = -1;
-for (const char *bc = func.bytecode.data(), *end = func.bytecode.data()+func.bytecode.length(); bc<frame.bcp && bc<end; ) {
+for (auto bc = func.bytecode, end = func.bytecodeEnd; bc<frame.bcp && bc<end; ) {
 uint8_t op = *bc++;
 if (op==OP_DEBUG_LINE) line = *reinterpret_cast<const int16_t*>(bc);
 bc += OPCODE_INFO[op].nArgs;
@@ -64,10 +64,10 @@ callFrames.erase(callFrames.begin() + catchPoint.callFrame, callFrames.end());
 auto& frame = callFrames.back();
 if (catchPoint.catchBlock==0xFFFFFFFF) {
 state = FiberState::FAILED;
-frame.bcp = frame.closure->func.bytecode.data() + catchPoint.finallyBlock;
+frame.bcp = frame.closure->func.bytecode + catchPoint.finallyBlock;
 }
 else {
 state = FiberState::RUNNING;
-frame.bcp = frame.closure->func.bytecode.data() + catchPoint.catchBlock;
+frame.bcp = frame.closure->func.bytecode + catchPoint.catchBlock;
 }
 }}

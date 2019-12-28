@@ -13,16 +13,20 @@ bool upperUpvalue;
 };
 
 struct QFunction: QObject {
-simple_string bytecode, name, file;
-simple_array<Upvariable, trace_allocator<char>> upvalues;
-simple_array<QV, trace_allocator<char>> constants;
+QV* constants;
+union { Upvariable* upvalues; QV* constantsEnd; };
+union { char *bytecode; Upvariable* upvaluesEnd; };
+char* bytecodeEnd;
+c_string name, file;
+struct QClass* returnType;
 uint_local_index_t nArgs;
 bool vararg;
 
+static QFunction* create (QVM& vm, int nConstants, int nUpvalues, int bcSize);
 QFunction (QVM& vm);
 virtual bool gcVisit () final override;
 virtual ~QFunction () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+virtual size_t getMemSize () override { return  bytecodeEnd - reinterpret_cast<char*>(this); }
 };
 
 #endif

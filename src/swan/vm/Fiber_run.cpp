@@ -5,7 +5,12 @@
 #include "Upvalue.hpp"
 #include "BoundFunction.hpp"
 #include "../../include/cpprintf.hpp"
+#include<cmath>
 using namespace std;
+
+double dlshift (double, double);
+double drshift (double, double);
+double dintdiv (double, double);
 
 void pushSwanExceptionFromCppException (QFiber& f, const std::exception& e);
 
@@ -228,6 +233,38 @@ BREAK
 CASE(OP_STORE_STATIC_FIELD)
 top().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] = at(-2);
 pop();
+BREAK
+
+#define G(N,Q) \
+CASE(OP_##N) \
+pop(); Q; BREAK
+#define OPA(N,O) G(N, top().d O  stack.end()->d ) 
+#define OPC(N,O) G(N, top() = top().d O  stack.end()->d ) 
+#define OPB(N,O) G(N, top().d = static_cast<double>(static_cast<int64_t>(top().d) O static_cast<int64_t>(stack.end()->d)) ) 
+#define OPF(N,F) G(N, top().d = F(top().d, stack.end()->d) ) 
+OPA(ADD, +=) OPA(SUB, -=)
+OPA(MUL, *=) OPA(DIV, /=)
+OPB(BINAND, &) OPB(BINOR, |) OPB(BINXOR, ^)
+OPF(LSH, dlshift) OPF(RSH, drshift)
+OPF(INTDIV, dintdiv) OPF(MOD, fmod) OPF(POW, pow)
+OPC(EQ, ==) OPC(NEQ, !=)
+OPC(LT, <) OPC(GT, >) OPC(LTE, <=) OPC(GTE, >=)
+#undef OPA
+#undef OPB
+#undef OPC
+#undef OPF
+#undef G
+
+CASE(OP_NEG)
+top().d = -top().d;
+BREAK
+
+CASE(OP_BINNOT)
+top().d = static_cast<double>(~static_cast<int64_t>(top().d));
+BREAK
+
+CASE(OP_NOT)
+top() = top().isFalsy();
 BREAK
 
 CASE(OP_JUMP)

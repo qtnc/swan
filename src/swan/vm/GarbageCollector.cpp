@@ -38,14 +38,14 @@ return false;
 
 bool QFunction::gcVisit () {
 if (QObject::gcVisit()) return true;
-for (auto& cst: constants) cst.gcVisit();
+for (auto cst = constants; cst<constantsEnd; ++cst) cst->gcVisit();
 return false;
 }
 
 bool QClosure::gcVisit () {
 if (QObject::gcVisit()) return true;
 func.gcVisit();
-for (int i=0, n=func.upvalues.size(); i<n; i++) upvalues[i]->gcVisit();
+for (auto upv = upvalues, end = upvalues + (func.upvaluesEnd - func.upvalues); upv<end; ++upv) (*upv)->gcVisit();
 return false;
 }
 

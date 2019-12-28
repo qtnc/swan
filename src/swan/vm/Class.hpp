@@ -8,7 +8,7 @@
 struct QClass: QObject {
 QVM& vm;
 QClass* parent;
-simple_string name;
+c_string name;
 std::vector<QV, trace_allocator<QV>> methods;
 int nFields;
 QV staticFields[0];

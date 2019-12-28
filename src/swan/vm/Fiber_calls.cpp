@@ -169,7 +169,7 @@ int nClosureArgs = closure.func.nArgs;
 adjustArguments(nArgs, nClosureArgs, closure.func.vararg);
 uint32_t newStackBase = stack.size() -nClosureArgs;
 bool doRun = callFrames.back().isCppCallFrame();
-callFrames.push_back({&closure, closure.func.bytecode.data(), newStackBase});
+callFrames.push_back({&closure, closure.func.bytecode, newStackBase});
 if (doRun) run();
 }
 
@@ -230,10 +230,9 @@ return upvalue;
 
 void QFiber::loadPushClosure (QClosure* curClosure, uint_constant_index_t constantIndex) {
 QFunction& func = *curClosure->func.constants[constantIndex].asObject<QFunction>();
-QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvalues.size(), vm, func);
-for (int i=0, n=func.upvalues.size(); i<n; i++) {
-auto& upvalue = func.upvalues[i];
-newClosure->upvalues[i] = upvalue.upperUpvalue? curClosure->upvalues[upvalue.slot] : captureUpvalue(upvalue.slot);
+QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(func.upvaluesEnd - func.upvalues, vm, func);
+for (auto [newUpvalue, upvalue, upvalueEnd] = tuple{ newClosure->upvalues, func.upvalues, func.upvaluesEnd }; upvalue<upvalueEnd; ++upvalue, ++newUpvalue) {
+*newUpvalue = upvalue->upperUpvalue? curClosure->upvalues[upvalue->slot] : captureUpvalue(upvalue->slot);
 }
 push(QV(newClosure, QV_TAG_CLOSURE));
 }

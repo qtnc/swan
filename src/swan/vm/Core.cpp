@@ -30,8 +30,8 @@ return static_cast<QObject*>(this);
 QFunction::QFunction (QVM& vm): 
 QObject(vm.functionClass), 
 nArgs(0), vararg(false),
-constants(trace_allocator<char>(vm)),
-upvalues(trace_allocator<char>(vm))
+constants(nullptr), upvalues(nullptr), bytecode(nullptr), bytecodeEnd(nullptr),
+returnType(nullptr)
 {}
 
 QClosure::QClosure (QVM& vm, QFunction& f):
@@ -49,6 +49,15 @@ return bf;
 
 StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
 QObject(vm.functionClass), func(func0) {}
+
+QFunction* QFunction::create (QVM& vm, int nConsts, int nUpvalues, int bcSize) {
+QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + bcSize, vm);
+function->constants = reinterpret_cast<QV*>(function+1);
+function->constantsEnd = function->constants + nConsts;
+function->upvaluesEnd = function->upvalues + nUpvalues;
+function->bytecodeEnd = function->bytecode + bcSize;
+return function;
+}
 
 QInstance* QInstance::create (QClass* type, int nFields) { 
 return type->vm.constructVLS<QInstance, QV>(nFields, type); 
@@ -72,7 +81,7 @@ if (cls->destructor) cls->destructor(userData);
 }
 
 size_t QClosure::getMemSize () { 
-return sizeof(*this) + sizeof(QV) * func.upvalues.size(); 
+return sizeof(*this) + sizeof(QV) * (func.upvaluesEnd - func.upvalues); 
 }
 
 void QVM::addToGC (QObject* obj) {
