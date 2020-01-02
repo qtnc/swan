@@ -120,6 +120,7 @@ static shared_ptr<TypeInfo> ANY, MANY;
 virtual bool isEmpty () { return false; }
 virtual bool isNum (QVM& vm) { return false; }
 virtual bool isBool (QVM& vm) { return false; }
+virtual shared_ptr<TypeInfo> resolve (QCompiler& compiler) { return shared_from_this(); }
 virtual shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) = 0;
 virtual string toString () = 0;
 };
@@ -160,6 +161,14 @@ if (p1==p2) return p1;
 }}
 return nullptr;
 }};
+
+struct NamedTypeInfo: TypeInfo {
+QToken token;
+NamedTypeInfo (const QToken& t): token(t) {}
+shared_ptr<TypeInfo> resolve (QCompiler& compiler);
+string toString () override { return string(token.start, token.length); }
+shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return shared_from_this(); }
+};
 
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
@@ -550,16 +559,18 @@ compiler.writeOp(OP_UNPACK_SEQUENCE);
 const QToken& nearestToken () override { return expr->nearestToken(); }
 };
 
-struct TypeHintExpression: BinaryOperation {
-TypeHintExpression (shared_ptr<Expression> left = nullptr, shared_ptr<Expression> right = nullptr): BinaryOperation(left, T_AS, right) {}
+struct TypeHintExpression: Expression {
+shared_ptr<Expression> expr;
+shared_ptr<TypeInfo> type;
+TypeHintExpression (shared_ptr<Expression> e, shared_ptr<TypeInfo> t): expr(e), type(t) {}
+const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler)  override { 
 //todo: actually exploit the type hint
-int pos = compiler.out.tellp();
-right->compile(compiler);
-compiler.out.seekp(pos);
-left->compile(compiler); 
+//int pos = compiler.out.tellp();
+//compiler.out.seekp(pos);
+expr->compile(compiler); 
 } 
-shared_ptr<TypeInfo> computeType (QCompiler& compiler);
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override { return type->resolve(compiler); }
 };
 
 struct AbstractCallExpression: Expression {
@@ -632,7 +643,8 @@ compiler.writeOp(OP_CALL_FUNCTION_2);
 }};
 
 struct Variable {
-shared_ptr<Expression> name, value, typeHint;
+shared_ptr<Expression> name, value;
+shared_ptr<TypeInfo> typeHint;
 vector<shared_ptr<Expression>> decorations;
 int flags;
 Variable (const shared_ptr<Expression>& nm, const shared_ptr<Expression>& val = nullptr, int flgs = 0, const vector<shared_ptr<Expression>>& decos = {}):
@@ -942,7 +954,7 @@ struct FunctionDeclaration: Expression, Decorable {
 QToken name;
 vector<shared_ptr<Variable>> params;
 shared_ptr<Statement> body;
-shared_ptr<Expression> returnTypeHint;
+shared_ptr<TypeInfo> returnTypeHint;
 int flags;
 FunctionDeclaration (const QToken& nm, int fl = 0, const vector<shared_ptr<Variable>>& fp = {}, shared_ptr<Statement> b = nullptr): name(nm), params(fp), body(b), returnTypeHint(nullptr), flags(fl)     {}
 const QToken& nearestToken () override { return name; }
@@ -1892,7 +1904,7 @@ if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
 if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
 else var->flags |= VD_NODEFAULT;
-if (match(T_AS)) var->typeHint = parseExpression(P_MEMBER);
+if (match(T_AS)) var->typeHint = parseTypeInfo();
 vars.push_back(var);
 if (flags&VD_SINGLE) break;
 } while(match(T_COMMA));
@@ -1922,7 +1934,7 @@ else if (match(T_NAME)) {
 prevToken();
 parseVarList(func->params, VD_SINGLE);
 }
-if (match(T_AS)) func->returnTypeHint = parseExpression(P_MEMBER);
+if (match(T_AS)) func->returnTypeHint = parseTypeInfo();
 if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
 
@@ -2006,12 +2018,12 @@ QToken fieldToken = cur;
 string fieldName = string(fieldToken.start, fieldToken.length);
 if (auto m = cls.findMethod(fieldToken, flags&FD_STATIC)) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
 cls.findField(flags&FD_STATIC? cls.staticFields : cls.fields, fieldToken);
-shared_ptr<Expression> typeHint = nullptr;
+shared_ptr<TypeInfo> typeHint = nullptr;
 if (match(T_EQ)) {
 auto& f = (flags&FD_STATIC? cls.staticFields : cls.fields)[fieldName];
 f.defaultValue = parseExpression(P_COMPREHENSION);
 }
-if (match(T_AS)) typeHint = parseExpression(P_MEMBER);
+if (match(T_AS)) typeHint = parseTypeInfo();
 QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED};
@@ -2656,7 +2668,7 @@ else left = right;
 
 shared_ptr<TypeInfo> QParser::parseTypeInfo () {
 consume(T_NAME, "Expected type name");
-return nullptr;
+return make_shared<NamedTypeInfo>(cur);
 }
 
 static string printFuncInfo (const QFunction& func) {
@@ -3009,17 +3021,19 @@ auto tmpVar = make_shared<NameExpression>(tmpToken);
 int slot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 assignedValue->compile(compiler);
 for (int i=0, n=items.size(); i<n; i++) {
-shared_ptr<Expression> item = items[i], defaultValue = nullptr, typeHint = nullptr;
+shared_ptr<Expression> item = items[i], defaultValue = nullptr;
+shared_ptr<TypeInfo> typeHint = nullptr;
 bool unpack = false;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item);
+auto th = dynamic_pointer_cast<TypeHintExpression>(item);
 if (bop && bop->op==T_EQ) {
 item = bop->left;
 defaultValue = bop->right;
-bop = dynamic_pointer_cast<BinaryOperation>(item);
+th = dynamic_pointer_cast<TypeHintExpression>(defaultValue);
 }
-if (bop && bop->op==T_AS) {
-item = bop->left;
-typeHint = bop->right;
+if (th) {
+item = th->expr;
+typeHint = th->type;
 }
 auto assignable = dynamic_pointer_cast<Assignable>(item);
 if (!assignable) {
@@ -3067,16 +3081,18 @@ auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->compile(compiler);
 bool first = true;
 for (auto& item: items) {
-shared_ptr<Expression> assigned = item.second, defaultValue = nullptr, typeHint = nullptr;
+shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
+shared_ptr<TypeInfo> typeHint = nullptr;
 auto bop = dynamic_pointer_cast<BinaryOperation>(assigned);
+auto th = dynamic_pointer_cast<TypeHintExpression>(assigned);
 if (bop && bop->op==T_EQ) {
 assigned = bop->left;
 defaultValue = bop->right;
-bop = dynamic_pointer_cast<BinaryOperation>(assigned);
+th = dynamic_pointer_cast<TypeHintExpression>(defaultValue);
 }
-if (bop && bop->op==T_AS) {
-assigned = bop->left;
-typeHint = bop->right;
+if (th) {
+assigned = th->expr;
+typeHint = th->type;
 }
 auto assignable = dynamic_pointer_cast<Assignable>(assigned);
 if (!assignable) {
@@ -3277,25 +3293,22 @@ elsePart->compile(compiler);
 compiler.patchJump(elseJump);
 }
 
-shared_ptr<TypeInfo> TypeHintExpression::computeType (QCompiler& compiler) {
-auto name = dynamic_pointer_cast<NameExpression>(right);
-if (!name) return left->getType(compiler);
-//if (token.type==T_END) token = compiler.parser.curMethodNameToken;
+shared_ptr<TypeInfo> NamedTypeInfo::resolve (QCompiler& compiler) {
 LocalVariable* lv = nullptr;
-int slot = compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv);
+int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot>=0) {
 //todo
-return left->getType(compiler);
+return shared_from_this();
 }
-slot = compiler.findUpvalue(name->token, LV_FOR_READ, &lv);
+slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
 if (slot>=0) { 
 //todo
-return left->getType(compiler);
+return shared_from_this();
 }
-slot = compiler.vm.findGlobalSymbol(string(name->token.start, name->token.length), LV_EXISTING | LV_FOR_READ);
+slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_READ);
 if (slot>=0) { 
 auto value = compiler.parser.vm.globalVariables[slot];
-if (!value.isInstanceOf(compiler.parser.vm.classClass)) return left->getType(compiler);
+if (!value.isInstanceOf(compiler.parser.vm.classClass)) return shared_from_this();
 QClass* cls = value.asObject<QClass>();
 return make_shared<ClassTypeInfo>(cls);
 }
@@ -3303,9 +3316,9 @@ int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
 //todo
-return left->getType(compiler);
+return shared_from_this();
 }
-return left->getType(compiler);
+return shared_from_this();
 }
 
 void SwitchExpression::compile (QCompiler& compiler) {
