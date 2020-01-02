@@ -127,14 +127,14 @@ virtual string toString () = 0;
 
 struct AnyTypeInfo: TypeInfo {
 bool isEmpty () override { return true; }
-shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return t?t:shared_from_this(); }
-virtual string toString () override { return "<any>"; }
+shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return t?t->resolve(compiler) : shared_from_this(); }
+virtual string toString () override { return "*"; }
 };
 shared_ptr<TypeInfo> TypeInfo::ANY = make_shared<AnyTypeInfo>();
 
 struct ManyTypeInfo: TypeInfo {
 virtual shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return shared_from_this(); }
-virtual string toString () override { return "<many>"; }
+virtual string toString () override { return "#"; }
 };
 shared_ptr<TypeInfo> TypeInfo::MANY = make_shared<ManyTypeInfo>();
 
@@ -146,6 +146,7 @@ virtual bool isBool (QVM& vm) override { return type==vm.boolClass; }
 virtual string toString () override { return type->name.c_str(); }
 shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t0, QCompiler& compiler) override {
 if (!t0 || t0->isEmpty()) return shared_from_this();
+t0 = t0->resolve(compiler);
 auto t = dynamic_pointer_cast<ClassTypeInfo>(t0);
 if (!t) return TypeInfo::MANY;
 if (t->type==type) return shared_from_this();
@@ -167,8 +168,34 @@ QToken token;
 NamedTypeInfo (const QToken& t): token(t) {}
 shared_ptr<TypeInfo> resolve (QCompiler& compiler);
 string toString () override { return string(token.start, token.length); }
-shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return shared_from_this(); }
+shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t, QCompiler& compiler) override { return resolve(compiler)->merge(t? t->resolve(compiler) : t, compiler); }
 };
+
+struct ComposedTypeInfo: TypeInfo {
+shared_ptr<TypeInfo> type;
+unique_ptr<shared_ptr<TypeInfo>[]> subtypes;
+int nSubtypes;
+ComposedTypeInfo (shared_ptr<TypeInfo> tp, int nst, unique_ptr<shared_ptr<TypeInfo>[]>&& st): type(tp), nSubtypes(nst), subtypes(std::move(st)) {}
+shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t0, QCompiler& compiler) override {
+if (!t0 || t0->isEmpty()) return shared_from_this();
+auto t = dynamic_pointer_cast<ComposedTypeInfo>(t0->resolve(compiler));
+if (!t) return t0->merge(type, compiler);
+else if (t->nSubtypes!=nSubtypes) return t->type->merge(type, compiler);
+auto newType = type->merge(t->type, compiler);
+auto newSubtypes = make_unique<shared_ptr<TypeInfo>[]>(nSubtypes);
+for (int i=0; i<nSubtypes; i++) newSubtypes[i] = subtypes[i]->merge(t->subtypes[i], compiler);
+return make_shared<ComposedTypeInfo>(newType, nSubtypes, std::move(newSubtypes));
+}
+string toString () override {
+ostringstream out;
+out << type->toString() << '<';
+for (int i=0; i<nSubtypes; i++) {
+if (i>0) out << ',';
+out << subtypes[i]->toString();
+}
+out << '>';
+return out.str();
+}};
 
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline shared_ptr<Statement> shared_this () { return shared_from_this(); }
@@ -249,12 +276,21 @@ bool isVararg () { return any_of(items.begin(), items.end(), isUnpack); }
 bool isSingleSequence ();
 virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) override;
-};
+virtual QClass* getSequenceClass (QVM& vm) = 0;
+virtual shared_ptr<TypeInfo> computeType (QCompiler& compiler) override {
+auto seqtype = make_shared<ClassTypeInfo>(getSequenceClass(compiler.parser.vm));
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
+shared_ptr<TypeInfo> type = TypeInfo::ANY;
+for (auto& item: items) type = type->merge(item->getType(compiler), compiler);
+subtypes[0] = type;
+return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
+}};
 
 struct LiteralListExpression: LiteralSequenceExpression, Functionnable {
 LiteralListExpression (const QToken& t): LiteralSequenceExpression(t) {}
 virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) override;
 virtual bool isFunctionnable () override;
+virtual QClass* getSequenceClass (QVM& vm) override { return vm.listClass; }
 virtual void compile (QCompiler& compiler) override {
 compiler.writeDebugLine(nearestToken());
 int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
@@ -279,6 +315,7 @@ else writeOpCallMethod(compiler, items.size(), ofSymbol);
 
 struct LiteralSetExpression: LiteralSequenceExpression {
 LiteralSetExpression (const QToken& t): LiteralSequenceExpression(t) {}
+virtual QClass* getSequenceClass (QVM& vm) override { return vm.setClass; }
 void compile (QCompiler& compiler) override {
 int setSymbol = compiler.vm.findGlobalSymbol(("Set"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
@@ -350,10 +387,23 @@ item.second->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_3, subscriptSetterSymbol);
 compiler.writeOp(OP_POP);
 }}
+virtual shared_ptr<TypeInfo> computeType (QCompiler& compiler) override {
+auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.mapClass);
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(2);
+shared_ptr<TypeInfo> keyType = TypeInfo::ANY, valueType = TypeInfo::ANY;
+for (auto& item: items) {
+keyType = keyType->merge(item.first->getType(compiler), compiler);
+valueType = valueType->merge(item.second->getType(compiler), compiler);
+}
+subtypes[0] = keyType;
+subtypes[1] = valueType;
+return make_shared<ComposedTypeInfo>(seqtype, 2, std::move(subtypes));
+}
 };
 
 struct LiteralTupleExpression: LiteralSequenceExpression, Functionnable {
 LiteralTupleExpression (const QToken& t, const vector<shared_ptr<Expression>>& p = {}): LiteralSequenceExpression(t, p) {}
+virtual QClass* getSequenceClass (QVM& vm) override { return vm.tupleClass; }
 virtual void makeFunctionParameters (vector<shared_ptr<struct Variable>>& params) override;
 virtual bool isFunctionnable () override;
 virtual void compile (QCompiler& compiler) override {
@@ -376,7 +426,12 @@ int ofSymbol = compiler.vm.findMethodSymbol("of");
 if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, ofSymbol);
 else writeOpCallMethod(compiler, items.size(), ofSymbol);
 }}
-};
+virtual shared_ptr<TypeInfo> computeType (QCompiler& compiler) override {
+auto seqtype = make_shared<ClassTypeInfo>(getSequenceClass(compiler.parser.vm));
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(items.size());
+for (int i=0, n=items.size(); i<n; i++) subtypes[i] = items[i]->getType(compiler);
+return make_shared<ComposedTypeInfo>(seqtype, items.size(), std::move(subtypes));
+}};
 
 struct LiteralGridExpression: Expression {
 QToken token;
@@ -398,6 +453,14 @@ value->compile(compiler);
 }}
 if (size>argLimit) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, size+2);
+}
+virtual shared_ptr<TypeInfo> computeType (QCompiler& compiler) override {
+auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.gridClass);
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
+shared_ptr<TypeInfo> type = TypeInfo::ANY;
+for (auto& row: data) for (auto& item: row) type = type->merge(item->getType(compiler), compiler);
+subtypes[0] = type;
+return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 }
 };
 
@@ -575,9 +638,9 @@ shared_ptr<TypeInfo> computeType (QCompiler& compiler) override { return type->r
 
 struct AbstractCallExpression: Expression {
 shared_ptr<Expression> receiver;
-QTokenType type;
+QTokenType callType;
 std::vector<shared_ptr<Expression>> args;
-AbstractCallExpression (shared_ptr<Expression> recv0, QTokenType tp, const std::vector<shared_ptr<Expression>>& args0): receiver(recv0), type(tp), args(args0) {}
+AbstractCallExpression (shared_ptr<Expression> recv0, QTokenType tp, const std::vector<shared_ptr<Expression>>& args0): receiver(recv0), callType(tp), args(args0) {}
 const QToken& nearestToken () override { return receiver->nearestToken(); }
 shared_ptr<Expression> optimize () override { receiver=receiver->optimize(); for (auto& arg: args) arg=arg->optimize(); return shared_this(); }
 bool isVararg () { return isUnpack(receiver) || any_of(args.begin(), args.end(), isUnpack); }
@@ -589,18 +652,21 @@ for (auto arg: args) arg->compile(compiler);
 struct CallExpression: AbstractCallExpression {
 CallExpression (shared_ptr<Expression> recv0, const std::vector<shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_PAREN, args0) {}
 void compile (QCompiler& compiler)override ;
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 };
 
 struct SubscriptExpression: AbstractCallExpression, Assignable  {
 SubscriptExpression (shared_ptr<Expression> recv0, const std::vector<shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_BRACKET, args0) {}
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 };
 
 struct MemberLookupOperation: BinaryOperation, Assignable  {
 MemberLookupOperation (shared_ptr<Expression> l, shared_ptr<Expression> r): BinaryOperation(l, T_DOT, r) {}
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue)override ;
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 };
 
 struct MethodLookupOperation: BinaryOperation, Assignable  {
@@ -614,6 +680,7 @@ bool optimized;
 AssignmentOperation (shared_ptr<Expression> l, QTokenType o, shared_ptr<Expression> r): BinaryOperation(l,o,r), optimized(false)  {}
 shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override { return right->getType(compiler); }
 };
 
 struct YieldExpression: Expression {
@@ -641,6 +708,17 @@ compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConsta
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
 }};
+
+struct DebugExpression: Expression {
+shared_ptr<Expression> expr;
+DebugExpression (shared_ptr<Expression> e): expr(e) {}
+const QToken& nearestToken () { return expr->nearestToken(); }
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override { return expr->computeType(compiler); }
+void compile (QCompiler& compiler) {
+expr->compile(compiler);
+compiler.compileInfo(nearestToken(), "Type = %s", expr->getType(compiler)->toString());
+}
+};
 
 struct Variable {
 shared_ptr<Expression> name, value;
@@ -967,7 +1045,17 @@ for (auto& param: params) param->optimize();
 return shared_this(); 
 }
 virtual bool isDecorable () override { return true; }
-};
+virtual shared_ptr<TypeInfo> computeType (QCompiler& compiler) {
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(params.size()+1);
+auto funcTI = make_shared<ClassTypeInfo>(compiler.parser.vm.functionClass);
+for (int i=0, n=params.size(); i<n; i++) {
+auto& p = params[i];
+auto t = p->typeHint;
+subtypes[i] = t?t: TypeInfo::MANY;
+}
+subtypes[params.size()] = returnTypeHint? returnTypeHint : TypeInfo::MANY;
+return make_shared<ComposedTypeInfo>(funcTI, params.size()+1, std::move(subtypes));
+}};
 
 struct ClassDeclaration: Expression, Decorable  {
 struct Field {
@@ -1005,10 +1093,40 @@ const QToken& nearestToken () override { return name; }
 shared_ptr<Expression> optimize () override { for (auto& m: methods) m=static_pointer_cast<FunctionDeclaration>(m->optimize()); return shared_this(); }
 void compile (QCompiler&)override ;
 virtual bool isDecorable () override { return true; }
+shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 };
 
+struct ClassDeclTypeInfo: TypeInfo {
+shared_ptr<ClassDeclaration> cls;
+ClassDeclTypeInfo (shared_ptr<ClassDeclaration> c1): cls(c1) {}
+ClassDeclTypeInfo (ClassDeclaration* c1): cls(static_pointer_cast<ClassDeclaration>(c1->shared_this())) {}
+string toString () override { return string(cls->name.start, cls->name.length); }
+shared_ptr<TypeInfo> merge (shared_ptr<TypeInfo> t0, QCompiler& compiler) override { 
+t0 = t0? t0->resolve(compiler) :t0;
+if (!t0 || t0->isEmpty()) return shared_from_this();
+auto t = dynamic_pointer_cast<ClassDeclTypeInfo>(t0);
+if (t && t->cls==cls) return shared_from_this();
+else if (t) for (auto& p1: cls->parents) {
+for (auto& p2: t->cls->parents) {
+auto t3 = make_shared<NamedTypeInfo>(p1), t4 = make_shared<NamedTypeInfo>(p2);
+auto re = t3->merge(t4, compiler);
+if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
+}}
+else for (auto& p1: cls->parents) {
+auto t3 = make_shared<NamedTypeInfo>(p1);
+auto re = t3->merge(t0, compiler);
+if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
+}
+return TypeInfo::MANY;
+}};
+
 LocalVariable::LocalVariable (const QToken& n, int s, bool ic): 
-name(n), scope(s), type(TypeInfo::ANY), hasUpvalues(false), isConst(ic) {}
+name(n), scope(s), type(TypeInfo::ANY), value(nullptr), hasUpvalues(false), isConst(ic) {}
+
+shared_ptr<TypeInfo> ClassDeclaration::computeType (QCompiler& compiler) { 
+auto thisPtr = static_pointer_cast<ClassDeclaration>(shared_from_this());
+return make_shared<ClassDeclTypeInfo>(thisPtr); 
+}
 
 bool LiteralSequenceExpression::isSingleSequence () {
 if (items.size()!=1) return false;
@@ -1074,7 +1192,7 @@ INFIX(AMPAMP, InfixOp, &&, LOGICAL, LEFT),
 INFIX(BARBAR, InfixOp, ||, LOGICAL, LEFT),
 INFIX(QUESTQUEST, InfixOp, ??, LOGICAL, LEFT),
 
-INFIX(AS, InfixOp, as, ASSIGNMENT, RIGHT),
+INFIX(AS, TypeHint, as, ASSIGNMENT, RIGHT),
 INFIX(EQ, InfixOp, =, ASSIGNMENT, RIGHT),
 INFIX(PLUSEQ, InfixOp, +=, ASSIGNMENT, RIGHT),
 INFIX(MINUSEQ, InfixOp, -=, ASSIGNMENT, RIGHT),
@@ -1105,7 +1223,7 @@ INFIX_OP(IN, InfixOp, in, COMPARISON, SWAP_OPERANDS),
 OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL, LEFT),
 OPERATOR(EXCL, PrefixOp, InfixNot, !, !, COMPARISON, LEFT),
 PREFIX_OP(TILDE, PrefixOp, ~),
-//PREFIX(DOLLAR, Lambda, $),
+PREFIX(DOLLAR, DebugExpression, $),
 
 #ifndef NO_REGEX
 OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR, LEFT),
@@ -2307,6 +2425,11 @@ shared_ptr<Expression> right = parseExpression(priority);
 return make_shared<UnaryOperation>(T_EXCL, createBinaryOperation(left, T_IN, right));
 }
 
+shared_ptr<Expression> QParser::parseTypeHint (shared_ptr<Expression> expr) {
+auto th = parseTypeInfo();
+return make_shared<TypeHintExpression>(expr, th);
+}
+
 shared_ptr<Expression> QParser::parseConditional  (shared_ptr<Expression> cond) {
 shared_ptr<Expression> ifPart = parseExpression();
 skipNewlines();
@@ -2497,6 +2620,11 @@ return createBinaryOperation(superExpr, T_DOT, call);
 consume(T_DOT, ("Expected '.' or '('  after 'super'"));
 shared_ptr<Expression> expr = parseExpression();
 return createBinaryOperation(superExpr, T_DOT, expr);
+}
+
+shared_ptr<Expression> QParser::parseDebugExpression () {
+shared_ptr<Expression> e = parseExpression();
+return make_shared<DebugExpression>(e);
 }
 
 shared_ptr<Expression> QParser::parseUnpackOrExpression (int priority) {
@@ -2785,6 +2913,29 @@ compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 compiler.writeOp(OP_CALL_FUNCTION_1);
 }
 
+static shared_ptr<TypeInfo> findMethodReturnType (shared_ptr<TypeInfo> valtype, const QToken& name, bool super, QCompiler& compiler) {
+if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(valtype)) {
+auto cls = clt->type;
+//todo
+}
+else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(valtype)) {
+if (!super) {
+auto m = cdt->cls->findMethod(name, false);
+if (!m) m = cdt->cls->findMethod(name, true);
+if (m) return m->returnTypeHint;
+}
+for (auto& parentToken: cdt->cls->parents) {
+auto parentTypeInfo = make_shared<NamedTypeInfo>(parentToken);
+return findMethodReturnType(parentTypeInfo, name, false, compiler);
+}}
+return TypeInfo::MANY;
+}
+
+static shared_ptr<TypeInfo> findMethodReturnType (shared_ptr<Expression> receiver, const QToken& name, bool super, QCompiler& compiler) {
+shared_ptr<TypeInfo> valtype = receiver->getType(compiler) ->resolve(compiler);
+return findMethodReturnType(valtype, name, super, compiler);
+}
+
 shared_ptr<TypeInfo> NameExpression::computeType (QCompiler& compiler) {
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
 LocalVariable* lv = nullptr;
@@ -2798,10 +2949,7 @@ auto curType = make_shared<ClassTypeInfo>(&(compiler.parser.vm.globalVariables[s
 return type->merge(curType, compiler);
 }
 ClassDeclaration* cls = compiler.getCurClass();
-if (cls) {
-//todo
-return TypeInfo::MANY;
-}
+if (cls) return findMethodReturnType(make_shared<ClassDeclTypeInfo>(cls), token, false, compiler);
 return TypeInfo::MANY;
 }
 
@@ -2838,6 +2986,7 @@ if (cls) {
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
 else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
+type = type->merge(findMethodReturnType(make_shared<ClassDeclTypeInfo>(cls), token, false, compiler), compiler);
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -2889,6 +3038,7 @@ else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpv
 string setterName(token.length+1, '=');
 memcpy(const_cast<char*>(setterName.data()), token.start, token.length);
 assignedValue->compile(compiler);
+type = type->merge(assignedValue->getType(compiler), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(setterName));
 return;
 }
@@ -3295,30 +3445,33 @@ compiler.patchJump(elseJump);
 
 shared_ptr<TypeInfo> NamedTypeInfo::resolve (QCompiler& compiler) {
 LocalVariable* lv = nullptr;
+do {
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
-if (slot>=0) {
-//todo
-return shared_from_this();
-}
+if (slot>=0) break;
 slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
-if (slot>=0) { 
-//todo
-return shared_from_this();
-}
+if (slot>=0) break;
 slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_READ);
 if (slot>=0) { 
 auto value = compiler.parser.vm.globalVariables[slot];
-if (!value.isInstanceOf(compiler.parser.vm.classClass)) return shared_from_this();
+if (!value.isInstanceOf(compiler.parser.vm.classClass)) break;
 QClass* cls = value.asObject<QClass>();
 return make_shared<ClassTypeInfo>(cls);
 }
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
-//todo
-return shared_from_this();
+auto m = cls->findMethod(token, false);
+if (!m) m = cls->findMethod(token, true);
+if (!m) break;
+return m->returnTypeHint;
 }
-return shared_from_this();
+}while(false);
+if (lv && lv->value) {
+println("CDTI::resolve, type found: %s", typeid(*lv->value).name());
+if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
+return make_shared<ClassDeclTypeInfo>(cd);
+}}
+return TypeInfo::MANY;
 }
 
 void SwitchExpression::compile (QCompiler& compiler) {
@@ -3381,12 +3534,17 @@ compiler.loops.back().endPos = compiler.writePosition();
 compiler.popLoop();
 }
 
+shared_ptr<TypeInfo> SubscriptExpression::computeType (QCompiler& compiler) {
+return findMethodReturnType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED }, false, compiler);
+}
+
 void SubscriptExpression::compile  (QCompiler& compiler) {
 int subscriptSymbol = compiler.vm.findMethodSymbol("[]");
 bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 for (auto arg: args) arg->compile(compiler);
+type = type->merge(findMethodReturnType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED }, false, compiler), compiler);
 if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, subscriptSymbol);
 else writeOpCallMethod(compiler, args.size(), subscriptSymbol);
 }
@@ -3398,8 +3556,26 @@ if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 for (auto arg: args) arg->compile(compiler);
 assignedValue->compile(compiler);
+type = type->merge(assignedValue->getType(compiler), compiler);
 if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, subscriptSetterSymbol);
 else writeOpCallMethod(compiler, args.size() +1, subscriptSetterSymbol);
+}
+
+shared_ptr<TypeInfo> MemberLookupOperation::computeType (QCompiler& compiler) {
+shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
+shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
+if (getter) {
+if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
+return findMethodReturnType(left, getter->token, !!super, compiler);
+}
+shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
+if (call) {
+getter = dynamic_pointer_cast<NameExpression>(call->receiver);
+if (getter) {
+if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
+return findMethodReturnType(left, getter->token, !!super, compiler);
+}}
+return TypeInfo::MANY;
 }
 
 void MemberLookupOperation::compile (QCompiler& compiler) {
@@ -3409,6 +3585,7 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
+type = type->merge(findMethodReturnType(left, getter->token, !!super, compiler), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -3422,6 +3599,7 @@ bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
+type = type->merge(findMethodReturnType(left, getter->token, !!super, compiler), compiler);
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) writeOpCallSuper(compiler, call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -3439,6 +3617,7 @@ string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 left->compile(compiler);
 assignedValue->compile(compiler);
+type = type->merge(assignedValue->getType(compiler), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
@@ -3469,19 +3648,30 @@ return;
 compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in assignment"));
 }
 
+shared_ptr<TypeInfo> CallExpression::computeType (QCompiler& compiler) {
+if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
+if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0 && compiler.getCurClass()) {
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
+auto expr = createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize();
+return expr->getType(compiler);
+}}
+return findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler);
+}
+
 void CallExpression::compile (QCompiler& compiler) {
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0 && compiler.getCurClass()) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize()->compile(compiler);
+auto expr = createBinaryOperation(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize();
+expr->compile(compiler);
+type = type->merge(expr->getType(compiler), compiler);
 return;
 }}
 bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
-QOpCode op = OP_CALL_FUNCTION_0;
-if (compiler.lastOp==OP_LOAD_THIS) op = OP_CALL_METHOD_0;
 compileArgs(compiler);
+type = type->merge(findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler), compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else writeOpCallFunction(compiler, args.size());
 }
@@ -3540,15 +3730,22 @@ else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV
 continue;
 }
 int slot = -1;
+LocalVariable* lv = nullptr;
 if ((var->flags&VD_GLOBAL)) slot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
+else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
+if (var->value) {
 if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
 auto func = fdecl->compileFunction(compiler);
 func->name = string(name->token.start, name->token.length);
 }
-else if (var->value) var->value->compile(compiler);
+else var->value->compile(compiler);
+if (lv) {
+lv->value = var->value;
+lv->type = var->value->getType(compiler);
+}
+}
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 for (auto& decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);

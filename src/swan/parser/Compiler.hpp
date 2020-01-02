@@ -16,6 +16,7 @@ struct QParser;
 struct LocalVariable {
 QToken name;
 std::shared_ptr<struct TypeInfo> type;
+std::shared_ptr<struct Expression> value;
 int scope;
 bool hasUpvalues ;
 bool isConst;

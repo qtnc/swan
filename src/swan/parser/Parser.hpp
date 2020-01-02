@@ -36,6 +36,7 @@ std::shared_ptr<Expression> parsePrefixOp ();
 std::shared_ptr<Expression> parseInfixOp (std::shared_ptr<Expression> left);
 std::shared_ptr<Expression> parseInfixIs (std::shared_ptr<Expression> left);
 std::shared_ptr<Expression> parseInfixNot (std::shared_ptr<Expression> left);
+std::shared_ptr<Expression> parseTypeHint (std::shared_ptr<Expression> left);
 std::shared_ptr<Expression> parseConditional  (std::shared_ptr<Expression> condition);
 std::shared_ptr<Expression> parseComprehension   (std::shared_ptr<Expression> body);
 std::shared_ptr<Expression> parseMethodCall (std::shared_ptr<Expression> receiver);
@@ -56,6 +57,7 @@ std::shared_ptr<Expression> parseArrowFunction (std::shared_ptr<Expression> arge
 std::shared_ptr<Expression> parseSuper ();
 std::shared_ptr<Expression> parseUnpackOrExpression (int priority = P_LOWEST);
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
+std::shared_ptr<Expression> parseDebugExpression ();
 std::shared_ptr<Expression> parseDecoratedExpression ();
 void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func);
 
