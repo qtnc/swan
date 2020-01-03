@@ -1,7 +1,7 @@
 global class Error {
-let message
-constructor (_message=this.class.name);
-toString: this.class.name + ': ' + _message
+let message as String
+constructor (_message = this.class.name as String);
+toString () as String: this.class.name + ': ' + _message
 }
 
 global class CallError is Error

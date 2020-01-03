@@ -1187,7 +1187,7 @@ INFIX_OP(CIRC, InfixOp, ^, BITWISE, LEFT),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE, LEFT),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE, LEFT),
 INFIX_OP(DOTDOT, InfixOp, .., RANGE, LEFT),
-INFIX(DOTDOTDOT, InfixOp, ..., RANGE, LEFT),
+INFIX_OP(DOTDOTDOT, InfixOp, ..., RANGE, LEFT),
 INFIX(AMPAMP, InfixOp, &&, LOGICAL, LEFT),
 INFIX(BARBAR, InfixOp, ||, LOGICAL, LEFT),
 INFIX(QUESTQUEST, InfixOp, ??, LOGICAL, LEFT),
@@ -1220,8 +1220,8 @@ INFIX_OP(GTE, InfixOp, >=, COMPARISON, LEFT),
 INFIX_OP(IS, InfixIs, is, COMPARISON, SWAP_OPERANDS),
 INFIX_OP(IN, InfixOp, in, COMPARISON, SWAP_OPERANDS),
 
-OPERATOR(QUEST, PrefixOp, Conditional, ?, ?, CONDITIONAL, LEFT),
-OPERATOR(EXCL, PrefixOp, InfixNot, !, !, COMPARISON, LEFT),
+INFIX(QUEST, Conditional, ?, CONDITIONAL, LEFT),
+MULTIFIX(EXCL, PrefixOp, InfixNot, !, !, COMPARISON, LEFT),
 PREFIX_OP(TILDE, PrefixOp, ~),
 PREFIX(DOLLAR, DebugExpression, $),
 
@@ -3351,7 +3351,7 @@ expr->compile(compiler);
 auto type = expr->getType(compiler);
 if (op==T_MINUS && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_NEG);
 else if (op==T_TILDE && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_BINNOT);
-else if (op==T_EXCL && type->isBool(compiler.parser.vm)) compiler.writeOp(OP_NOT);
+else if (op==T_EXCL) compiler.writeOp(OP_NOT);
 else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(rules[op].prefixOpName));
 }
 
@@ -4227,8 +4227,7 @@ compile();
 string bc = out.str();
 size_t nConsts = constants.size(), nUpvalues = upvalues.size(), bcSize = bc.size();
 
-QFunction* function = QFunction::create(vm, nConsts, nUpvalues, bcSize);
-function->nArgs = nArgs;
+QFunction* function = QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize);
 copy(make_move_iterator(constants.begin()), make_move_iterator(constants.end()), function->constants);
 copy(make_move_iterator(upvalues.begin()), make_move_iterator(upvalues.end()), function->upvalues);
 memmove(function->bytecode, bc.data(), bcSize);

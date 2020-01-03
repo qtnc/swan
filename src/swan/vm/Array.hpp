@@ -8,6 +8,7 @@
 #include<type_traits>
 #include<iosfwd>
 
+/*
 template <class T, class A = std::allocator<char>, bool EMPTY_ALLOCATOR = std::is_empty<A>::value> 
 class simple_array {
 private:
@@ -96,17 +97,41 @@ doalloc(n, a);
 }
 
 };
-
+*/
 /*
-class simple_string: public simple_array<char> {
+template<class T>
+class c_array {
+private:
+T* ptr;
+
+inline size_t& rfsize () const mutable  { return -1[reinterpret_cast<size_t*>(ptr)]; }
+inline size_t displacement () { return std::max(1, sizeof(size_t) / sizeof(T)); }
+inline void dealloc () { if (ptr) delete[] (ptr - displacement()); }
+inline void alloc (size_t size) { dealloc(); auto d = displacement(); ptr = new T[size + d] +d; rfsize()=size; }
+
 public:
-inline simple_string (): simple_array() {}
-inline simple_string (const char* s): simple_array(s? strlen(s)+1:0) { std::copy(s, s+size()+1, begin()); }
-inline simple_string (const std::string& s): simple_array(s.size()+1) { std::copy(s.begin(), s.end(), begin()); }
-inline size_t length () const { return size(); }
-inline const char* c_str () const { return data(); }
-inline std::string str () const { return data(); }
-};
+inline size_t size () const { return rfsize(); }
+template<class I> inline void assign (size_t size, const I& begin, const I& end) { alloc(size); std::copy(begin, end, ptr); }
+template<class I> inline void assign (const I& begin, const I& end) { assign(std::distance(begin, end), begin, end); }
+inline T* data () { return ptr; }
+inline const T* data () const { return ptr; }
+inline T* begin () { return ptr; }
+inline T* end () { return ptr+size(); }
+inline const T* begin () const { return ptr; }
+inline const T* cbegin () const { return ptr; }
+inline const T* cend () const { return ptr+size(); }
+inline const T* end () const { return ptr+size(); }
+
+inline c_array (size_t size = 0): ptr(nullptr) { alloc(size); }
+inline  c_array (const c_array& a): ptr(nullptr)  { assign(a.size(), a.begin(), a.end()); }
+inline  c_array (c_array&& a): ptr(a.ptr) { a.ptr=nullptr; }
+inline c_array (const std::initializer_list<T>& il): ptr(nullptr) { assign(il.size(), il.begin(), il.end()); }
+template<class I> inline c_array (size_t size, const I& begin, const I& end): ptr(nullptr) { assign(begin, end); }
+template<class I> inline c_array (const I& begin, const I& end): ptr(nullptr) { assign(begin, end); }
+inline c_array& operator= (const c_array& a) { assign(a.size(), a.begin(), a.end()); return *this; }
+inline c_array& operator= (c_array&& a) { dealloc(); ptr=a.ptr; a.ptr=nullptr; return *this; }
+~c_array () { dealloc(); }
+}
 */
 
 class c_string {

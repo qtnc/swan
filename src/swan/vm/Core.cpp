@@ -29,9 +29,9 @@ return static_cast<QObject*>(this);
 
 QFunction::QFunction (QVM& vm): 
 QObject(vm.functionClass), 
-nArgs(0), vararg(false),
-constants(nullptr), upvalues(nullptr), bytecode(nullptr), bytecodeEnd(nullptr),
-returnType(nullptr)
+nArgs(0), vararg(false), 
+iField(0), fieldGetter(false), fieldSetter(false),
+upvalues(nullptr), bytecode(nullptr), argtypes(nullptr)
 {}
 
 QClosure::QClosure (QVM& vm, QFunction& f):
@@ -50,12 +50,12 @@ return bf;
 StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
 QObject(vm.functionClass), func(func0) {}
 
-QFunction* QFunction::create (QVM& vm, int nConsts, int nUpvalues, int bcSize) {
-QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + bcSize, vm);
-function->constants = reinterpret_cast<QV*>(function+1);
+QFunction* QFunction::create (QVM& vm, int nArgs, int nConsts, int nUpvalues, int bcSize) {
+QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + bcSize + (nArgs+1)*sizeof(QClass*), vm);
 function->constantsEnd = function->constants + nConsts;
 function->upvaluesEnd = function->upvalues + nUpvalues;
 function->bytecodeEnd = function->bytecode + bcSize;
+function->nArgs = nArgs;
 return function;
 }
 

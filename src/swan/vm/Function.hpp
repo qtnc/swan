@@ -13,16 +13,20 @@ bool upperUpvalue;
 };
 
 struct QFunction: QObject {
-QV* constants;
 union { Upvariable* upvalues; QV* constantsEnd; };
 union { char *bytecode; Upvariable* upvaluesEnd; };
-char* bytecodeEnd;
+union { QClass *argtypes; char* bytecodeEnd; };
 c_string name, file;
-struct QClass* returnType;
 uint_local_index_t nArgs;
-bool vararg;
+uint_field_index_t iField;
+union {
+uint8_t flags;
+struct {
+bool vararg :1, fieldGetter :1, fieldSetter :1;
+}; };
+QV constants[];
 
-static QFunction* create (QVM& vm, int nConstants, int nUpvalues, int bcSize);
+static QFunction* create (QVM& vm, int nArgs, int nConstants, int nUpvalues, int bcSize);
 QFunction (QVM& vm);
 virtual bool gcVisit () final override;
 virtual ~QFunction () = default;

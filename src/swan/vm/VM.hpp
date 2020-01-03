@@ -21,6 +21,7 @@ std::unordered_map<std::string, GlobalVariable> globalSymbols;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
 std::unordered_map<uint64_t, uint32_t> keptHandles;
+std::unordered_map<uint64_t, std::unique_ptr<uint64_t>> nativeFuncTypeInfos;
 std::vector<QFiber*> fibers;
 QFiber *activeFiber;
 PathResolverFn pathResolver;
