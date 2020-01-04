@@ -3,7 +3,6 @@
 #include "Constants.hpp"
 #include "Token.hpp"
 #include "../../include/cpprintf.hpp"
-#include "../vm/VM.hpp"
 #include<string>
 #include<memory>
 
@@ -27,7 +26,9 @@ const QToken& nextNameToken (bool);
 const QToken& prevToken();
 QToken createTempName ();
 std::pair<int,int> getPositionOf (const char*);
-template<class... A> void parseError (const char* fmt, const A&... args);
+
+void printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const std::string& msg);
+template<class... A> inline void parseError (const char* fmt, const A&... args) { printMessage(cur, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED; }
 
 void skipNewlines ();
 bool match (QTokenType type);
@@ -117,14 +118,6 @@ nextToken();
 if (vt.end()!=std::find(vt.begin(), vt.end(), cur.type)) return true;
 prevToken();
 return false;
-}
-
-template<class... A> void QParser::parseError (const char* fmt, const A&... args) {
-auto p = getPositionOf(cur.start);
-int line = p.first, column = p.second;
-Swan::CompilationMessage z = { Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), std::string(cur.start, cur.length), displayName, line, column };
-vm.messageReceiver(z);
-result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED;
 }
 
 inline bool isSpace (uint32_t c) {

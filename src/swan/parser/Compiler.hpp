@@ -5,7 +5,6 @@
 #include "Parser.hpp"
 #include "../vm/OpCodeInfo.hpp"
 #include "../vm/Function.hpp"
-#include "../vm/VM.hpp"
 #include "../../include/cpprintf.hpp"
 #include<string>
 #include<vector>
@@ -95,34 +94,14 @@ struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
 inline QToken createTempName () { return parser.createTempName(); }
 
-template<class... A> void compileError (const QToken& token, const char* fmt, const A&... args);
-template<class... A> void compileWarn (const QToken& token, const char* fmt, const A&... args);
-template<class... A> void compileInfo (const QToken& token, const char* fmt, const A&... args);
+template<class... A> inline void compileError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = CR_FAILED; }
+template<class... A> inline void compileWarn (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }
+template<class... A> inline void compileInfo (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::INFO, format(fmt, args...)); }
 void dump ();
 
 QCompiler (QParser& p): vm(p.vm), parser(p), parent(nullptr), curClass(nullptr)  {}
 void compile ();
 struct QFunction* getFunction (int nArgs = 0);
 };
-
-template<class... A> void QCompiler::compileError (const QToken& token, const char* fmt, const A&... args) {
-auto p = parser.getPositionOf(token.start);
-int line = p.first, column = p.second;
-parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
-result = CR_FAILED;
-}
-
-template<class... A> void QCompiler::compileWarn (const QToken& token, const char* fmt, const A&... args) {
-auto p = parser.getPositionOf(token.start);
-int line = p.first, column = p.second;
-parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::WARNING, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
-}
-
-template<class... A> void QCompiler::compileInfo (const QToken& token, const char* fmt, const A&... args) {
-auto p = parser.getPositionOf(token.start);
-int line = p.first, column = p.second;
-parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::INFO, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
-}
-
 
 #endif

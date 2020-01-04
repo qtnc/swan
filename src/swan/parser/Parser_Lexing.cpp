@@ -351,3 +351,10 @@ string name = format("$%d", count++);
 QString* s = QString::create(vm,name);
 return { T_NAME, s->data, s->length, QV(s) };
 }
+
+void QParser::printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const string& msg) {
+auto p = getPositionOf(tok.start);
+int line = p.first, column = p.second;
+Swan::CompilationMessage z = { msgtype, msg, std::string(tok.start, tok.length), displayName, line, column };
+vm.messageReceiver(z);
+}

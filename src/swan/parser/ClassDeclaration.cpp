@@ -2,6 +2,7 @@
 #include "Expression.hpp"
 #include "Statement.hpp"
 #include "TypeInfo.hpp"
+#include "NativeFuncTypeInfo.hpp"
 #include "ParserRules.hpp"
 #include "Compiler.hpp"
 #include "../vm/VM.hpp"
@@ -109,17 +110,31 @@ return m->returnTypeHint;
 }
 }while(false);
 if (lv && lv->value) {
-println("CDTI::resolve, type found: %s", typeid(*lv->value).name());
+//println("CDTI::resolve, type found: %s", typeid(*lv->value).name());
 if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
 return make_shared<ClassDeclTypeInfo>(cd);
 }}
 return TypeInfo::MANY;
 }
 
+shared_ptr<TypeInfo> findMethodReturnType (QV func, QVM& vm) {
+if (func.isClosure()) {
+//todo
+}
+else if (func.isNativeFunction()) {
+intptr_t ptr = (func.i &~QV_TAGMASK);
+auto it = vm.nativeFuncTypeInfos.find(ptr);
+if (it!=vm.nativeFuncTypeInfos.end()) return it->second->getReturnType();
+}
+return TypeInfo::MANY;
+}
+
 shared_ptr<TypeInfo> findMethodReturnType (shared_ptr<TypeInfo> valtype, const QToken& name, bool super, QCompiler& compiler) {
 if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(valtype)) {
 auto cls = clt->type;
-//todo
+if (super) cls = cls->parent;
+QV method = cls->findMethod(compiler.parser.vm.findMethodSymbol(string(name.start, name.length)));
+return findMethodReturnType(method, compiler.parser.vm);
 }
 else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(valtype)) {
 if (!super) {
@@ -131,6 +146,9 @@ for (auto& parentToken: cdt->cls->parents) {
 auto parentTypeInfo = make_shared<NamedTypeInfo>(parentToken);
 return findMethodReturnType(parentTypeInfo, name, false, compiler);
 }}
+else if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(valtype)) {
+return findMethodReturnType(cti->type, name, super, compiler);
+}
 return TypeInfo::MANY;
 }
 

@@ -3,6 +3,7 @@
 #include "StatementBase.hpp"
 #include<unordered_map>
 
+std::shared_ptr<TypeInfo> findMethodReturnType (QV value, QVM& vm);
 std::shared_ptr<TypeInfo> findMethodReturnType (std::shared_ptr<TypeInfo> valtype, const QToken& name, bool super, QCompiler& compiler);
 std::shared_ptr<TypeInfo> findMethodReturnType (std::shared_ptr<Expression> receiver, const QToken& name, bool super, QCompiler& compiler);
 
@@ -196,6 +197,7 @@ bool isComprehension () override { return true; }
 const QToken& nearestToken () override { return loopExpression->nearestToken(); }
 std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler&)override ;
+std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 };
 
 struct UnpackExpression: Expression {

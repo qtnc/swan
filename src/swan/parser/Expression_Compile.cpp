@@ -199,6 +199,7 @@ void UnpackExpression::compile (QCompiler& compiler) {
 expr->compile(compiler);
 compiler.writeOp(OP_UNPACK_SEQUENCE);
 }
+
 void TypeHintExpression::compile (QCompiler& compiler)  { 
 //todo: actually exploit the type hint
 //int pos = compiler.out.tellp();
@@ -720,19 +721,27 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in 
 }
 
 void CallExpression::compile (QCompiler& compiler) {
+LocalVariable* lv = nullptr;
+QV func = QV::UNDEFINED;
+int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
-if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ)<0 && compiler.findUpvalue(name->token, LV_FOR_READ)<0 && compiler.findGlobalVariable(name->token, LV_FOR_READ)<0 && compiler.getCurClass()) {
+if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ))<0 && compiler.getCurClass()) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto expr = BinaryOperation::create(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize();
+auto thisExpr = make_shared<NameExpression>(thisToken);
+auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
-type = type->merge(expr->getType(compiler), compiler);
+shared_ptr<TypeInfo> returnType = findMethodReturnType(thisExpr, name->token, false, compiler);
+type = type->merge(returnType, compiler);
 return;
 }}
 bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 compileArgs(compiler);
-type = type->merge(findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler), compiler);
+shared_ptr<TypeInfo> returnType;
+if (globalIndex>=0) returnType = findMethodReturnType(compiler.parser.vm.globalVariables[globalIndex], compiler.parser.vm);
+else returnType = findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler);
+type = type->merge(returnType, compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else compiler.writeOpCallFunction(args.size());
 }

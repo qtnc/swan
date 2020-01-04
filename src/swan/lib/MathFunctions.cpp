@@ -62,7 +62,7 @@ f.returnValue(static_cast<double>(n));
 void QVM::initMathFunctions () {
 #define F(X) \
 numClass BIND_F(X, numMathFunc<X>); \
-bindGlobal(#X, numMathFunc<X>);
+bindGlobal(#X, numMathFunc<X>, { numClass }, numClass );
 F(abs)
 F(sin) F(cos) F(tan) F(asin) F(acos) F(atan)
 F(sinh) F(cosh) F(tanh) F(asinh) F(acosh) F(atanh)
@@ -70,14 +70,14 @@ F(exp) F(sqrt) F(cbrt) F(log2) F(log10)
 #undef F
 #define F(X) \
 numClass BIND_F(X, numRoundingFunc<X>); \
-bindGlobal(#X, numRoundingFunc<X>);
+bindGlobal(#X, numRoundingFunc<X>, { numClass, numClass }, numClass);
 F(floor) F(ceil) F(round) F(trunc)
 #undef F
-bindGlobal("log", numLog);
-bindGlobal("gcd", numGCD);
-bindGlobal("lcm", numLCM);
-bindGlobal("min", genericComp<'<'>);
-bindGlobal("max", genericComp<'>'>);
+bindGlobal("log", numLog, { numClass, numClass }, numClass);
+bindGlobal("gcd", numGCD, { numClass, numClass }, numClass);
+bindGlobal("lcm", numLCM, { numClass, numClass }, numClass);
+bindGlobal("min", genericComp<'<'>, { numClass, numClass }, numClass);
+bindGlobal("max", genericComp<'>'>, { numClass, numClass }, numClass);
 
 numClass
 BIND_F(log, numLog)

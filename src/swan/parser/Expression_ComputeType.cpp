@@ -90,6 +90,14 @@ for (auto& p: cases) type = type->merge(p.second->getType(compiler), compiler);
 return type;
 }
 
+std::shared_ptr<TypeInfo> ComprehensionExpression::computeType (QCompiler& compiler) {
+auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.iterableClass);
+auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
+shared_ptr<TypeInfo> type = loopExpression->getType(compiler);
+subtypes[0] = type;
+return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
+}
+
 shared_ptr<TypeInfo> TypeHintExpression::computeType (QCompiler& compiler) { 
 return type->resolve(compiler); 
 }
