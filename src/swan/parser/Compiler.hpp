@@ -5,6 +5,8 @@
 #include "Parser.hpp"
 #include "../vm/OpCodeInfo.hpp"
 #include "../vm/Function.hpp"
+#include "../vm/VM.hpp"
+#include "../../include/cpprintf.hpp"
 #include<string>
 #include<vector>
 #include<sstream>
@@ -70,6 +72,11 @@ write<T>(val);
 out.seekp(curpos);
 }
 void seek (int n) { out.seekp(n, std::ios_base::cur); }
+void writeOpCallFunction (uint8_t nArgs) ;
+void writeOpCallMethod (uint8_t nArgs, uint_method_symbol_t symbol) ;
+void writeOpCallSuper  (uint8_t nArgs, uint_method_symbol_t symbol) ;
+void writeOpLoadLocal (uint_local_index_t slot) ;
+void writeOpStoreLocal (uint_local_index_t slot);
 
 void writeDebugLine (const QToken& tk);
 
@@ -97,5 +104,25 @@ QCompiler (QParser& p): vm(p.vm), parser(p), parent(nullptr), curClass(nullptr) 
 void compile ();
 struct QFunction* getFunction (int nArgs = 0);
 };
+
+template<class... A> void QCompiler::compileError (const QToken& token, const char* fmt, const A&... args) {
+auto p = parser.getPositionOf(token.start);
+int line = p.first, column = p.second;
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
+result = CR_FAILED;
+}
+
+template<class... A> void QCompiler::compileWarn (const QToken& token, const char* fmt, const A&... args) {
+auto p = parser.getPositionOf(token.start);
+int line = p.first, column = p.second;
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::WARNING, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
+}
+
+template<class... A> void QCompiler::compileInfo (const QToken& token, const char* fmt, const A&... args) {
+auto p = parser.getPositionOf(token.start);
+int line = p.first, column = p.second;
+parser.vm.messageReceiver({ Swan::CompilationMessage::Kind::INFO, format(fmt, args...), std::string(token.start, token.length), parser.displayName, line, column });
+}
+
 
 #endif

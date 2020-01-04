@@ -2,11 +2,14 @@
 #define _____PARSER_HPP_____
 #include "Constants.hpp"
 #include "Token.hpp"
+#include "../../include/cpprintf.hpp"
+#include "../vm/VM.hpp"
 #include<string>
 #include<memory>
 
 struct Expression;
 struct Statement;
+struct Variable;
 
 struct QParser  {
 const char *in, *start, *end;
@@ -82,7 +85,7 @@ std::shared_ptr<Statement> parseWith ();
 std::shared_ptr<Expression> parseYield ();
 std::shared_ptr<Statement> parseVarDecl ();
 std::shared_ptr<Statement> parseVarDecl (int flags);
-void parseVarList (std::vector<std::shared_ptr<struct Variable>>& vars, int flags = 0);
+void parseVarList (std::vector<std::shared_ptr<Variable>>& vars, int flags = 0);
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();
@@ -102,7 +105,36 @@ void parseDecoratedDecl (struct ClassDeclaration&, int);
 void parseAsyncMethodDecl (struct ClassDeclaration&, int);
 void parseMethodDecl2 (struct ClassDeclaration&, int);
 
+std::shared_ptr<Expression> nameExprToConstant (std::shared_ptr<Expression> key);
+void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, int flags);
+
 std::shared_ptr<struct TypeInfo> parseTypeInfo ();
 };
+
+template<class... T> bool QParser::matchOneOf (T... tokens) {
+std::vector<QTokenType> vt = { tokens... };
+nextToken();
+if (vt.end()!=std::find(vt.begin(), vt.end(), cur.type)) return true;
+prevToken();
+return false;
+}
+
+template<class... A> void QParser::parseError (const char* fmt, const A&... args) {
+auto p = getPositionOf(cur.start);
+int line = p.first, column = p.second;
+Swan::CompilationMessage z = { Swan::CompilationMessage::Kind::ERROR, format(fmt, args...), std::string(cur.start, cur.length), displayName, line, column };
+vm.messageReceiver(z);
+result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED;
+}
+
+inline bool isSpace (uint32_t c) {
+return c==' ' || c=='\t' || c=='\r' || c==160;
+}
+
+inline bool isLine (uint32_t c) {
+return c=='\n';
+}
+
+bool isDigit (uint32_t c);
 
 #endif
