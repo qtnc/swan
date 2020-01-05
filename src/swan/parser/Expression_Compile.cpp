@@ -274,10 +274,11 @@ return;
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
-type = type->merge(findMethodReturnType(make_shared<ClassDeclTypeInfo>(cls), token, false, compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(make_shared<NameExpression>(thisToken), token), compiler);
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -324,12 +325,16 @@ return;
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue({ T_NAME, THIS, 4, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
-string setterName(token.length+1, '=');
-memcpy(const_cast<char*>(setterName.data()), token.start, token.length);
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
+char setterName[token.length+2];
+memcpy(&setterName[0], token.start, token.length);
+setterName[token.length+1] = 0;
+setterName[token.length] = '=';
+QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
 assignedValue->compile(compiler);
-type = type->merge(assignedValue->getType(compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(make_shared<NameExpression>(thisToken), setterNameToken, 1, &assignedValue), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(setterName));
 return;
 }
@@ -633,7 +638,7 @@ bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 for (auto arg: args) arg->compile(compiler);
-type = type->merge(findMethodReturnType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED }, false, compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(receiver, { T_NAME, "[]", 2, QV::UNDEFINED }, args.size(), &args[0]), compiler);
 if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, subscriptSymbol);
 else compiler.writeOpCallMethod(args.size(), subscriptSymbol);
 }
@@ -645,7 +650,8 @@ if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 for (auto arg: args) arg->compile(compiler);
 assignedValue->compile(compiler);
-type = type->merge(assignedValue->getType(compiler), compiler);
+vector<shared_ptr<Expression>> tmpargs = args; tmpargs.push_back(assignedValue);
+type = type->merge(compiler.updateTypeOnCall(receiver, { T_NAME, "[]=", 3, QV::UNDEFINED }, tmpargs.size(), &tmpargs[0]), compiler);
 if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, subscriptSetterSymbol);
 else compiler.writeOpCallMethod(args.size() +1, subscriptSetterSymbol);
 }
@@ -657,7 +663,7 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-type = type->merge(findMethodReturnType(left, getter->token, !!super, compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(left, getter->token, 0, nullptr, !!super), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -671,7 +677,7 @@ bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
-type = type->merge(findMethodReturnType(left, getter->token, !!super, compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(left, getter->token, call->args.size(), &(call->args[0]), !!super), compiler);
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) compiler.writeOpCallSuper(call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -689,7 +695,7 @@ string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 left->compile(compiler);
 assignedValue->compile(compiler);
-type = type->merge(assignedValue->getType(compiler), compiler);
+type = type->merge(compiler.updateTypeOnCall(left, setter->token, 1, &assignedValue, !!super), compiler);
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
@@ -730,8 +736,7 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
-shared_ptr<TypeInfo> returnType = findMethodReturnType(thisExpr, name->token, false, compiler);
-type = type->merge(returnType, compiler);
+type = type->merge(compiler.updateTypeOnCall(thisExpr, name->token, args.size(), &args[0]), compiler);
 return;
 }}
 bool vararg = isVararg();
@@ -739,8 +744,12 @@ if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 compileArgs(compiler);
 shared_ptr<TypeInfo> returnType;
-if (globalIndex>=0) returnType = findMethodReturnType(compiler.parser.vm.globalVariables[globalIndex], compiler.parser.vm);
-else returnType = findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler);
+if (globalIndex>=0) {
+auto gval = compiler.parser.vm.globalVariables[globalIndex];
+QToken tmptok = { T_NAME, 0, 0, gval  };
+returnType = compiler.updateTypeOnCall(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
+}
+else returnType = compiler.updateTypeOnCall(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, args.size(), &args[0]);
 type = type->merge(returnType, compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else compiler.writeOpCallFunction(args.size());

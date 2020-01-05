@@ -107,7 +107,7 @@ return right->getType(compiler);
 }
 
 shared_ptr<TypeInfo> SubscriptExpression::computeType (QCompiler& compiler) {
-return findMethodReturnType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED }, false, compiler);
+return compiler.updateTypeOnCall(receiver, { T_NAME, "[]", 2, QV::UNDEFINED });
 }
 
 shared_ptr<TypeInfo> ClassDeclaration::computeType (QCompiler& compiler) { 
@@ -138,8 +138,9 @@ if (slot>=0) {
 auto curType = make_shared<ClassTypeInfo>(&(compiler.parser.vm.globalVariables[slot].getClass(compiler.parser.vm)));
 return type->merge(curType, compiler);
 }
+QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 ClassDeclaration* cls = compiler.getCurClass();
-if (cls) return findMethodReturnType(make_shared<ClassDeclTypeInfo>(cls), token, false, compiler);
+if (cls) return compiler.updateTypeOnCall(make_shared<NameExpression>(thisToken), token);
 return TypeInfo::MANY;
 }
 
@@ -148,14 +149,14 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-return findMethodReturnType(left, getter->token, !!super, compiler);
+return compiler.updateTypeOnCall(left, getter->token, 0, nullptr, !!super);
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
 if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-return findMethodReturnType(left, getter->token, !!super, compiler);
+return compiler.updateTypeOnCall(left, getter->token, call->args.size(), &(call->args[0]), !!super);
 }}
 return TypeInfo::MANY;
 }
@@ -167,7 +168,7 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto expr = BinaryOperation::create(make_shared<NameExpression>(thisToken), T_DOT, shared_this())->optimize();
 return expr->getType(compiler);
 }}
-return findMethodReturnType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, false, compiler);
+return compiler.updateTypeOnCall(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, args.size(), &args[0]);
 }
 
 shared_ptr<TypeInfo> DebugExpression::computeType (QCompiler& compiler) { 

@@ -3,10 +3,6 @@
 #include "StatementBase.hpp"
 #include<unordered_map>
 
-std::shared_ptr<TypeInfo> findMethodReturnType (QV value, QVM& vm);
-std::shared_ptr<TypeInfo> findMethodReturnType (std::shared_ptr<TypeInfo> valtype, const QToken& name, bool super, QCompiler& compiler);
-std::shared_ptr<TypeInfo> findMethodReturnType (std::shared_ptr<Expression> receiver, const QToken& name, bool super, QCompiler& compiler);
-
 struct ConstantExpression: Expression {
 QToken token;
 ConstantExpression(QToken x): token(x) {}

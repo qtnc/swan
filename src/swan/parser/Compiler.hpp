@@ -83,6 +83,7 @@ void pushLoop ();
 void popLoop ();
 void pushScope ();
 void popScope ();
+
 int countLocalVariablesInScope (int scope = -1);
 int findLocalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
 int findUpvalue (const QToken& name, int flags, LocalVariable** ptr = nullptr);
@@ -92,6 +93,8 @@ int addUpvalue (int slot, bool upperUpvalue);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
+std::shared_ptr<TypeInfo> updateTypeOnCall  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false);
+std::shared_ptr<TypeInfo> updateTypeOnCall  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args);
 inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> inline void compileError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = CR_FAILED; }
