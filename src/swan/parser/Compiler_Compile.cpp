@@ -2,6 +2,7 @@
 #include "Statement.hpp"
 #include "Expression.hpp"
 #include "ParserRules.hpp"
+#include "TypeChecker.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -25,12 +26,11 @@ return bs;
 void QCompiler::compile () {
 shared_ptr<Statement> sta = parser.parseStatements();
 if (sta && !parser.result) {
-//println("Code before optimization:");
-//println("%s", sta->print() );
+TypeChecker globalChecker(parser);
+TypeChecker checker(parser, &globalChecker);
 sta = addReturnExports(sta);
 sta=sta->optimizeStatement();
-//println("Code after optimization:");
-//println("%s", sta->print());
+sta->typeCheck(checker);
 sta->compile(*this);
 if (constants.size() >= std::numeric_limits<uint_constant_index_t>::max()) compileError(sta->nearestToken(), "Too many constant values");
 if (vm.methodSymbols.size()  >= std::numeric_limits<uint_method_symbol_t>::max()) compileError(sta->nearestToken(), "Too many method symbols");

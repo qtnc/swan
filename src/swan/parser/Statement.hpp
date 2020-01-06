@@ -19,6 +19,7 @@ void chain (const std::shared_ptr<Statement>& st) final override;
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return condition->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct SwitchStatement: Statement {
@@ -28,6 +29,7 @@ std::vector<std::shared_ptr<Statement>> defaultCase;
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ForStatement: Statement, Comprenable  {
@@ -53,6 +55,7 @@ WhileStatement (std::shared_ptr<Expression> cond, std::shared_ptr<Statement> lst
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return condition->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct RepeatWhileStatement: Statement {
@@ -62,6 +65,7 @@ RepeatWhileStatement (std::shared_ptr<Expression> cond, std::shared_ptr<Statemen
 std::shared_ptr<Statement> optimizeStatement () override ;
 const QToken& nearestToken () override { return loopStatement->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ContinueStatement: SimpleStatement {
@@ -83,6 +87,7 @@ ReturnStatement (const QToken& retk, std::shared_ptr<Expression> e0 = nullptr): 
 const QToken& nearestToken () override { return expr? expr->nearestToken() : returnToken; }
 std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ThrowStatement: Statement {
@@ -92,6 +97,7 @@ ThrowStatement (const QToken& retk, std::shared_ptr<Expression> e0): returnToken
 const QToken& nearestToken () override { return expr? expr->nearestToken() : returnToken; }
 std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct TryStatement: Statement, Comprenable  {
@@ -102,6 +108,7 @@ const QToken& nearestToken () override { return tryPart->nearestToken(); }
 void chain (const std::shared_ptr<Statement>& st) final override ;
 std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct BlockStatement: Statement, Comprenable  {
@@ -114,6 +121,7 @@ void doHoisting ();
 const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct VariableDeclaration: Statement, Decorable {
@@ -131,6 +139,7 @@ const QToken& nearestToken () override { return exports[0].first; }
 std::shared_ptr<Statement> optimizeStatement () override;
 bool isUsingExports () override { return true; }
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ImportDeclaration: Statement {
@@ -139,6 +148,7 @@ std::vector<std::shared_ptr<Variable>> imports;
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return from->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 

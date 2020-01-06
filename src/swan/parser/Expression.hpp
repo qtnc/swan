@@ -9,6 +9,7 @@ ConstantExpression(QToken x): token(x) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct DupExpression: Expression  {
@@ -30,6 +31,8 @@ bool isAssignable () override;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override;
 virtual QClass* getSequenceClass (QVM& vm) = 0;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct LiteralListExpression: LiteralSequenceExpression, Functionnable {
@@ -57,7 +60,9 @@ virtual bool isFunctionnable () override;
 virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct LiteralTupleExpression: LiteralSequenceExpression, Functionnable {
@@ -67,6 +72,7 @@ virtual void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable
 virtual bool isFunctionnable () override;
 virtual void compile (QCompiler& compiler) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct LiteralGridExpression: Expression {
@@ -75,7 +81,9 @@ std::vector<std::vector<std::shared_ptr<Expression>>> data;
 LiteralGridExpression (const QToken& t, const std::vector<std::vector<std::shared_ptr<Expression>>>& v): token(t), data(v) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct LiteralRegexExpression: Expression {
@@ -84,6 +92,7 @@ std::string pattern, options;
 LiteralRegexExpression(const QToken& tk, const std::string& p, const std::string& o): tok(tk), pattern(p), options(o) {}
 const QToken& nearestToken () override { return tok; }
 virtual std::shared_ptr<TypeInfo>  computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 void compile (QCompiler& compiler) override;
 };
 
@@ -92,8 +101,10 @@ QToken token;
 NameExpression (QToken x): token(x) {}
 virtual const QToken& nearestToken () override { return token; }
 virtual std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 virtual void compile (QCompiler& compiler) override ;
 virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue)override ;
 virtual void makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) override;
 virtual bool isFunctionnable () override { return true; }
 };
@@ -104,6 +115,7 @@ FieldExpression (QToken x): token(x) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue)override ;
 };
 
 struct StaticFieldExpression: Expression, Assignable {
@@ -112,6 +124,7 @@ StaticFieldExpression (QToken x): token(x) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue)override ;
 };
 
 struct SuperExpression: Expression {
@@ -148,7 +161,9 @@ const QToken& nearestToken () override { return left->nearestToken(); }
 std::shared_ptr<Expression> optimize ()override ;
 std::shared_ptr<Expression> optimizeChainedComparisons ();
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo>  computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct UnaryOperation: Expression {
@@ -157,8 +172,10 @@ QTokenType op;
 UnaryOperation  (QTokenType op0, std::shared_ptr<Expression> e0): op(op0), expr(e0) {}
 std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 virtual std::shared_ptr<TypeInfo>  computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct ShortCircuitingBinaryOperation: BinaryOperation {
@@ -172,7 +189,9 @@ ConditionalExpression (std::shared_ptr<Expression> cond, std::shared_ptr<Express
 const QToken& nearestToken () override { return condition->nearestToken(); }
 std::shared_ptr<Expression> optimize () override;
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct SwitchExpression: Expression {
@@ -182,7 +201,9 @@ std::shared_ptr<Expression> defaultCase;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 std::shared_ptr<Expression> optimize () override;
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct ComprehensionExpression: Expression {
@@ -193,7 +214,9 @@ bool isComprehension () override { return true; }
 const QToken& nearestToken () override { return loopExpression->nearestToken(); }
 std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler&)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct UnpackExpression: Expression {
@@ -202,6 +225,7 @@ UnpackExpression   (std::shared_ptr<Expression> e0): expr(e0) {}
 bool isUnpack () override { return true; }
 std::shared_ptr<Expression> optimize () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 };
 
@@ -211,7 +235,9 @@ std::shared_ptr<TypeInfo> type;
 TypeHintExpression (std::shared_ptr<Expression> e, std::shared_ptr<TypeInfo> t): expr(e), type(t) {}
 const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler)  override;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct AbstractCallExpression: Expression {
@@ -223,6 +249,7 @@ AbstractCallExpression (std::shared_ptr<Expression> recv0, QTokenType tp, const 
 const QToken& nearestToken () override { return receiver->nearestToken(); }
 std::shared_ptr<Expression> optimize () override ;
 void compileArgs (QCompiler& compiler);
+void typeCheck (TypeChecker& checker) override;
 bool isVararg ();
 };
 
@@ -230,20 +257,25 @@ struct CallExpression: AbstractCallExpression {
 CallExpression (std::shared_ptr<Expression> recv0, const std::vector<std::shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_PAREN, args0) {}
 void compile (QCompiler& compiler)override ;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct SubscriptExpression: AbstractCallExpression, Assignable  {
 SubscriptExpression (std::shared_ptr<Expression> recv0, const std::vector<std::shared_ptr<Expression>>& args0): AbstractCallExpression(recv0, T_LEFT_BRACKET, args0) {}
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue)override ;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct MemberLookupOperation: BinaryOperation, Assignable  {
 MemberLookupOperation (std::shared_ptr<Expression> l, std::shared_ptr<Expression> r): BinaryOperation(l, T_DOT, r) {}
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue)override ;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct MethodLookupOperation: BinaryOperation, Assignable  {
@@ -257,7 +289,9 @@ bool optimized;
 AssignmentOperation (std::shared_ptr<Expression> l, QTokenType o, std::shared_ptr<Expression> r): BinaryOperation(l,o,r), optimized(false)  {}
 std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct YieldExpression: Expression {
@@ -267,6 +301,7 @@ YieldExpression (const QToken& tk, std::shared_ptr<Expression> e): token(tk), ex
 const QToken& nearestToken () override { return token; }
 std::shared_ptr<Expression> optimize () override;
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ImportExpression: Expression {
@@ -275,6 +310,7 @@ ImportExpression (std::shared_ptr<Expression> f): from(f) {}
 std::shared_ptr<Expression> optimize () override;
 const QToken& nearestToken () override { return from->nearestToken(); }
 void compile (QCompiler& compiler) override;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct DebugExpression: Expression {
@@ -282,7 +318,9 @@ std::shared_ptr<Expression> expr;
 DebugExpression (std::shared_ptr<Expression> e): expr(e) {}
 const QToken& nearestToken () { return expr->nearestToken(); }
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 void compile (QCompiler& compiler);
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct FunctionDeclaration: Expression, Decorable {
@@ -297,9 +335,11 @@ const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
 void compile (QCompiler& compiler) override { compileFunction(compiler); }
+//void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<Expression> optimize  () override;
 bool isDecorable () override { return true; }
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler);
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 struct Field {
@@ -326,7 +366,9 @@ void handleAutoConstructor (QCompiler& compiler, std::unordered_map<std::string,
 const QToken& nearestToken () override { return name; }
 std::shared_ptr<Expression> optimize () override ;
 void compile (QCompiler&)override ;
+void typeCheck (TypeChecker& checker) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
 
 

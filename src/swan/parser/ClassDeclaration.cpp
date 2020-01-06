@@ -5,6 +5,7 @@
 #include "NativeFuncTypeInfo.hpp"
 #include "ParserRules.hpp"
 #include "Compiler.hpp"
+#include "TypeChecker.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -117,6 +118,39 @@ return make_shared<ClassDeclTypeInfo>(cd);
 return TypeInfo::MANY;
 }
 
+shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeChecker& checker) { 
+t0 = t0? t0->resolve(checker) :t0;
+if (!t0 || t0->isEmpty()) return shared_from_this();
+auto t = dynamic_pointer_cast<ClassDeclTypeInfo>(t0);
+if (t && t->cls==cls) return shared_from_this();
+else if (t) for (auto& p1: cls->parents) {
+for (auto& p2: t->cls->parents) {
+auto t3 = make_shared<NamedTypeInfo>(p1), t4 = make_shared<NamedTypeInfo>(p2);
+auto re = t3->merge(t4, checker);
+if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
+}}
+else for (auto& p1: cls->parents) {
+auto t3 = make_shared<NamedTypeInfo>(p1);
+auto re = t3->merge(t0, checker);
+if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
+}
+return TypeInfo::MANY;
+}
+
+shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeChecker& checker) {
+auto var = checker.findVariable(token, LV_EXISTING | LV_FOR_READ);
+if (!var) {
+ClassDeclaration* cls = checker.getCurClass();
+if (cls) {
+auto m = cls->findMethod(token, false);
+if (!m) m = cls->findMethod(token, true);
+if (m) return m->returnTypeHint;
+}}
+if (var && var->classDecl) return make_shared<ClassDeclTypeInfo>(var->classDecl);
+else if (var) return var->type;
+else return TypeInfo::MANY;
+}
+
 std::shared_ptr<TypeInfo> QCompiler::updateTypeOnCall  (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args) {
 QVM& vm = parser.vm;
 if (func.isClosure()) {
@@ -161,6 +195,55 @@ if (m) return m->returnTypeHint;
 }
 return TypeInfo::MANY;
 }
+
+
+std::shared_ptr<TypeInfo> TypeChecker::resolveCallType (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args) {
+QVM& vm = parser.vm;
+if (func.isClosure()) {
+//todo
+}
+else if (func.isNativeFunction()) {
+intptr_t ptr = (func.i &~QV_TAGMASK);
+auto it = vm.nativeFuncTypeInfos.find(ptr);
+if (it!=vm.nativeFuncTypeInfos.end()) return it->second->getReturnType();
+}
+return TypeInfo::MANY;
+}
+
+std::shared_ptr<TypeInfo> TypeChecker::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super) {
+shared_ptr<TypeInfo> receiverType = receiver->getType(*this) ->resolve(*this);
+if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
+if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
+auto cls = clt->type;
+if (super) cls = cls->parent;
+QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+return resolveCallType(receiver, method, nArgs, args);
+}
+else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
+shared_ptr<FunctionDeclaration> m;
+if (!super) {
+m = cdt->cls->findMethod(name, false);
+if (!m) m = cdt->cls->findMethod(name, true);
+}
+if (!m) for (auto& parentToken: cdt->cls->parents) {
+auto parentTI = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
+if (cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
+m = cdt->cls->findMethod(name, false);
+if (!m) m = cdt->cls->findMethod(name, true);
+}
+else if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(parentTI)) {
+QV method = clt->type->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+return resolveCallType(receiver, method, nArgs, args);
+}
+if (m) break;
+}
+if (m) return m->returnTypeHint;
+}
+return TypeInfo::MANY;
+}
+
+
+
 
 
 

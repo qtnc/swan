@@ -31,18 +31,6 @@ subtypes[0] = type;
 return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 }
 
-QClass* LiteralTupleExpression::getSequenceClass (QVM& vm) { 
-return vm.tupleClass; 
-}
-
-QClass* LiteralListExpression::getSequenceClass (QVM& vm) { 
-return vm.listClass; 
-}
-
-QClass* LiteralSetExpression::getSequenceClass (QVM& vm) { 
-return vm.setClass; 
-}
-
 shared_ptr<TypeInfo> LiteralMapExpression::computeType (QCompiler& compiler) {
 auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.mapClass);
 auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(2);
