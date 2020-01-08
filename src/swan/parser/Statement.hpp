@@ -131,6 +131,7 @@ const QToken& nearestToken () override { return vars[0]->name->nearestToken(); }
 bool isDecorable () override { return true; }
 std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler)override ;
+void typeCheck (TypeChecker& checker) override;
 };
 
 struct ExportDeclaration: Statement  {

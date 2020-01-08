@@ -260,12 +260,8 @@ assignedValue->typeCheck(checker);
 if (fieldType) *fieldType = (*fieldType)->merge(assignedValue->getType(checker), checker);
 }
 
-/*
 void LiteralSequenceExpression::typeCheckAssignment (TypeChecker& checker, shared_ptr<Expression> assignedValue) {
 checker.pushScope();
-QToken tmpToken = checker.createTempName();
-auto tmpVar = make_shared<NameExpression>(tmpToken);
-auto var = checker.findVariable(tmpToken, LV_NEW | LV_CONST);
 assignedValue->typeCheck(checker);
 for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
@@ -288,7 +284,6 @@ auto unpackExpr = dynamic_pointer_cast<UnpackExpression>(item);
 if (unpackExpr) {
 assignable = dynamic_pointer_cast<Assignable>(unpackExpr->expr);
 unpack = true;
-if (i+1!=items.size()) checker.compileError(unpackExpr->nearestToken(), "Unpack expression must appear last in assignment expression");
 }}
 if (!assignable || !assignable->isAssignable()) continue;
 QToken indexToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
@@ -299,25 +294,19 @@ shared_ptr<Expression> minusOne = make_shared<ConstantExpression>(minusOneToken)
 index = BinaryOperation::create(index, T_DOTDOTDOT, minusOne);
 }
 vector<shared_ptr<Expression>> indices = { index };
-auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
+auto subscript = make_shared<SubscriptExpression>(assignedValue, indices);
 if (defaultValue) defaultValue = BinaryOperation::create(subscript, T_QUESTQUEST, defaultValue)->optimize();
 else defaultValue = subscript;
 if (typeHint) defaultValue = make_shared<TypeHintExpression>(defaultValue, typeHint)->optimize();
 assignable->typeCheckAssignment(checker, defaultValue);
-if (i+1<n) checker.writeOp(OP_POP);
 }
 checker.popScope();
 }
-*/
 
-/*
+
 void LiteralMapExpression::typeCheckAssignment (TypeChecker& checker, shared_ptr<Expression> assignedValue) {
 checker.pushScope();
-QToken tmpToken = checker.createTempName();
-int tmpSlot = checker.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
-auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->typeCheck(checker);
-bool first = true;
 for (auto& item: items) {
 shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
@@ -338,10 +327,8 @@ auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned);
 if (mh) assignable = make_shared<NameExpression>(mh->token);
 }
 if (!assignable || !assignable->isAssignable()) continue;
-if (!first) checker.writeOp(OP_POP);
-first=false;
 shared_ptr<Expression> value = nullptr;
-if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(assignedValue, T_DOT, make_shared<NameExpression>(method->token));
 else {
 shared_ptr<Expression> subscript = item.first;
 if (auto field = dynamic_pointer_cast<FieldExpression>(subscript))  {
@@ -353,7 +340,7 @@ field->token.value = QV(checker.vm, field->token.start, field->token.length);
 subscript = make_shared<ConstantExpression>(field->token);
 }
 vector<shared_ptr<Expression>> indices = { subscript };
-value = make_shared<SubscriptExpression>(tmpVar, indices);
+value = make_shared<SubscriptExpression>(assignedValue, indices);
 }
 if (defaultValue) value = BinaryOperation::create(value, T_QUESTQUEST, defaultValue)->optimize();
 if (typeHint) value = make_shared<TypeHintExpression>(value, typeHint)->optimize();
@@ -361,7 +348,7 @@ assignable->typeCheckAssignment(checker, value);
 }
 checker.popScope();
 }
-*/
+
 
 void UnaryOperation::typeCheck (TypeChecker& checker) {
 expr->typeCheck(checker);
@@ -429,66 +416,35 @@ method->typeCheck(checker);
 checker.curClass = oldClassDecl;
 }
 
-/*
 void FunctionDeclaration::typeCheckParams (TypeChecker& checker) {
 vector<shared_ptr<Variable>> destructuring;
-checker.writeDebugLine(nearestToken());
 for (auto& var: params) {
 auto name = dynamic_pointer_cast<NameExpression>(var->name);
-LocalVariable* lv = nullptr;
-int slot;
-if (!name) {
-name = make_shared<NameExpression>(checker.createTempName());
-slot = checker.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
-var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
-destructuring.push_back(var);
-if (lv) lv->type = var->value->getType(checker)->merge(lv->type, checker);
-}
+if (!name) destructuring.push_back(var);
 else {
-slot = checker.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
+lv = checker.findVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->typeCheck(checker);
-checker.writeOp(OP_POP);
 if (lv) lv->type = value->getType(checker)->merge(lv->type, checker);
 }}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->typeCheck(checker);
-checker.writeOpLoadLocal(slot);
-for (auto& decoration: var->decorations) checker.writeOpCallFunction(1);
-checker.writeOpStoreLocal(slot);
-var->decorations.clear();
 }
-if (var->typeHint) {
-auto typeHint = make_shared<TypeHintExpression>(name, var->typeHint)->optimize();
-if (lv) lv->type = typeHint->getType(checker)->merge(lv->type, checker);
-//todo: use the type hint
-//typeHint->typeCheck(checker);
-//checker.writeOp(OP_POP);
-}
+//if (var->typeHint && lv) lv->type = var->typeHint;
 }
 if (destructuring.size()) {
 make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->typeCheck(checker);
 }
 }
-*/
 
-/*
-QFunction* FunctionDeclaration::typeCheckFunction (TypeChecker& checker) {
-Qchecker fc(checker.parser);
-fc.parent = &checker;
+
+void FunctionDeclaration::typeCheck  (TypeChecker& checker) {
+TypeChecker tc(checker.parser, &checker);
 checker.parser.curMethodNameToken = name;
-compileParams(fc);
+typeCheckParams(tc);
 body=body->optimizeStatement();
-fc.writeDebugLine(body->nearestToken());
-body->typeCheck(fc);
-if (body->isExpression()) fc.writeOp(OP_POP);
-QFunction* func = fc.getFunction(params.size());
-checker.result = fc.result;
-func->vararg = (flags&FD_VARARG);
-int funcSlot = checker.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
-if (name.type==T_NAME) func->name = string(name.start, name.length);
-else func->name = "<closure>";
+body->typeCheck(tc);
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));
@@ -498,11 +454,8 @@ QToken asyncToken = { T_NAME, ASYNC, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(asyncToken));
 }
 for (auto decoration: decorations) decoration->typeCheck(checker);
-checker.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
-for (auto decoration: decorations) checker.writeOp(OP_CALL_FUNCTION_1);
-return func;
 }
-*/
+
 
 
 void DebugExpression::typeCheck (TypeChecker& checker) {

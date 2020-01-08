@@ -5,7 +5,7 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-static vector<shared_ptr<NameExpression>>& decompose (QCompiler& compiler, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
+vector<shared_ptr<NameExpression>>& decompose (QCompiler& compiler, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
 if (auto name = dynamic_pointer_cast<NameExpression>(expr)) {
 names.push_back(name);
 return names;

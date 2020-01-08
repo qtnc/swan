@@ -33,6 +33,7 @@ virtual QClass* getSequenceClass (QVM& vm) = 0;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 void typeCheck (TypeChecker& checker) override;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue) override;
 };
 
 struct LiteralListExpression: LiteralSequenceExpression, Functionnable {
@@ -61,6 +62,7 @@ virtual bool isAssignable () override;
 virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override;
 void compile (QCompiler& compiler) override;
 void typeCheck (TypeChecker& checker) override;
+void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue) override;
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler) override;
 std::shared_ptr<TypeInfo> getType (TypeChecker& checker) override;
 };
@@ -335,7 +337,8 @@ const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
 void compile (QCompiler& compiler) override { compileFunction(compiler); }
-//void typeCheck (TypeChecker& checker) override;
+void typeCheck (TypeChecker& checker) override;
+void typeCheckParams (TypeChecker& checker);
 std::shared_ptr<Expression> optimize  () override;
 bool isDecorable () override { return true; }
 std::shared_ptr<TypeInfo> computeType (QCompiler& compiler);

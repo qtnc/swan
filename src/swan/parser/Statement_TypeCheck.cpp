@@ -5,8 +5,7 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-/*
-static vector<shared_ptr<NameExpression>>& decompose (TypeChecker& checker, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
+vector<shared_ptr<NameExpression>>& decompose (TypeChecker& checker, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
 if (auto name = dynamic_pointer_cast<NameExpression>(expr)) {
 names.push_back(name);
 return names;
@@ -32,10 +31,8 @@ if (auto unpack = dynamic_pointer_cast<UnpackExpression>(expr)) {
 decompose(checker, unpack->expr, names);
 return names;
 }
-if (!dynamic_cast<FieldExpression*>(&*expr) && !dynamic_cast<StaticFieldExpression*>(&*expr)) checker.compileError(expr->nearestToken(), "Invalid target for assignment in destructuring");
 return names;
 }
-*/
 
 void IfStatement::typeCheck (TypeChecker& checker) {
 condition->typeCheck(checker);
@@ -175,7 +172,6 @@ checker.popScope();
 checker.popScope();
 }
 
-/*
 void VariableDeclaration::typeCheck (TypeChecker& checker) {
 vector<shared_ptr<Variable>> destructured;
 for (auto& var: vars) {
@@ -184,45 +180,24 @@ auto name = dynamic_pointer_cast<NameExpression>(var->name);
 if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
-for (auto& nm: decompose(checker, var->name, names)) {
-if (var->flags&VD_GLOBAL) checker.findGlobalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else { checker.findVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); checker.writeOp(OP_LOAD_UNDEFINED); }
-}
+for (auto& nm: decompose(checker, var->name, names)) checker.findVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); 
 continue;
 }
-int slot = -1;
-LocalVariable* lv = nullptr;
-if ((var->flags&VD_GLOBAL)) slot = checker.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else slot = checker.findVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
+auto lv = checker.findVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
 for (auto& decoration: decorations) decoration->typeCheck(checker);
 for (auto& decoration: var->decorations) decoration->typeCheck(checker);
 if (var->value) {
-if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
-auto func = fdecl->compileFunction(checker);
-func->name = string(name->token.start, name->token.length);
-}
-else var->value->typeCheck(checker);
-if (lv) {
-lv->value = var->value;
-lv->type = var->value->getType(checker);
-}
-}
-else checker.writeOp(OP_LOAD_UNDEFINED);
-for (auto& decoration: var->decorations) checker.writeOp(OP_CALL_FUNCTION_1);
-for (auto& decoration: decorations) checker.writeOp(OP_CALL_FUNCTION_1);
-if (var->flags&VD_GLOBAL) {
-checker.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
-checker.writeOp(OP_POP);
+var->value->typeCheck(checker);
+if (lv) lv->type = var->value->getType(checker);
 }
 }//for decompose
 for (auto& var: destructured) {
 auto assignable = dynamic_pointer_cast<Assignable>(var->name);
 if (!assignable || !assignable->isAssignable()) continue;
-assignable->compileAssignment(checker, var->value);
-checker.writeOp(OP_POP);
+assignable->typeCheckAssignment(checker, var->value);
 }
 }//end VariableDeclaration::typeCheck
-*/
+
 
 void ImportDeclaration::typeCheck (TypeChecker& checker) {
 doCompileTimeImport(checker.parser.vm, checker.parser.filename, from);
