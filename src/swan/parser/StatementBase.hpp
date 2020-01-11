@@ -10,7 +10,6 @@ double drshift (double, double);
 double dintdiv (double, double);
 
 struct QCompiler;
-struct TypeChecker;
 
 struct TypeInfo: std::enable_shared_from_this<TypeInfo> {
 static std::shared_ptr<TypeInfo> ANY, MANY;
@@ -18,9 +17,7 @@ virtual bool isEmpty () { return false; }
 virtual bool isNum (QVM& vm) { return false; }
 virtual bool isBool (QVM& vm) { return false; }
 virtual std::shared_ptr<TypeInfo> resolve (QCompiler& compiler) { return shared_from_this(); }
-virtual std::shared_ptr<TypeInfo> resolve (TypeChecker& checker) { return shared_from_this(); }
 virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, QCompiler& compiler) = 0;
-virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, TypeChecker& checker) = 0;
 virtual std::string toString () = 0;
 virtual ~TypeInfo () = default;
 };
@@ -33,27 +30,21 @@ virtual bool isDecorable () { return false; }
 virtual bool isUsingExports () { return false; }
 virtual std::shared_ptr<Statement> optimizeStatement () { return shared_this(); }
 virtual void compile (QCompiler& compiler) = 0;
-virtual void typeCheck (TypeChecker& checker) {}
 virtual ~Statement () = default;
 };
 
 struct Expression: Statement {
-std::shared_ptr<TypeInfo> type;
-Expression();
 bool isExpression () final override { return true; }
 inline std::shared_ptr<Expression> shared_this () { return std::static_pointer_cast<Expression>(shared_from_this()); }
 virtual std::shared_ptr<Expression> optimize () { return shared_this(); }
 std::shared_ptr<Statement> optimizeStatement () override { return optimize(); }
-virtual std::shared_ptr<TypeInfo> computeType (QCompiler& compiler);
-virtual std::shared_ptr<TypeInfo> getType (QCompiler& compiler);
-virtual std::shared_ptr<TypeInfo> getType (TypeChecker& checker);
+virtual std::shared_ptr<TypeInfo> getType (QCompiler& compiler) = 0;
 virtual bool isComprehension () { return false; }
 virtual bool isUnpack () { return false; }
 };
 
 struct Assignable {
 virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) = 0;
-virtual void typeCheckAssignment (TypeChecker& checker, std::shared_ptr<Expression> assignedValue) {}
 virtual bool isAssignable () { return true; }
 };
 

@@ -1,6 +1,5 @@
 #include "TypeInfo.hpp"
 #include "Compiler.hpp"
-#include "TypeChecker.hpp"
 #include "../vm/VM.hpp"
 #include<sstream>
 using namespace std;
@@ -32,17 +31,6 @@ if (cls) return make_shared<ClassTypeInfo>(cls);
 else return TypeInfo::MANY;
 }
 
-shared_ptr<TypeInfo> ClassTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeChecker& checker) {
-if (!t0 || t0->isEmpty()) return shared_from_this();
-t0 = t0->resolve(checker);
-auto t = dynamic_pointer_cast<ClassTypeInfo>(t0);
-if (!t) return TypeInfo::MANY;
-if (t->type==type) return shared_from_this();
-QClass* cls = findCommonParent(type, t->type);
-if (cls) return make_shared<ClassTypeInfo>(cls);
-else return TypeInfo::MANY;
-}
-
 QClass* ClassTypeInfo::findCommonParent (QClass* t1, QClass* t2) {
 if (t1==t2) return t1;
 for (auto p1=t1; p1; p1=p1->parent) {
@@ -65,17 +53,6 @@ else if (t->nSubtypes!=nSubtypes) return t->type->merge(type, compiler);
 auto newType = type->merge(t->type, compiler);
 auto newSubtypes = make_unique<shared_ptr<TypeInfo>[]>(nSubtypes);
 for (int i=0; i<nSubtypes; i++) newSubtypes[i] = subtypes[i]->merge(t->subtypes[i], compiler);
-return make_shared<ComposedTypeInfo>(newType, nSubtypes, std::move(newSubtypes));
-}
-
-shared_ptr<TypeInfo> ComposedTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeChecker& checker) {
-if (!t0 || t0->isEmpty()) return shared_from_this();
-auto t = dynamic_pointer_cast<ComposedTypeInfo>(t0->resolve(checker));
-if (!t) return t0->merge(type, checker);
-else if (t->nSubtypes!=nSubtypes) return t->type->merge(type, checker);
-auto newType = type->merge(t->type, checker);
-auto newSubtypes = make_unique<shared_ptr<TypeInfo>[]>(nSubtypes);
-for (int i=0; i<nSubtypes; i++) newSubtypes[i] = subtypes[i]->merge(t->subtypes[i], checker);
 return make_shared<ComposedTypeInfo>(newType, nSubtypes, std::move(newSubtypes));
 }
 
