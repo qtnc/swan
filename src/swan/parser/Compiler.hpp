@@ -38,7 +38,7 @@ struct ClassDeclaration* curClass = nullptr;
 struct FunctionDeclaration* curMethod = nullptr;
 QCompiler* parent = nullptr;
 std::ostringstream out;
-std::vector<LocalVariable> localVariables;
+std::vector<LocalVariable> localVariables, globalVariables;
 std::vector<Upvariable> upvalues;
 std::vector<Loop> loops;
 std::vector<QV> constants;
@@ -87,14 +87,19 @@ void popScope ();
 int countLocalVariablesInScope (int scope = -1);
 int findLocalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
 int findUpvalue (const QToken& name, int flags, LocalVariable** ptr = nullptr);
-int findGlobalVariable (const QToken& name, int flags);
+int findGlobalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
 int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
+
+std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args);
+std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args);
+std::shared_ptr<TypeInfo> resolveValueType (QV value);
+
 inline QToken createTempName () { return parser.createTempName(); }
 
 template<class... A> inline void compileError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = CR_FAILED; }

@@ -6,7 +6,7 @@
 using namespace std;
 
 shared_ptr<TypeInfo> ConstantExpression::getType (QCompiler& compiler) { 
- return make_shared<ClassTypeInfo>(&token.value.getClass(compiler.parser.vm));  
+return compiler.resolveValueType(token.value);
 }
 
 QClass* LiteralTupleExpression::getSequenceClass (QVM& vm) { 
@@ -25,7 +25,7 @@ shared_ptr<TypeInfo> LiteralSequenceExpression::getType (QCompiler& compiler) {
 auto seqtype = make_shared<ClassTypeInfo>(getSequenceClass(compiler.parser.vm));
 auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
 shared_ptr<TypeInfo> type = TypeInfo::ANY;
-for (auto& item: items) type = type->merge(item->getType(compiler), compiler);
+for (auto& item: items) type = compiler.mergeTypes(type, item->getType(compiler));
 subtypes[0] = type;
 return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 }
@@ -35,8 +35,8 @@ auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.mapClass);
 auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(2);
 shared_ptr<TypeInfo> keyType = TypeInfo::ANY, valueType = TypeInfo::ANY;
 for (auto& item: items) {
-keyType = keyType->merge(item.first->getType(compiler), compiler);
-valueType = valueType->merge(item.second->getType(compiler), compiler);
+keyType = compiler.mergeTypes(keyType, item.first->getType(compiler));
+valueType = compiler.mergeTypes(valueType, item.second->getType(compiler));
 }
 subtypes[0] = keyType;
 subtypes[1] = valueType;
@@ -59,7 +59,7 @@ shared_ptr<TypeInfo> LiteralGridExpression::getType (QCompiler& compiler) {
 auto seqtype = make_shared<ClassTypeInfo>(compiler.parser.vm.gridClass);
 auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
 shared_ptr<TypeInfo> type = TypeInfo::ANY;
-for (auto& row: data) for (auto& item: row) type = type->merge(item->getType(compiler), compiler);
+for (auto& row: data) for (auto& item: row) type = compiler.mergeTypes(type, item->getType(compiler));
 subtypes[0] = type;
 return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 }
@@ -67,13 +67,13 @@ return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 shared_ptr<TypeInfo>  ConditionalExpression::getType (QCompiler& compiler) { 
 if (!elsePart) return ifPart->getType(compiler);
 auto tp1 = ifPart->getType(compiler), tp2 = elsePart->getType(compiler);
-return tp1->merge(tp2, compiler);
+return compiler.mergeTypes(tp1, tp2);
 }
 
 shared_ptr<TypeInfo>  SwitchExpression::getType (QCompiler& compiler) { 
 shared_ptr<TypeInfo> type = TypeInfo::ANY;
-if (defaultCase) type = type->merge(defaultCase->getType(compiler), compiler);
-for (auto& p: cases) type = type->merge(p.second->getType(compiler), compiler);
+if (defaultCase) type = compiler.mergeTypes(type, defaultCase->getType(compiler));
+for (auto& p: cases) type = compiler.mergeTypes(type, p.second->getType(compiler));
 return type;
 }
 
@@ -86,6 +86,13 @@ return make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 }
 
 shared_ptr<TypeInfo> SubscriptExpression::getType (QCompiler& compiler) {
+auto rectype = receiver->getType(compiler);
+if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(rectype)) {
+if (auto ct = dynamic_pointer_cast<ClassTypeInfo>(cti->type)) {
+if (ct->type==compiler.vm.listClass && cti->nSubtypes==1) return cti->subtypes[0];
+else if (ct->type==compiler.vm.mapClass && cti->nSubtypes==2) return cti->subtypes[1];
+else if (ct->type==compiler.vm.tupleClass && args.size()==1) if (auto cxe = dynamic_pointer_cast<ConstantExpression>(args[0])) if (cti->nSubtypes>=cxe->token.value.d) return cti->subtypes[cxe->token.value.d];
+}}
 return compiler.resolveCallType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED });
 }
 

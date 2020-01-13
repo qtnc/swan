@@ -35,12 +35,6 @@ static inline bool isUnpack (shared_ptr<Expression> expr) {
 return expr->isUnpack();
 }
 
-static inline shared_ptr<TypeInfo> mergeTypes (shared_ptr<TypeInfo> t1, shared_ptr<TypeInfo> t2, QCompiler& compiler) {
-if (t1) return t1->merge(t2, compiler);
-else if (t2) return t2->merge(t1, compiler);
-else return nullptr;
-}
-
 void ConstantExpression::compile (QCompiler& compiler) {
 QV& value = token.value;
 if (value.isUndefined()) compiler.writeOp(OP_LOAD_UNDEFINED);
@@ -225,6 +219,8 @@ void YieldExpression::compile (QCompiler& compiler) {
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_YIELD);
+auto method = compiler.getCurMethod();
+if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
 }
 
 void ImportExpression::compile (QCompiler& compiler) {
@@ -269,10 +265,9 @@ compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, slot);
 type = lv->type;
 return;
 }
-slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_READ);
+slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot>=0) { 
-auto curType = make_shared<ClassTypeInfo>(&(compiler.parser.vm.globalVariables[slot].getClass(compiler.parser.vm)));
-type = curType;
+type = lv->type;
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
 return;
 }
@@ -297,7 +292,7 @@ type = assignedValue->getType(compiler);
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpStoreLocal(slot);
-type = lv->type = mergeTypes(lv->type, type, compiler);
+type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -307,17 +302,17 @@ return;
 slot = compiler.findUpvalue(token, LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_upvalue_index_t>(OP_STORE_UPVALUE, slot);
-type = lv->type = mergeTypes(lv->type, type, compiler);
+type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
 compiler.compileError(token, ("Constant cannot be reassigned"));
 return;
 }
-slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_WRITE);
+slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
-//todo: merge with type of global var 
+type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -381,7 +376,7 @@ return;
 }
 int fieldSlot = cls->findField(token, &fieldType);
 assignedValue->compile(compiler);
-if (fieldType) *fieldType = mergeTypes(*fieldType, assignedValue->getType(compiler), compiler);
+if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
@@ -423,7 +418,7 @@ return;
 bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
 int fieldSlot = cls->findStaticField(token, &fieldType);
 assignedValue->compile(compiler);
-if (fieldType) *fieldType = mergeTypes(*fieldType, assignedValue->getType(compiler), compiler);
+if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
 else if (atLevel<=2) {
 compiler.writeOp(OP_LOAD_THIS);
@@ -584,7 +579,6 @@ void BinaryOperation::compile  (QCompiler& compiler) {
 left->compile(compiler);
 right->compile(compiler);
 if (left->getType(compiler)->isNum(compiler.parser.vm) && right->getType(compiler)->isNum(compiler.parser.vm) && BASE_OPTIMIZED_OPS[op]) {
-println("Write optimized op !");
 compiler.writeOp(static_cast<QOpCode>(BASE_OPTIMIZED_OPS[op]));
 }
 else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(rules[op].infixOpName));
@@ -663,7 +657,7 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-type = mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super), compiler);
+type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super));
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -677,7 +671,7 @@ bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
-type = mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super), compiler);
+type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super));
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) compiler.writeOpCallSuper(call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -731,7 +725,7 @@ LocalVariable* lv = nullptr;
 QV func = QV::UNDEFINED;
 int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
-if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ))<0 && compiler.getCurClass()) {
+if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ, &lv))<0 && compiler.getCurClass()) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
@@ -743,12 +737,13 @@ bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 compileArgs(compiler);
-if (globalIndex>=0) {
+/*if (globalIndex>=0) {
 auto gval = compiler.parser.vm.globalVariables[globalIndex];
 QToken tmptok = { T_NAME, 0, 0, gval  };
 type = compiler.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
 }
-else type = compiler.resolveCallType(receiver, { T_NAME, "()", 2, QV::UNDEFINED }, args.size(), &args[0]);
+else */
+type = compiler.resolveCallType(receiver, args.size(), &args[0]);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else compiler.writeOpCallFunction(args.size());
 }
@@ -816,7 +811,7 @@ name = make_shared<NameExpression>(compiler.createTempName());
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
 var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 destructuring.push_back(var);
-if (lv) lv->type = mergeTypes(var->value->getType(compiler), lv->type, compiler);
+if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
 }
 else {
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
@@ -824,7 +819,7 @@ if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
 compiler.writeOp(OP_POP);
-if (lv) lv->type = mergeTypes(value->getType(compiler), lv->type, compiler);
+if (lv) lv->type = compiler.mergeTypes(value->getType(compiler), lv->type);
 }}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
@@ -835,7 +830,7 @@ var->decorations.clear();
 }
 if (var->typeHint) {
 auto typeHint = make_shared<TypeHintExpression>(name, var->typeHint)->optimize();
-if (lv) lv->type = mergeTypes(typeHint->getType(compiler), lv->type, compiler);
+if (lv) lv->type = compiler.mergeTypes(typeHint->getType(compiler), lv->type);
 //todo: use the type hint
 //typeHint->compile(compiler);
 //compiler.writeOp(OP_POP);
@@ -849,6 +844,7 @@ make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(co
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
 QCompiler fc(compiler.parser);
 fc.parent = &compiler;
+fc.curMethod = this;
 compiler.parser.curMethodNameToken = name;
 compileParams(fc);
 body=body->optimizeStatement();

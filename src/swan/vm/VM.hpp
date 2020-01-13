@@ -30,6 +30,7 @@ std::unordered_map<uint64_t, uint32_t> keptHandles;
 std::unordered_map<uintptr_t, std::unique_ptr<NativeFuncTypeInfo, NativeFuncTypeInfoDeleter>> nativeFuncTypeInfos;
 std::vector<QFiber*> fibers;
 QFiber *activeFiber;
+
 PathResolverFn pathResolver;
 FileLoaderFn fileLoader;
 CompilationMessageFn messageReceiver;
@@ -37,6 +38,7 @@ ImportHookFn importHook;
 GIL gil;
 size_t gcMemUsage, gcTreshhold;
 uint16_t gcTreshholdFactor, gcLock;
+
 QObject* firstGCObject;
 
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *undefinedClass;
@@ -67,7 +69,7 @@ virtual QFiber& createFiber () final override;
 virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 
 int findMethodSymbol (const std::string& name);
-int findGlobalSymbol (const std::string& name, int flags);
+int findGlobalSymbol (const std::string& name, int flags, bool* isConst=nullptr);
 void bindGlobal (const std::string& name, const QV& value, bool isConst=false);
 void bindGlobal (const std::string& name, QNativeFunction value, const std::initializer_list<QClass*>& argtypes, QClass* returnType);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);

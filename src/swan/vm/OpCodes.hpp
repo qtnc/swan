@@ -85,7 +85,7 @@ OP(NEW_CLASS, -1, 3*sizeof(uint_field_index_t), (sizeof(uint_field_index_t)<<8)|
 
 OP(DEBUG_LINE, 0, sizeof(uint16_t), sizeof(uint16_t)),
 
-/* Not yet used, but reserved. These instructions are going to be faster if we are sure to operate on numbers */
+/* Optimized instructions when we are sure to operate on numbers */
 OP(ADD, -1, 0, 0),
 OP(SUB, -1, 0, 0),
 OP(MUL, -1, 0, 0),

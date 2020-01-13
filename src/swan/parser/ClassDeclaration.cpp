@@ -117,8 +117,19 @@ return make_shared<ClassDeclTypeInfo>(cd);
 return TypeInfo::MANY;
 }
 
+std::shared_ptr<TypeInfo> QCompiler::resolveValueType (QV value) {
+if (value.isClosure()) {
+//todo
+}
+else if (value.isNativeFunction()) {
+intptr_t ptr = (value.i &~QV_TAGMASK);
+auto it = vm.nativeFuncTypeInfos.find(ptr);
+if (it!=vm.nativeFuncTypeInfos.end()) return it->second->getFunctionType(vm);
+}
+return make_shared<ClassTypeInfo>(&value.getClass(vm));
+}
+
 std::shared_ptr<TypeInfo> QCompiler::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args) {
-QVM& vm = parser.vm;
 if (func.isClosure()) {
 //todo
 }
@@ -158,6 +169,17 @@ return resolveCallType(receiver, method, nArgs, args);
 if (m) break;
 }
 if (m) return m->returnTypeHint;
+}
+return TypeInfo::MANY;
+}
+
+std::shared_ptr<TypeInfo> QCompiler::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args) {
+auto funcType = receiver->getType(*this);
+if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(funcType)) {
+return cdt;
+}
+else if (auto ct = dynamic_pointer_cast<ComposedTypeInfo>(funcType)) {
+if (ct->nSubtypes>0) return ct->subtypes[ct->nSubtypes -1];
 }
 return TypeInfo::MANY;
 }

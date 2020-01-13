@@ -114,8 +114,19 @@ upvalues.push_back({ slot, upperUpvalue });
 return i;
 }
 
-int QCompiler::findGlobalVariable (const QToken& name, int flags) {
-return parser.vm.findGlobalSymbol(string(name.start, name.length), flags);
+int QCompiler::findGlobalVariable (const QToken& name, int flags, LocalVariable** ptr) {
+bool isConst;
+int slot = parser.vm.findGlobalSymbol(string(name.start, name.length), flags, &isConst);
+if (ptr && slot>=0) {
+QCompiler* p = this; while(p->parent) p=p->parent;
+auto it = find_if(p->globalVariables.begin(), p->globalVariables.end(), [&](auto& x){ return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0; });
+if (it!=p->globalVariables.end()) *ptr = &*it;
+else {
+p->globalVariables.emplace_back(name, 0, isConst);
+*ptr = &(p->globalVariables.back());
+(*ptr)->type = resolveValueType(vm.globalVariables[slot]);
+}}
+return slot;
 }
 
 int QCompiler::findConstant (const QV& value) {
@@ -138,10 +149,11 @@ methodSymbols.push_back(name);
 return n;
 }}
 
-int QVM::findGlobalSymbol (const string& name, int flags) {
+int QVM::findGlobalSymbol (const string& name, int flags, bool* isConst) {
 auto it = globalSymbols.find(name);
 if (it!=globalSymbols.end()) {
 auto& gv = it->second;
+if (isConst) *isConst = gv.isConst;
 if (flags&LV_NEW && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return LV_ERR_ALREADY_EXIST;
 else if ((flags&LV_FOR_WRITE) && gv.isConst) return LV_ERR_CONST;
 return gv.index;
@@ -154,3 +166,8 @@ globalVariables.push_back(QV::UNDEFINED);
 return n;
 }}
 
+shared_ptr<TypeInfo> QCompiler::mergeTypes (shared_ptr<TypeInfo> t1, shared_ptr<TypeInfo> t2) {
+if (t1) return t1->merge(t2, *this);
+else if (t2) return t2->merge(t1, *this);
+else return nullptr;
+}
