@@ -23,6 +23,8 @@
 #define FD_STATIC 8
 #define FD_ASYNC 16
 #define FD_CONST 0x200
+#define FD_GETTER 0x400
+#define FD_SETTER 0x800
 
 #define P_LEFT 0
 #define P_RIGHT 1

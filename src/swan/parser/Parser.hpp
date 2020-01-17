@@ -63,7 +63,7 @@ std::shared_ptr<Expression> parseUnpackOrExpression (int priority = P_LOWEST);
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
 std::shared_ptr<Expression> parseDebugExpression ();
 std::shared_ptr<Expression> parseDecoratedExpression ();
-void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func);
+void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func, struct ClassDeclaration* cld = nullptr);
 
 std::shared_ptr<Statement> parseStatement ();
 std::shared_ptr<Statement> parseStatements ();

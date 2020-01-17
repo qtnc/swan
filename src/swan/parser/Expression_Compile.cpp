@@ -207,6 +207,18 @@ void TypeHintExpression::compile (QCompiler& compiler)  {
 expr->compile(compiler); 
 } 
 
+void TypeHintExpression::compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) {
+auto assignable = dynamic_pointer_cast<Assignable>(expr);
+if (assignable) assignable->compileAssignment(compiler, assignedValue);
+else compiler.compileError(expr->nearestToken(), "Invalid target for assignment");
+}
+
+bool TypeHintExpression::isAssignable () {
+auto assignable = dynamic_pointer_cast<Assignable>(expr);
+return assignable && assignable->isAssignable();
+}
+
+
 bool AbstractCallExpression::isVararg () { 
 return  receiver->isUnpack()  || any_of(args.begin(), args.end(), ::isUnpack); 
 }
@@ -819,7 +831,7 @@ if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
 compiler.writeOp(OP_POP);
-if (lv) lv->type = compiler.mergeTypes(value->getType(compiler), lv->type);
+if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
 }}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);

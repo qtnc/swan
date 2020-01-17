@@ -213,12 +213,14 @@ const QToken& nearestToken () override { return expr->nearestToken(); }
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override;
 };
 
-struct TypeHintExpression: Expression {
+struct TypeHintExpression: Expression, Assignable {
 std::shared_ptr<Expression> expr;
 std::shared_ptr<TypeInfo> type;
 TypeHintExpression (std::shared_ptr<Expression> e, std::shared_ptr<TypeInfo> t): expr(e), type(t) {}
 const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler)  override;
+void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)  override;
+bool isAssignable () override;
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override { return type->resolve(compiler); }
 };
 
@@ -305,6 +307,7 @@ std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
 std::shared_ptr<TypeInfo> returnTypeHint;
 int flags;
+int iField;
 
 FunctionDeclaration (const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  name(nm), params(fp), body(b), returnTypeHint(nullptr), flags(fl)     {}
 const QToken& nearestToken () override { return name; }

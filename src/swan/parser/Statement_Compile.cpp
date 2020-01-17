@@ -18,9 +18,14 @@ if (auto map = dynamic_pointer_cast<LiteralMapExpression>(expr)) {
 for (auto& item: map->items) decompose(compiler, item.second, names);
 return names;
 }
+{
 auto bop = dynamic_pointer_cast<BinaryOperation>(expr);
 if (bop && bop->op==T_EQ) {
 decompose(compiler, bop->left, names);
+return names;
+}}
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(expr)) {
+decompose(compiler, th->expr, names);
 return names;
 }
 if (auto prop = dynamic_pointer_cast<GenericMethodSymbolExpression>(expr)) {

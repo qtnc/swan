@@ -51,7 +51,7 @@ return false;
 
 bool Upvalue::gcVisit () {
 if (QObject::gcVisit()) return true;
-if (value.isOpenUpvalue()) fiber->gcVisit();
+if (closedValue.i==QV_OPEN_UPVALUE_MARK) fiber->gcVisit();
 get().gcVisit();
 return false;
 }
@@ -249,7 +249,6 @@ T(QClosure, QV_TAG_CLOSURE)
 T(QFiber, QV_TAG_FIBER)
 T(BoundFunction, QV_TAG_BOUND_FUNCTION)
 T(QFunction, QV_TAG_NORMAL_FUNCTION)
-T(Upvalue, QV_TAG_OPEN_UPVALUE)
 T(QString, QV_TAG_STRING)
 #undef T
 return obj;

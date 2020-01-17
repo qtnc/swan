@@ -2,6 +2,7 @@
 #include "ParserRules.hpp"
 #include "Statement.hpp"
 #include "Expression.hpp"
+#include "TypeInfo.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -46,10 +47,12 @@ parseVarList(decl->vars, flags);
 return decl;
 }
 
-void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func) {
+void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func, ClassDeclaration* cld) {
 if (func->flags&FD_METHOD) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
+auto var = make_shared<Variable>(make_shared<NameExpression>(thisToken));
+if (cld) var->typeHint = make_shared<ClassDeclTypeInfo>(cld);
+func->params.push_back(var);
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
 parseVarList(func->params);
@@ -98,7 +101,7 @@ void QParser::parseMethodDecl (ClassDeclaration& cls, int flags) {
 prevToken();
 QToken name = nextNameToken(true);
 auto func = make_shared<FunctionDeclaration>(name, FD_METHOD | flags);
-parseFunctionParameters(func);
+parseFunctionParameters(func, &cls);
 if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
 return;
@@ -142,7 +145,7 @@ consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
 string fieldName = string(fieldToken.start, fieldToken.length);
 if (auto m = cls.findMethod(fieldToken, flags&FD_STATIC)) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
-cls.findField(flags&FD_STATIC? cls.staticFields : cls.fields, fieldToken);
+int fieldIndex = cls.findField(flags&FD_STATIC? cls.staticFields : cls.fields, fieldToken);
 shared_ptr<TypeInfo> typeHint = nullptr;
 if (match(T_EQ)) {
 auto& f = (flags&FD_STATIC? cls.staticFields : cls.fields)[fieldName];
@@ -166,6 +169,10 @@ shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
 shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(fieldToken, flags, empty, field);
 shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(setterNameToken, flags, setterParams, assignment);
 getter->returnTypeHint = typeHint;
+getter->iField = fieldIndex;
+getter->flags |= FD_GETTER;
+setter->iField = fieldIndex;
+setter->flags |= FD_SETTER;
 cls.methods.push_back(getter);
 if (!(flags&FD_CONST)) cls.methods.push_back(setter);
 } while (match(T_COMMA));

@@ -220,8 +220,8 @@ stack.insert(stack.end(), buffer.begin(), buffer.end());
 }
 
 Upvalue* QFiber::captureUpvalue (int slot) {
-QV val = QV(QV_TAG_OPEN_UPVALUE | reinterpret_cast<uintptr_t>(&stack.at(callFrames.back().stackBase + slot)));
-auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==this && x->value.i==val.i; });
+QV* val = &stack.at(callFrames.back().stackBase + slot);
+auto it = find_if(openUpvalues.begin(), openUpvalues.end(), [&](auto x){ return x->fiber==this && x->value==val; });
 if (it!=openUpvalues.end()) return *it;
 auto upvalue = vm.construct<Upvalue>(*this, slot);
 openUpvalues.push_back(upvalue);

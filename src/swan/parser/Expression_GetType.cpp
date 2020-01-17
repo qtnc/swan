@@ -118,6 +118,7 @@ auto funcTI = make_shared<ClassTypeInfo>(compiler.parser.vm.functionClass);
 for (int i=0, n=params.size(); i<n; i++) {
 auto& p = params[i];
 auto t = p->typeHint;
+if (!t && p->value) t = p->value->getType(compiler);
 subtypes[i] = t?t: TypeInfo::MANY;
 }
 subtypes[params.size()] = returnTypeHint? returnTypeHint : TypeInfo::MANY;

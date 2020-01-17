@@ -67,6 +67,7 @@ std::shared_ptr<Expression> name, value;
 std::shared_ptr<TypeInfo> typeHint;
 std::vector<std::shared_ptr<Expression>> decorations;
 int flags;
+
 Variable (const std::shared_ptr<Expression>& nm, const std::shared_ptr<Expression>& val = nullptr, int flgs = 0, const std::vector<std::shared_ptr<Expression>>& decos = {}):
 name(nm), value(val), flags(flgs), decorations(decos), typeHint(nullptr) {}
 void optimize ();

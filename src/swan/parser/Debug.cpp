@@ -92,7 +92,6 @@ else if (isString()) return ("\"") + asString() + ("\"");
 else if (isNativeFunction()) return format("%s@%#0$16llX", ("NativeFunction"), i);
 else if (isNormalFunction()) return format("%s@%#0$16llX: %s", ("NormalFunction"), i, printFuncInfo(*asObject<QFunction>()));
 else if (isClosure()) return format("%s@%#0$16llX: %s", ("Closure"), i, printFuncInfo(asObject<QClosure>()->func));
-else if (isOpenUpvalue()) return format("%s@%#0$16llX=>%s", ("Upvalue"), i, asPointer<Upvalue>()->get().print() );
 else if (i==QV_VARARG_MARK) return "<VarArgMark>"; 
 else {
 QObject* obj = asObject<QObject>();
