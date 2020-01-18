@@ -8,12 +8,6 @@
 #include<vector>
 #include<string>
 
-void nativeFuncTypeInfoDeleter (struct NativeFuncTypeInfo* nfti);
-
-struct NativeFuncTypeInfoDeleter {
-void operator() (struct NativeFuncTypeInfo* nfti) { nativeFuncTypeInfoDeleter(nfti); }
-};
-
 struct GlobalVariable {
 int index;
 bool isConst;
@@ -27,7 +21,7 @@ std::unordered_map<std::string, GlobalVariable> globalSymbols;
 std::unordered_map<std::pair<const char*, const char*>, QString*, StringCacheHasher, StringCacheEqualler> stringCache;
 std::unordered_map<size_t, struct QForeignClass*> foreignClassIds;
 std::unordered_map<uint64_t, uint32_t> keptHandles;
-std::unordered_map<uintptr_t, std::unique_ptr<NativeFuncTypeInfo, NativeFuncTypeInfoDeleter>> nativeFuncTypeInfos;
+std::unordered_map<QNativeFunction, std::string> nativeFuncTypeInfos;
 std::vector<QFiber*> fibers;
 QFiber *activeFiber;
 
@@ -71,7 +65,7 @@ virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 int findMethodSymbol (const std::string& name);
 int findGlobalSymbol (const std::string& name, int flags, bool* isConst=nullptr);
 void bindGlobal (const std::string& name, const QV& value, bool isConst=false);
-void bindGlobal (const std::string& name, QNativeFunction value, const std::initializer_list<QClass*>& argtypes, QClass* returnType);
+void bindGlobal (const std::string& name, QNativeFunction value, const char* typeInfo);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
 void addToGC (QObject* obj);

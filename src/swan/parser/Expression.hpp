@@ -213,14 +213,12 @@ const QToken& nearestToken () override { return expr->nearestToken(); }
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override;
 };
 
-struct TypeHintExpression: Expression, Assignable {
+struct TypeHintExpression: Expression {
 std::shared_ptr<Expression> expr;
 std::shared_ptr<TypeInfo> type;
 TypeHintExpression (std::shared_ptr<Expression> e, std::shared_ptr<TypeInfo> t): expr(e), type(t) {}
 const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler)  override;
-void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)  override;
-bool isAssignable () override;
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override { return type->resolve(compiler); }
 };
 
@@ -301,7 +299,8 @@ void compile (QCompiler& compiler);
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override { return expr->getType(compiler); }
 };
 
-struct FunctionDeclaration: Expression, Decorable {
+struct FunctionDeclaration: Expression, Decorable, FunctionInfo {
+QVM& vm;
 QToken name;
 std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
@@ -309,7 +308,7 @@ std::shared_ptr<TypeInfo> returnTypeHint;
 int flags;
 int iField;
 
-FunctionDeclaration (const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  name(nm), params(fp), body(b), returnTypeHint(nullptr), flags(fl)     {}
+FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnTypeHint(nullptr), flags(fl)     {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
@@ -317,6 +316,12 @@ void compile (QCompiler& compiler) override { compileFunction(compiler); }
 std::shared_ptr<Expression> optimize  () override;
 bool isDecorable () override { return true; }
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override;
+std::shared_ptr<TypeInfo> getReturnTypeInfo (int nArgs, std::shared_ptr<TypeInfo>* ptr) override { return returnTypeHint; }
+std::shared_ptr<TypeInfo> getArgTypeInfo (int n) override;
+int getArgCount () override { return params.size(); }
+std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nArgs = 0, std::shared_ptr<TypeInfo>* ptr = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nArgs, ptr); }
+int getFlags () override { return flags; }
+int getFieldIndex () override { return iField; }
 };
 
 struct Field {

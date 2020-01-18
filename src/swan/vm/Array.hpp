@@ -110,7 +110,8 @@ inline void dealloc () { if (ptr) delete[] (ptr - displacement()); }
 inline void alloc (size_t size) { dealloc(); auto d = displacement(); ptr = new T[size + d] +d; rfsize()=size; }
 
 public:
-inline size_t size () const { return rfsize(); }
+inline size_t size () const { return ptr?rfsize():0; }
+inline bool empty () const { return size()==0; }
 template<class I> inline void assign (size_t size, const I& begin, const I& end) { alloc(size); std::copy(begin, end, ptr); }
 template<class I> inline void assign (const I& begin, const I& end) { assign(std::distance(begin, end), begin, end); }
 inline T* data () { return ptr; }
@@ -162,6 +163,8 @@ inline const char* begin () const { return &ptr[0]; }
 inline const char* data () const { return &ptr[0]; }
 inline const char* c_str () const { return &ptr[0]; }
 std::string str () const { return ptr?&ptr[0]:""; }
+inline size_t size () const { return ptr?strlen(&ptr[0]):0; }
+inline bool empty () const { return size()==0; }
 };
 
 std::ostream& operator<< (std::ostream& out, const c_string& s);

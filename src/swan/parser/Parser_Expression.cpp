@@ -59,7 +59,7 @@ else if (((tp>=T_PLUS && tp<=T_GTE) || (tp>=T_DOT && tp<=T_DOTQUEST)) && rules[t
 prevToken();
 cur.type=T_NAME;
 prevToken();
-auto func = make_shared<FunctionDeclaration>(cur);
+auto func = make_shared<FunctionDeclaration>(vm, cur);
 auto nm = make_shared<NameExpression>(cur);
 func->params.push_back(make_shared<Variable>(nm));
 func->body = parseExpression(P_COMPREHENSION);
@@ -81,7 +81,7 @@ return parseLambda(0);
 }
 
 shared_ptr<Expression> QParser::parseLambda  (int flags) {
-auto func = make_shared<FunctionDeclaration>(cur);
+auto func = make_shared<FunctionDeclaration>(vm, cur);
 func->flags |= flags;
 if (match(T_GT)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
@@ -99,7 +99,7 @@ if (!functionnable || !functionnable->isFunctionnable()) {
 parseError("Expression can't be considered as the argument list for an anonymous function");
 return fargs;
 }
-auto func = make_shared<FunctionDeclaration>(cur);
+auto func = make_shared<FunctionDeclaration>(vm, cur);
 if (match(T_GT)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
 else if (match(T_AMP)) func->flags |= FD_ASYNC;

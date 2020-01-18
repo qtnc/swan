@@ -22,6 +22,16 @@ virtual std::string toString () = 0;
 virtual ~TypeInfo () = default;
 };
 
+struct FunctionInfo {
+virtual std::shared_ptr<TypeInfo> getReturnTypeInfo (int nArgs=0, std::shared_ptr<TypeInfo>* ptr = nullptr) = 0;
+virtual std::shared_ptr<TypeInfo> getArgTypeInfo (int n) = 0;
+virtual int getArgCount () = 0;
+virtual std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nArgs = 0, std::shared_ptr<TypeInfo>* ptr = nullptr) = 0;
+virtual int getFlags () { return 0; }
+virtual int getFieldIndex () { return -1; }
+virtual ~FunctionInfo () = default;
+};
+
 struct Statement: std::enable_shared_from_this<Statement>  {
 inline std::shared_ptr<Statement> shared_this () { return shared_from_this(); }
 virtual const QToken& nearestToken () = 0;
@@ -74,5 +84,7 @@ void optimize ();
 };
 
 void doCompileTimeImport (QVM& vm, const std::string& baseFile, std::shared_ptr<Expression> exprRequestedFile);
+
+std::shared_ptr<TypeInfo> getFunctionTypeInfo (FunctionInfo& fti, struct QVM& vm, int nArgs = 0, std::shared_ptr<TypeInfo>* ptr = nullptr);
 
 #endif

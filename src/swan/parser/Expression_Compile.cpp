@@ -207,18 +207,6 @@ void TypeHintExpression::compile (QCompiler& compiler)  {
 expr->compile(compiler); 
 } 
 
-void TypeHintExpression::compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) {
-auto assignable = dynamic_pointer_cast<Assignable>(expr);
-if (assignable) assignable->compileAssignment(compiler, assignedValue);
-else compiler.compileError(expr->nearestToken(), "Invalid target for assignment");
-}
-
-bool TypeHintExpression::isAssignable () {
-auto assignable = dynamic_pointer_cast<Assignable>(expr);
-return assignable && assignable->isAssignable();
-}
-
-
 bool AbstractCallExpression::isVararg () { 
 return  receiver->isUnpack()  || any_of(args.begin(), args.end(), ::isUnpack); 
 }
@@ -847,6 +835,10 @@ if (lv) lv->type = compiler.mergeTypes(typeHint->getType(compiler), lv->type);
 //typeHint->compile(compiler);
 //compiler.writeOp(OP_POP);
 }
+else if (var->value) {
+var->typeHint = var->value->getType(compiler);
+if (lv) lv->type = compiler.mergeTypes(var->typeHint, lv->type);
+}
 }
 if (destructuring.size()) {
 make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(compiler);
@@ -869,6 +861,7 @@ func->vararg = (flags&FD_VARARG);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
+//### set argtypes
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));

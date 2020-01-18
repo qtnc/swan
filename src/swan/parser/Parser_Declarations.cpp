@@ -100,7 +100,7 @@ for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++i
 void QParser::parseMethodDecl (ClassDeclaration& cls, int flags) {
 prevToken();
 QToken name = nextNameToken(true);
-auto func = make_shared<FunctionDeclaration>(name, FD_METHOD | flags);
+auto func = make_shared<FunctionDeclaration>(vm, name, FD_METHOD | flags);
 parseFunctionParameters(func, &cls);
 if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
@@ -166,8 +166,8 @@ auto setterParam = make_shared<Variable>(param);
 setterParam->typeHint = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
-shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(fieldToken, flags, empty, field);
-shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(setterNameToken, flags, setterParams, assignment);
+shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(vm, fieldToken, flags, empty, field);
+shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(vm, setterNameToken, flags, setterParams, assignment);
 getter->returnTypeHint = typeHint;
 getter->iField = fieldIndex;
 getter->flags |= FD_GETTER;

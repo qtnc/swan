@@ -2,7 +2,7 @@
 #include "Expression.hpp"
 #include "Statement.hpp"
 #include "TypeInfo.hpp"
-#include "NativeFuncTypeInfo.hpp"
+#include "FunctionInfo.hpp"
 #include "ParserRules.hpp"
 #include "Compiler.hpp"
 #include "../vm/VM.hpp"
@@ -42,7 +42,7 @@ auto ctor = findMethod(ctorToken, isStatic);
 if (!ctor && (!isStatic || inits->statements.size() )) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
-ctor = make_shared<FunctionDeclaration>(ctorToken);
+ctor = make_shared<FunctionDeclaration>(compiler.vm, ctorToken);
 ctor->flags = (isStatic? FD_STATIC : 0);
 ctor->params.push_back(make_shared<Variable>(thisExpr));
 if (isStatic) ctor->body = make_shared<SimpleStatement>(ctorToken);
@@ -118,25 +118,35 @@ return TypeInfo::MANY;
 }
 
 std::shared_ptr<TypeInfo> QCompiler::resolveValueType (QV value) {
+std::unique_ptr<FunctionInfo> funcInfo;
 if (value.isClosure()) {
-//todo
+QClosure& closure = *value.asObject<QClosure>();
+if (!closure.func.typeInfo.empty()) funcInfo = make_unique<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
 }
 else if (value.isNativeFunction()) {
-intptr_t ptr = (value.i &~QV_TAGMASK);
+auto ptr = value.asNativeFunction();
 auto it = vm.nativeFuncTypeInfos.find(ptr);
-if (it!=vm.nativeFuncTypeInfos.end()) return it->second->getFunctionType(vm);
+if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>(*this, it->second.c_str());
 }
+if (funcInfo) return funcInfo->getFunctionTypeInfo();
 return make_shared<ClassTypeInfo>(&value.getClass(vm));
 }
 
 std::shared_ptr<TypeInfo> QCompiler::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args) {
+std::unique_ptr<FunctionInfo> funcInfo;
 if (func.isClosure()) {
-//todo
+QClosure& closure = *func.asObject<QClosure>();
+if (!closure.func.typeInfo.empty()) funcInfo = make_unique<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
 }
 else if (func.isNativeFunction()) {
-intptr_t ptr = (func.i &~QV_TAGMASK);
+auto ptr = func.asNativeFunction();
 auto it = vm.nativeFuncTypeInfos.find(ptr);
-if (it!=vm.nativeFuncTypeInfos.end()) return it->second->getReturnType();
+if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>(*this, it->second.c_str());
+}
+if (funcInfo) {
+shared_ptr<TypeInfo> argtypes[nArgs];
+for (int i=0; i<nArgs; i++) argtypes[i] = args[i]->getType(*this);
+return funcInfo->getReturnTypeInfo(nArgs, argtypes);
 }
 return TypeInfo::MANY;
 }

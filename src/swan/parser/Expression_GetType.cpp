@@ -112,17 +112,14 @@ if (op==T_EXCL) return make_shared<ClassTypeInfo>(compiler.parser.vm.boolClass);
 return expr->getType(compiler);
 }
 
-shared_ptr<TypeInfo> FunctionDeclaration::getType (QCompiler& compiler) {
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(params.size()+1);
-auto funcTI = make_shared<ClassTypeInfo>(compiler.parser.vm.functionClass);
-for (int i=0, n=params.size(); i<n; i++) {
-auto& p = params[i];
-auto t = p->typeHint;
-if (!t && p->value) t = p->value->getType(compiler);
-subtypes[i] = t?t: TypeInfo::MANY;
+std::shared_ptr<TypeInfo> FunctionDeclaration::getArgTypeInfo (int n) {
+auto& p = params[n];
+if (p->typeHint) return p->typeHint;
+return TypeInfo::MANY;
 }
-subtypes[params.size()] = returnTypeHint? returnTypeHint : TypeInfo::MANY;
-return make_shared<ComposedTypeInfo>(funcTI, params.size()+1, std::move(subtypes));
+
+shared_ptr<TypeInfo> FunctionDeclaration::getType (QCompiler& compiler) {
+return getFunctionTypeInfo();
 }
 
 shared_ptr<TypeInfo>  FieldExpression::getType (QCompiler& compiler) {

@@ -30,6 +30,12 @@ insert_n(globalVariables, 1+symbol-globalVariables.size(), QV::UNDEFINED);
 globalVariables.at(symbol) = value;
 }
 
+void QVM::bindGlobal (const string& name, QNativeFunction value, const char* typeInfo) {
+bindGlobal(name, value, false);
+nativeFuncTypeInfos[value] = typeInfo;
+}
+
+
 QClass* QVM::createNewClass (const string& name, vector<QV>& parents, int nStaticFields, int nFields, bool foreign) {
 GCLocker gcLocker(*this);
 string metaName = name + ("MetaClass");

@@ -8,15 +8,15 @@
 #include<vector>
 
 struct Upvariable {
-int slot;
-bool upperUpvalue;
+uint_local_index_t slot;
+bool upperUpvalue :1;
 };
 
 struct QFunction: QObject {
 union { Upvariable* upvalues; QV* constantsEnd; };
 union { char *bytecode; Upvariable* upvaluesEnd; };
-union { QClass *argtypes; char* bytecodeEnd; };
-c_string name, file;
+char* bytecodeEnd;
+c_string name, file, typeInfo;
 uint_local_index_t nArgs;
 uint_field_index_t iField;
 union {
