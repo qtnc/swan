@@ -6,14 +6,14 @@
 using namespace std;
 
 shared_ptr<Expression> QParser::nameExprToConstant (shared_ptr<Expression> key) {
-auto bop = dynamic_pointer_cast<BinaryOperation>(key);
-if (bop && bop->op==T_EQ) key = bop->left;
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(key)) {
+if (bop->op==T_EQ) key = bop->left;
 while (bop && bop->op==T_DOT) {
 key = bop->right;
 bop = dynamic_pointer_cast<BinaryOperation>(key);
-}
-auto name = dynamic_pointer_cast<NameExpression>(key);
-if (name) {
+}}
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(key)) key = th->expr;
+if (auto name = dynamic_pointer_cast<NameExpression>(key)) {
 QToken token = name->token;
 token.type = T_STRING;
 token.value = QV(vm, string(token.start, token.length));

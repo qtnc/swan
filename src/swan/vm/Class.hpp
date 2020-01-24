@@ -16,6 +16,7 @@ QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nFie
 QClass* copyParentMethods ();
 QClass* mergeMixinMethods (QClass* mixin);
 QClass* bind (const std::string& methodName, QNativeFunction func);
+QClass* bind (const std::string& methodName, QNativeFunction func, const char* typeInfo);
 QClass* bind (int symbol, const QV& value);
 inline bool isSubclassOf (QClass* cls) { return this==cls || (parent && parent->isSubclassOf(cls)); }
 inline QV findMethod (int symbol) {

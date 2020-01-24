@@ -19,6 +19,7 @@ virtual bool isBool (QVM& vm) { return false; }
 virtual std::shared_ptr<TypeInfo> resolve (QCompiler& compiler) { return shared_from_this(); }
 virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, QCompiler& compiler) = 0;
 virtual std::string toString () = 0;
+virtual std::string toBinString (QVM& vm) = 0;
 virtual ~TypeInfo () = default;
 };
 

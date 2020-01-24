@@ -32,6 +32,11 @@ int symbol = vm.findMethodSymbol(methodName);
 return bind(symbol, QV(func));
 }
 
+QClass* QClass::bind (const std::string& methodName, QNativeFunction func, const char* typeInfo) {
+vm.nativeFuncTypeInfos[func] = typeInfo;
+return bind(methodName, func);
+}
+
 QClass* QClass::bind (int symbol, const QV& val) {
 insert_n(methods, 1+symbol-methods.size(), QV::UNDEFINED);
 methods[symbol] = val;

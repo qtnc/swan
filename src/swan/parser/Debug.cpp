@@ -82,6 +82,12 @@ static string printFuncInfo (const QFunction& func) {
 return format("%s (arity=%d, consts=%d, upvalues=%d, bc=%d, file=%s)", func.name, static_cast<int>(func.nArgs), func.constantsEnd-func.constants, func.upvaluesEnd-func.upvalues, func.bytecodeEnd-func.bytecode, func.file);
 }
 
+void QFunction::printInstructions () const {
+auto bc = reinterpret_cast<const uint8_t*>( bytecode );
+auto bcEnd = reinterpret_cast<const uint8_t*>( bytecodeEnd );
+for (; bc<bcEnd; )  bc = printOpCode(bc);
+}
+
 string QV::print () const {
 if (isNull()) return ("null");
 else if (isUndefined()) return "undefined";

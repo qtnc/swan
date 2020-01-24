@@ -454,9 +454,14 @@ frame = callFrames.back();
 }
 BREAK
 
-//CASE(OP_DEBUG)
+CASE(OP_DEBUG)
 //printStack(cout, stack, frame.stackBase);
-//BREAK
+println("%s", top().print() );
+if (top().isObject()) {
+if (auto f = dynamic_cast<QClosure*>(top().asObject<QObject>())) {
+f->func.printInstructions();
+}}
+BREAK
 
 CASE(OP_END)
 DEFAULT

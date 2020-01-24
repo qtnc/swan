@@ -237,6 +237,8 @@ fc.parent = &compiler;
 rootStatement->optimizeStatement()->compile(fc);
 QFunction* func = fc.getFunction(0);
 func->name = "<comprehension>";
+println("compr func type info = %s", getType(compiler)->resolve(compiler)->toBinString(compiler.vm));
+//###set argtypes
 compiler.result = fc.result;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_FOR_READ));
@@ -446,7 +448,12 @@ if (items.size()<1) return false;
 for (auto& item: items) {
 shared_ptr<Expression> expr = item;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item);
-if (bop && bop->op==T_EQ) expr = bop->left;
+auto th = dynamic_pointer_cast<TypeHintExpression>(item);
+if (bop && bop->op==T_EQ) {
+expr = bop->left;
+th = dynamic_pointer_cast<TypeHintExpression>(expr);
+}
+if (th) expr = th->expr;
 if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<UnpackExpression>(expr)) {
 if (auto cst = dynamic_pointer_cast<ConstantExpression>(expr)) return cst->token.value.i == QV::UNDEFINED.i;
 else return false;
@@ -484,7 +491,10 @@ assignable = dynamic_pointer_cast<Assignable>(unpackExpr->expr);
 unpack = true;
 if (i+1!=items.size()) compiler.compileError(unpackExpr->nearestToken(), "Unpack expression must appear last in assignment expression");
 }}
-if (!assignable || !assignable->isAssignable()) continue;
+if (!assignable || !assignable->isAssignable()) {
+compiler.compileWarn(item->nearestToken(), "Ignoring unassignable target");
+continue;
+}
 QToken indexToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
 shared_ptr<Expression> index = make_shared<ConstantExpression>(indexToken);
 if (unpack) {
@@ -508,7 +518,12 @@ if (items.size()<1) return false;
 for (auto& item: items) {
 shared_ptr<Expression> expr = item.second;
 auto bop = dynamic_pointer_cast<BinaryOperation>(item.second);
-if (bop && bop->op==T_EQ) expr = bop->left;
+auto th = dynamic_pointer_cast<TypeHintExpression>(item.second);
+if (bop && bop->op==T_EQ) {
+expr = bop->left;
+th = dynamic_pointer_cast<TypeHintExpression>(expr);
+}
+if (th) expr = th->expr;
 if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<GenericMethodSymbolExpression>(expr)) return false;
 }
 return true;
@@ -540,7 +555,10 @@ if (!assignable) {
 auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned);
 if (mh) assignable = make_shared<NameExpression>(mh->token);
 }
-if (!assignable || !assignable->isAssignable()) continue;
+if (!assignable || !assignable->isAssignable()) {
+compiler.compileWarn(item.second->nearestToken(), "Ignoring unassignable target");
+continue;
+}
 if (!first) compiler.writeOp(OP_POP);
 first=false;
 shared_ptr<Expression> value = nullptr;
@@ -861,7 +879,9 @@ func->vararg = (flags&FD_VARARG);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
-//### set argtypes
+string sType = getType(compiler)->resolve(compiler)->toBinString(compiler.vm);
+func->typeInfo.assign(sType.begin() +3, sType.end() -1);
+println("func type = %s", func->typeInfo.c_str());
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));
@@ -889,5 +909,6 @@ f.pop();
 void DebugExpression::compile (QCompiler& compiler) {
 expr->compile(compiler);
 compiler.compileInfo(nearestToken(), "Type = %s", expr->getType(compiler)->toString());
+compiler.writeOp(OP_DEBUG);
 }
 

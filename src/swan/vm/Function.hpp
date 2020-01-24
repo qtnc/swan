@@ -31,6 +31,7 @@ QFunction (QVM& vm);
 virtual bool gcVisit () final override;
 virtual ~QFunction () = default;
 virtual size_t getMemSize () override { return  bytecodeEnd - reinterpret_cast<char*>(this); }
+void printInstructions () const;
 };
 
 #endif
