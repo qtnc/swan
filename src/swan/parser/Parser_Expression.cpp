@@ -229,25 +229,11 @@ expr->chain(bs);
 expr = bs;
 }}
 else if (match(T_WITH)) {
-//#########
-auto openExpr = parseExpression(P_COMPREHENSION);
-QToken varToken;
-if (match(T_AS)) {
-consume(T_NAME, "Expected variable name after 'as'");
-varToken = cur;
-}
-else varToken = createTempName();
-QString* closeName = QString::create(vm, ("close"), 5);
-QToken closeToken = { T_NAME, closeName->data, closeName->length, QV(closeName, QV_TAG_STRING) };
-auto varExpr = make_shared<NameExpression>(varToken);
-vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
-auto varDecl = make_shared<VariableDeclaration>(varDecls);
-auto closeExpr = BinaryOperation::create(varExpr, T_DOT, make_shared<NameExpression>(closeToken));
-auto trySta = make_shared<TryStatement>(nullptr, nullptr, closeExpr, cur); 
-vector<shared_ptr<Statement>> statements = { varDecl, trySta };
-auto bs = make_shared<BlockStatement>(statements);
-expr->chain(bs);
-expr = trySta;
+auto withSta = make_shared<WithStatement>();
+withSta->parseHead(*this);
+withSta->parseTail(*this);
+expr->chain(withSta);
+expr = withSta;
 }
 else break;
 }

@@ -530,7 +530,7 @@ In fact, Swan supports extended/advanced comprehension. The complete syntax of a
 - `if condition`: a filter, the item is yielded only if the condition is met
 - `while condition` or `break if condition`: the loop is stopped as soon as the condition become false
 - `continue if condition`: similar to the simple filter, but resume to the next iteration instead of simply skipping the item
-- `with expression as name`: see the with expression further below
+- `with name = expression`: see the with expression further below
 - traditional for loops can also be used
 
 ```
@@ -540,7 +540,7 @@ let l2 = [x**2 for x in l break if x>3] # [1, 4, 9] (another way to say the same
 let l3 = [x for x, count=0, it=l.iterator; (x=it.next) && count<6; count+=1 if count>=2] # [3, 4, 5, 4] (only yield from the 2nd to the 6th element)
 
 # Assuming filenames is a list of file names, this will gather all the lines from all the files, opening and closing them properly. This example requires the CLI.
-let lines = [line for filename in filenames with FileReader(filename) as file for line in file]
+let lines = [line for filename in filenames with file = FileReader(filename) for line in file]
 ```
 
 ## Decorators
@@ -667,12 +667,12 @@ print("This is always executed, whether or not something bad effectively happene
 The *with* construct is also available as a shortcut for the common pattern of a resource that nees to be closed whatever happens:
 
 ```
-with expression as variable {
+with variable = expression {
 statements...
 }
 ```
 
-Which is equivalent to the following code:
+Which is more or less equivalent to the following code:
 
 ```
 let variable = expression

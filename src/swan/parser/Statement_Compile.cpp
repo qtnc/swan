@@ -170,6 +170,17 @@ compiler.popScope();
 compiler.writeOp(OP_END_FINALLY);
 }
 
+void WithStatement::compile (QCompiler& compiler) {
+QToken closeToken = { T_NAME, "close", 5, QV::UNDEFINED };
+vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
+auto varDecl = make_shared<VariableDeclaration>(varDecls);
+auto closeExpr = BinaryOperation::create(varExpr, T_DOTQUEST, make_shared<NameExpression>(closeToken));
+auto trySta = make_shared<TryStatement>(body, catchPart, closeExpr, catchVar);
+vector<shared_ptr<Statement>> statements = { varDecl, trySta };
+auto bs = make_shared<BlockStatement>(statements);
+bs->optimizeStatement()->compile(compiler);
+}
+
 void BlockStatement::compile (QCompiler& compiler) {
 if (makeScope) compiler.pushScope();
 for (auto sta: statements) {

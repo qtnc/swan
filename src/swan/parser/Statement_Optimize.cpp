@@ -66,6 +66,18 @@ if (expr) expr=expr->optimize();
 return shared_this(); 
 }
 
+shared_ptr<Statement> WithStatement::optimizeStatement () {
+if (varExpr) varExpr = varExpr->optimize();
+if (openExpr) openExpr = openExpr->optimize();
+if (body) body = body->optimizeStatement();
+if (catchPart) catchPart = catchPart->optimizeStatement();
+return shared_this();
+}
+
+void WithStatement::chain (const shared_ptr<Statement>& st) { 
+body=st; 
+}
+
 void TryStatement::chain (const shared_ptr<Statement>& st) { 
 tryPart=st; 
 }

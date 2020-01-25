@@ -104,6 +104,19 @@ std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler) override;
 };
 
+struct WithStatement: Statement, Comprenable  {
+std::shared_ptr<Expression> varExpr, openExpr;
+std::shared_ptr<Statement> body, catchPart;
+QToken catchVar;
+WithStatement (): varExpr(nullptr), openExpr(nullptr), body(nullptr), catchPart(nullptr), catchVar({ T_END, nullptr, 0, QV::UNDEFINED }) {}
+const QToken& nearestToken () override { return varExpr->nearestToken(); }
+void chain (const std::shared_ptr<Statement>& st) final override ;
+std::shared_ptr<Statement> optimizeStatement () override;
+void compile (QCompiler& compiler) override;
+void parseHead (QParser& parser);
+void parseTail  (QParser& parser);
+};
+
 struct BlockStatement: Statement, Comprenable  {
 std::vector<std::shared_ptr<Statement>> statements;
 bool makeScope, optimized;

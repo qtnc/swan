@@ -190,42 +190,44 @@ return make_shared<TryStatement>(tryPart, catchPart, finallyPart, catchVar);
 }
 
 shared_ptr<Statement> QParser::parseWith () {
-QToken catchVar = cur;
+auto withSta = make_shared<WithStatement>();
 skipNewlines();
-shared_ptr<Expression> openExpr, varExpr = parseExpression(P_COMPREHENSION);
-if (match(T_EQ)) openExpr = parseExpression(P_COMPREHENSION);
-else {
-openExpr = varExpr;
-varExpr = make_shared<NameExpression>(createTempName());
+withSta->parseHead(*this);
+skipNewlines();
+match(T_COLON);
+withSta->body = parseStatement();
+skipNewlines();
+withSta->parseTail(*this);
+return withSta;
 }
-//#######
+
+void WithStatement::parseHead (QParser& parser) {
+auto expr = parser.parseExpression(P_COMPREHENSION);
+if (parser.match(T_EQ)) {
+varExpr = expr;
+openExpr = parser.parseExpression(P_COMPREHENSION);
+}
+else {
+varExpr = make_shared<NameExpression>(parser.createTempName());
+openExpr = expr;
+}
 if (!dynamic_pointer_cast<NameExpression>(varExpr)) {
 varExpr = openExpr = nullptr;
-parseError("Invalid variable name for 'with' expression");
+parser.parseError("Invalid variable name for 'with' expression");
 }
-if (!varExpr || !openExpr) { result=CR_INCOMPLETE; return nullptr; }
-match(T_COLON);
-shared_ptr<Statement> catchSta=nullptr, body = parseStatement();
-if (!body) { result=CR_INCOMPLETE; return nullptr; }
-skipNewlines();
-if (match(T_CATCH)) {
-bool paren = match(T_LEFT_PAREN);
-consume(T_NAME, "Expected variable name after 'catch'");
-catchVar = cur;
-if (paren) consume(T_RIGHT_PAREN, "Expected ')' after catch variable name");
-match(T_COLON);
-catchSta = parseStatement();
-if (!catchSta) { result=CR_INCOMPLETE; return nullptr; }
+if (!varExpr || !openExpr) parser.result=CR_INCOMPLETE; 
 }
-QString* closeName = QString::create(vm, ("close"), 5);
-QToken closeToken = { T_NAME, closeName->data, closeName->length, QV(closeName, QV_TAG_STRING) };
-vector<shared_ptr<Variable>> varDecls = { make_shared<Variable>(varExpr, openExpr) };
-auto varDecl = make_shared<VariableDeclaration>(varDecls);
-auto closeExpr = BinaryOperation::create(varExpr, T_DOT, make_shared<NameExpression>(closeToken));
-auto trySta = make_shared<TryStatement>(body, catchSta, closeExpr, catchVar);
-vector<shared_ptr<Statement>> statements = { varDecl, trySta };
-return make_shared<BlockStatement>(statements);
-}
+
+void WithStatement::parseTail (QParser& parser) {
+if (parser.match(T_CATCH)) {
+bool paren = parser.match(T_LEFT_PAREN);
+parser.consume(T_NAME, "Expected variable name after 'catch'");
+catchVar = parser.cur;
+if (paren) parser.consume(T_RIGHT_PAREN, "Expected ')' after catch variable name");
+parser.match(T_COLON);
+catchPart = parser.parseStatement();
+if (!catchPart) parser.result=CR_INCOMPLETE;
+}}
 
 shared_ptr<Statement> QParser::parseDecoratedStatement () {
 auto decoration = parseExpression(P_PREFIX);

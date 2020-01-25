@@ -4,8 +4,10 @@ using namespace std;
 
 static bool isItemFunctionnable (shared_ptr<Expression> item) {
 shared_ptr<Expression> expr = item;
-auto bop = dynamic_pointer_cast<BinaryOperation>(item);
-if (bop && bop->op==T_EQ) expr = bop->left;
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(expr)) {
+if (bop->op==T_EQ) expr = bop->left;
+}
+else if (auto th = dynamic_pointer_cast<TypeHintExpression>(expr)) expr = th->expr;
 auto functionnable = dynamic_pointer_cast<Functionnable>(expr);
 return functionnable && functionnable->isFunctionnable();
 }
@@ -18,14 +20,17 @@ void LiteralTupleExpression::makeFunctionParameters (vector<shared_ptr<Variable>
 for (auto& item: items) {
 auto var = make_shared<Variable>(nullptr, nullptr);
 auto bx = dynamic_pointer_cast<BinaryOperation>(item);
+auto th = dynamic_pointer_cast<TypeHintExpression>(item);
 if (bx && bx->op==T_EQ) {
 var->name = bx->left;
 var->value = bx->right;
+th = dynamic_pointer_cast<TypeHintExpression>(bx->right);
 }
 else {
 var->name = item;
 var->flags |= VD_NODEFAULT;
 }
+if (th) var->typeHint = th->type;
 params.push_back(var);
 }}
 
