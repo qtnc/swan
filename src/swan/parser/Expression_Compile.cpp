@@ -472,14 +472,13 @@ for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
 bool unpack = false;
-auto bop = dynamic_pointer_cast<BinaryOperation>(item);
-auto th = dynamic_pointer_cast<TypeHintExpression>(item);
-if (bop && bop->op==T_EQ) {
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(item)) {
+if (bop->op==T_EQ) {
 item = bop->left;
 defaultValue = bop->right;
-th = dynamic_pointer_cast<TypeHintExpression>(defaultValue);
-}
-if (th) {
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(defaultValue)) typeHint = th->type;
+}}
+else if (auto th = dynamic_pointer_cast<TypeHintExpression>(item)) {
 item = th->expr;
 typeHint = th->type;
 }
@@ -539,14 +538,13 @@ bool first = true;
 for (auto& item: items) {
 shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
-auto bop = dynamic_pointer_cast<BinaryOperation>(assigned);
-auto th = dynamic_pointer_cast<TypeHintExpression>(assigned);
-if (bop && bop->op==T_EQ) {
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(assigned)) {
+if (bop->op==T_EQ) {
 assigned = bop->left;
 defaultValue = bop->right;
-th = dynamic_pointer_cast<TypeHintExpression>(defaultValue);
-}
-if (th) {
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(defaultValue)) typeHint = th->type;
+}}
+else if (auto th = dynamic_pointer_cast<TypeHintExpression>(assigned)) {
 assigned = th->expr;
 typeHint = th->type;
 }
@@ -556,7 +554,7 @@ auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned);
 if (mh) assignable = make_shared<NameExpression>(mh->token);
 }
 if (!assignable || !assignable->isAssignable()) {
-compiler.compileWarn(item.second->nearestToken(), "Ignoring unassignable target");
+compiler.compileWarn(item.second->nearestToken(), "Ignoring unassignable target: %s", typeid(*assigned).name() );
 continue;
 }
 if (!first) compiler.writeOp(OP_POP);
