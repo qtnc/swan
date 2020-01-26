@@ -3,6 +3,8 @@
 #include "Range.hpp"
 #include "StdFunction.hpp"
 
+#define FIBER_INITIAL_STACK_SIZE 8
+
 QFiber& QVM::createFiber () {
 auto f = construct<QFiber>(*this);
 fibers.push_back(f);
@@ -17,7 +19,7 @@ parentFiber(nullptr),
 callFrames(trace_allocator<QCallFrame>(vm)),
 catchPoints(trace_allocator<QCatchPoint>(vm)),
 openUpvalues(trace_allocator<Upvalue*>(vm)),
-stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, 8, trace_allocator<QV>(vm))
+stack([this](const QV* _old, const QV* _new){ adjustUpvaluePointers(_old, _new); }, FIBER_INITIAL_STACK_SIZE, trace_allocator<QV>(vm))
  {
 stack.reserve(8);
 callFrames.reserve(4);

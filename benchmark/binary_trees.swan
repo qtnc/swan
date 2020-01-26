@@ -1,7 +1,10 @@
 // Ported from the Python version.
 
 class Tree {
-  constructor (_item, depth) {
+let item as Num, left as Tree, right as Tree
+
+
+  constructor (_item as Num, depth as Num) {
     if (depth > 0) {
       var item2 = _item + _item
       depth -= 1
@@ -10,7 +13,7 @@ class Tree {
     }
   }
 
-  check {
+  check as Num {
     if (_left is undefined) {
       return _item
     }
@@ -29,7 +32,7 @@ print("stretch tree of depth " + stretchDepth + " check: " +
 
 var longLivedTree = Tree(0, maxDepth)
 
-var  iterations = 2 ** maxDepth
+var  iterations = (2 ** maxDepth) as Num
 
 var depth = minDepth
 while (depth < stretchDepth) {
@@ -38,7 +41,7 @@ while (depth < stretchDepth) {
     check = check + Tree(i, depth).check + Tree(-i, depth).check
   }
 
- print("" + (iterations * 2) + " trees of depth " + depth + " check: " + check)
+print("" + (iterations * 2) + " trees of depth " + depth + " check: " + check)
   iterations /= 4
   depth += 2
 }

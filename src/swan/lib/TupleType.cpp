@@ -66,15 +66,11 @@ f.returnValue(re);
 static void tupleHashCode (QFiber& f) {
 QTuple& t = f.getObject<QTuple>(0);
 int hashCodeSymbol = f.vm.findMethodSymbol("hashCode");
-size_t re = FNV_OFFSET ^t.length;
+size_t re = 0x811c9dc5 ^t.length;
+QVHasher hash(f.vm);
 for (uint32_t i=0, n=t.length; i<n; i++) {
-f.pushCppCallFrame();
-f.push(t.data[i]);
-f.callSymbol(hashCodeSymbol, 1);
-size_t h = static_cast<size_t>(f.at(-1).d);
-f.pop();
-f.popCppCallFrame();
-re = (re^h) * FNV_PRIME;
+auto h = hash(t.data[i]);
+re = (re^h) * 16777619;
 }
 f.returnValue(static_cast<double>(re));
 }

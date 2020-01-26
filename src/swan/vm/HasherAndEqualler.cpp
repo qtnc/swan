@@ -4,10 +4,43 @@
 
 bool stringEquals (QString& s1, QString& s2);
 
-size_t hashBytes (const uint8_t* c, const uint8_t* end) {
-size_t re = FNV_OFFSET;
-for (; c<end; ++c) re = (re^*c) * FNV_PRIME;
-return re;
+// Adapated from MurmurHash3, x86, 32
+// https://github.com/aappleby/smhasher
+template<class T> inline T rot (T x, uint8_t r) {
+return (x<<r) | (x>>((sizeof(T)<<3)-r));
+}
+size_t hashBytes (const uint8_t* begin, const uint8_t* end) {
+const uint32_t C1 = 0xcc9e2d51;
+const uint32_t C2 = 0x1b873593;
+const int nBlocks = (end-begin)/4;
+const uint32_t* p = reinterpret_cast<const uint32_t*>(begin), *pEnd = p+nBlocks;
+uint32_t h = 0x811c9dc5;
+while(p<pEnd) {
+uint32_t k = *p++;
+k *= C1;
+k = rot(k, 15);
+k *= C2;
+h ^= k;
+h = rot(h, 13);
+h = h*5+0xe6546b64;
+}
+uint32_t k = 0;
+switch(reinterpret_cast<uintptr_t>(end) &3) {
+case 3: k ^= end[-3] <<16;
+case 2: k ^= end[-2] << 8;
+case 1: k ^= end[-1];
+k*= C1;
+k = rot(k, 15);
+k *= C2;
+h ^= k;
+}
+h ^= (end-begin);
+h ^= (h>>16);
+h *= 0x85ebca6b;
+h ^= (h>>13);
+h *= 0xc2b2ae35;
+h ^= (h>>16);
+return h;
 }
 
 
@@ -16,10 +49,14 @@ if (value.isString()) {
 QString& s = *value.asObject<QString>();
 return hashBytes(reinterpret_cast<const uint8_t*>(s.data), reinterpret_cast<const uint8_t*>(s.data+s.length));
 }
-else if (value.isNum() || value.isBool() || value.isNullOrUndefined() || value.isCallable()) {
-const uint32_t *u = reinterpret_cast<const uint32_t*>(&value.i);
-return FNV_OFFSET ^ u[0] ^u[1];
+else if (value.isNum()) {
+return value.d;
 }
+else if (!value.isObject()) {
+const uint32_t* p = reinterpret_cast<const uint32_t*>(&value.i);
+return p[0] ^p[1];
+}
+else {
 QFiber& f = vm.getActiveFiber();
 static int hashCodeSymbol = f.vm.findMethodSymbol("hashCode");
 f.pushCppCallFrame();
@@ -29,7 +66,7 @@ size_t re = f.getNum(-1);
 f.pop();
 f.popCppCallFrame();
 return re;
-}
+}}
 
 bool QVEqualler::operator() (const QV& a, const QV& b) const {
 if (a.isString() && b.isString()) return stringEquals(*a.asObject<QString>(), *b.asObject<QString>());

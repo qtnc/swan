@@ -1,11 +1,11 @@
 class Toggle {
-  constructor (startState) {
+  constructor (startState as Bool) {
     _state = startState
 _ac = 0
   }
 
-  value { _state }
-  activate {
+  value () as Bool { _state }
+  activate as Toggle {
     _state = !_state
     return this
   }
@@ -13,13 +13,13 @@ _ac = 0
 }
 
 class NthToggle is Toggle {
-  constructor (startState, maxCounter) {
+  constructor (startState as Bool, maxCounter as Num) {
     super(startState)
     _countMax = maxCounter
     _count = 0
   }
 
-  activate {
+  activate as NthToggle {
     _count += 1
     if (_count >= _countMax) {
       super.activate

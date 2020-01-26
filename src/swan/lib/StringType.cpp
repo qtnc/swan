@@ -27,7 +27,7 @@ return strnatcmp(s1.data, s2.data);
 
 bool stringEquals (QString& s1, QString& s2) {
 if (s1.length!=s2.length) return false;
-return 0==memcmp(s1.data, s2.data, s2.length);
+return !memcmp(s1.data, s2.data, s2.length);
 }
 
 static bool stringEquals (QFiber& f) {
@@ -346,52 +346,53 @@ stringClass
 ->copyParentMethods()
 BIND_N(toString)
 BIND_F(toJSON, stringToJSON)
-BIND_F(+, stringPlus)
-BIND_F(in, stringIn)
-BIND_F(hashCode, stringHashCode)
-BIND_F(length, stringLength)
-BIND_F( [], stringSubscript)
-BIND_F(iterator, stringIterator)
+->bind("+", stringPlus, "SSS")
+->bind("in", stringIn, "SSB")
+->bind("hashCode", stringHashCode, "SN")
+->bind("length", stringLength, "SN")
+->bind("[]", stringSubscript)
+->bind("iterator", stringIterator)
 BIND_L(compare, { f.returnValue(static_cast<double>(stringCompare(f))); })
 OP(<) OP(>) OP(<=) OP(>=)
 #undef OP
 BIND_L(==, { f.returnValue(stringEquals(f)); })
 BIND_L(!=, { f.returnValue(!stringEquals(f)); })
 
-BIND_F(indexOf, stringFind)
-BIND_F(lastIndexOf, stringRfind)
-BIND_F(findFirstOf, stringFindFirstOf)
-BIND_F(startsWith, stringStartsWith)
-BIND_F(endsWith, stringEndsWith)
-BIND_F(upper, stringUpper)
-BIND_F(lower, stringLower)
-BIND_F(toNumber, stringToNum)
-BIND_F(unp, stringToNum)
-BIND_F(codePointAt, stringCodePointAt)
-BIND_F(*, stringTimes)
+->bind("indexOf", stringFind, "SSN?N")
+->bind("lastIndexOf", stringRfind, "SSN?N")
+->bind("findFirstOf", stringFindFirstOf, "SSN?N")
+->bind("startsWith", stringStartsWith, "SSB")
+->bind("endsWith", stringEndsWith, "SSB")
+->bind("upper", stringUpper, "SS")
+->bind("lower", stringLower, "SS")
+->bind("toNumber", stringToNum, "SN?N")
+->bind("unp", stringToNum, "SN")
+->bind("codePointAt", stringCodePointAt, "SNN")
+->bind("*", stringTimes, "SNS")
 #ifndef NO_REGEX
-BIND_F(search, stringSearch)
-BIND_F(split, stringSplitWithRegex)
-BIND_F(replace, stringReplaceWithRegex)
-BIND_F(findAll, stringFindAll)
+->bind("search", stringSearch)
+->bind("split", stringSplitWithRegex)
+->bind("replace", stringReplaceWithRegex)
+->bind("findAll", stringFindAll)
 #else
-BIND_F(split, stringSplitWithoutRegex)
-BIND_F(replace, stringReplaceWithoutRegex)
+->bind("search", stringIndexOf)
+->bind("split", stringSplitWithoutRegex)
+->bind("replace", stringReplaceWithoutRegex)
 #endif
-BIND_F(fill, stringFill)
-BIND_F(trim, stringTrim)
-BIND_F(format, stringFormat)
+->bind("fill", stringFill, "SSNN?S")
+->bind("trim", stringTrim, "SS")
+->bind("format", stringFormat, "SO+S")
 ;
 
 stringIteratorClass
 ->copyParentMethods()
-BIND_F(next, stringIteratorNext)
-BIND_F(previous, stringIteratorPrevious)
+->bind("next", stringIteratorNext)
+->bind("previous", stringIteratorPrevious)
 ;
 
 stringClass->type
 ->copyParentMethods()
-BIND_F( (), stringInstantiate)
+->bind("()", stringInstantiate)
 ;
 }
 

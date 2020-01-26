@@ -36,8 +36,8 @@ f.returnValue(instance);
 }
 
 void objectHashCode (QFiber& f) {
-uint32_t h = FNV_OFFSET, *u = reinterpret_cast<uint32_t*>(&(f.at(0).i));
-h ^= u[0] ^u[1];
+QVHasher hash(f.vm);
+auto h = hash(f.at(0));
 f.returnValue(static_cast<double>(h));
 }
 
@@ -163,32 +163,31 @@ objectClass
 ->copyParentMethods()
 BIND_N(constructor)
 BIND_L(class, { f.returnValue(&f.at(0).getClass(f.vm)); })
-BIND_F(toString, objectToString)
-BIND_F(is, objectEquals)
-BIND_F(==, objectEquals)
-BIND_F(!=, objectNotEquals)
+->bind("toString", objectToString, "OS")
+->bind("hashCode", objectHashCode, "ON")
+->bind("is", objectEquals, "OOB")
+->bind("==", objectEquals, "OOB")
+->bind("!=", objectNotEquals, "OOB")
 ->bind(findMethodSymbol("compare"), QV::UNDEFINED)
-BIND_F(<, objectLess)
-BIND_F(>, objectGreater)
-BIND_F(<=, objectLessEquals)
-BIND_F(>=, objectGreaterEquals)
+->bind("<", objectLess, "OOB")
+->bind(">", objectGreater, "OOB")
+->bind("<=", objectLessEquals, "OOB")
+->bind(">=", objectGreaterEquals, "OOB")
 BIND_L(!, { f.returnValue(QV(false)); })
 ;
 
 classClass
 ->copyParentMethods()
-BIND_F( (), objectInstantiate)
-BIND_F(is, instanceofOperator)
+->bind("()", objectInstantiate)
+->bind("is", instanceofOperator, "OOB")
 BIND_L(toString, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
-BIND_F(hashCode, objectHashCode)
 BIND_L(name, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
 ;
 
 functionClass
 ->copyParentMethods()
 //##BIND_L( (), {  f.callFunc(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
-BIND_F(hashCode, objectHashCode)
-BIND_F(bind, functionBind)
+->bind("bind", functionBind)
 BIND_L(name, { f.returnValue(getFuncName(f.at(0), f.vm)); })
 ;
 
@@ -196,7 +195,6 @@ boolClass
 ->copyParentMethods()
 BIND_L(!, { f.returnValue(!f.getBool(0)); })
 BIND_L(toString, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
-BIND_F(hashCode, objectHashCode)
 ;
 
 nullClass
@@ -204,7 +202,6 @@ nullClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
-BIND_F(hashCode, objectHashCode)
 ;
 
 undefinedClass
@@ -212,7 +209,6 @@ undefinedClass
 BIND_L(!, { f.returnValue(QV::TRUE); })
 BIND_L(toString, { f.returnValue(QV(f.vm, "undefined", 9));  })
 BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
-BIND_F(hashCode, objectHashCode)
 ;
 
 iterableClass
@@ -222,8 +218,8 @@ BIND_N(iterator)
 
 fiberClass
 ->copyParentMethods()
-BIND_F( (), fiberNext)
-BIND_F(next, fiberNext)
+->bind("()", fiberNext)
+->bind("next", fiberNext)
 BIND_N(iterator)
 ;
 
@@ -242,12 +238,12 @@ BIND_L( (), { f.returnValue(!f.at(1).isFalsy()); })
 
 functionClass ->type
 ->copyParentMethods()
-BIND_F( (), functionInstantiate)
+->bind("()", functionInstantiate)
 ;
 
 fiberClass ->type
 ->copyParentMethods()
-BIND_F( (), fiberInstantiate)
+->bind("()", fiberInstantiate)
 ;
 
 iterableClass ->type

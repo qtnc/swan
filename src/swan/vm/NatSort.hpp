@@ -2,9 +2,7 @@
 #define _____NATSORT_HPP_____
 #include<cstdlib>
 
-inline bool isDigit (uint32_t c) {
-return c>='0' && c<='9';
-}
+bool isDigit (uint32_t c);
 
 template<class T> int strnatcmp (const T* L, const T* R) {
 bool alphaMode=true;

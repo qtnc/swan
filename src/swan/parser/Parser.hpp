@@ -14,7 +14,7 @@ struct QParser  {
 const char *in, *start, *end;
 std::string filename, displayName;
 QToken cur, prev;
-QToken curMethodNameToken = { T_END, "#", 1,  QV() };
+QToken curMethodNameToken = { T_END, "#", 1, QV::UNDEFINED  };
 std::vector<QToken> stackedTokens;
 QVM& vm;
 CompilationResult result = CR_SUCCESS;

@@ -1,4 +1,4 @@
-var start = System.clock
+var start = clock()
 
 var count = 0
 for i in 1...1000000 {
@@ -21,4 +21,4 @@ for i in 1...1000000 {
 }
 
 print(count)
-print("elapsed: "+(System.clock - start))
+print(format("elapsed: %1", (clock() - start)))

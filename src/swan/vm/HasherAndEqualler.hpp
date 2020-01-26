@@ -5,10 +5,6 @@
 #include<utility>
 #include<cstring>
 
-//https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-#define FNV_OFFSET 0x811c9dc5
-#define FNV_PRIME 16777619
-
 size_t hashBytes (const uint8_t* start, const uint8_t* end);
 
 struct StringCacheHasher {

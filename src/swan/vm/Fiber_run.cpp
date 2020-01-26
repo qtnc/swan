@@ -89,9 +89,6 @@ switch(op){
 #endif
 
 SWITCH 
-CASE(OP_DEBUG_LINE)
-frame.read<uint16_t>();
-BREAK
 
 CASE(OP_LOAD_LOCAL_0)
 CASE(OP_LOAD_LOCAL_1)
@@ -113,7 +110,7 @@ push(stack.at(frame.stackBase));
 BREAK
 
 CASE(OP_LOAD_THIS_FIELD)
-push(base().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
+push(stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
 BREAK
 
 CASE(OP_POP)
@@ -206,15 +203,15 @@ vm.globalVariables.at(frame.read<uint_global_symbol_t>()) = top();
 BREAK
 
 CASE(OP_STORE_THIS_FIELD)
-base().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
+stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
 BREAK
 
 CASE(OP_LOAD_THIS_STATIC_FIELD)
-push( base().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
+push( stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
 BREAK
 
 CASE(OP_STORE_THIS_STATIC_FIELD)
-base().getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
+stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
 BREAK
 
 CASE(OP_LOAD_FIELD)
@@ -313,11 +310,10 @@ if (!top().isNullOrUndefined()) frame.bcp += arg1;
 else pop();
 BREAK
 
-CASE(OP_POP_SCOPE) {
-int newSize = stack.size() - frame.read<uint_local_index_t>();
-closeUpvalues(newSize);
-stack.resize(newSize);
-}
+CASE(OP_POP_SCOPE) 
+arg1 = stack.size() - frame.read<uint_local_index_t>();
+closeUpvalues(arg1);
+stack.resize(arg1);
 BREAK
 
 CASE(OP_RETURN)
@@ -452,6 +448,10 @@ if (state==FiberState::FAILED) {
 handleException(std::runtime_error(ensureString(-1)->asString()));
 frame = callFrames.back();
 }
+BREAK
+
+CASE(OP_DEBUG_LINE)
+frame.read<uint16_t>();
 BREAK
 
 CASE(OP_DEBUG)

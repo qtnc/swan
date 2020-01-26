@@ -42,6 +42,10 @@ while (in<end && (c=utf8::next(in, end)) && (isSpace(c) || isLine(c)));
 return string(".+-/*&|").find(c)!=string::npos;
 }
 
+bool isDigit (uint32_t c) {
+return c>='0' && c<='9';
+}
+
 static inline double parseNumber (const char*& in) {
 if (*in=='0') {
 switch(in[1]){
