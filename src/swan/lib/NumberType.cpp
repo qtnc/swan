@@ -109,10 +109,9 @@ BIND_L(unm, { f.returnValue(-f.getNum(0)); })
 BIND_L(unp, { f.returnValue(+f.getNum(0)); })
 BIND_L(~, { f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); })
 BIND_L(compare, { f.returnValue(f.getNum(0)  - f.getNum(1)); })
-BIND_F(toString, numToString)
-BIND_F(toJSON, numToJSON)
-BIND_F(hashCode, objectHashCode)
-BIND_F(format, numFormat)
+->bind("toString", numToString, "NS")
+->bind("toJSON", numToJSON)
+->bind("format", numFormat, "NN?S?S?N?N?S") 
 BIND_L(.., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), false)); })
 BIND_L(..., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); })
 ;
@@ -122,6 +121,6 @@ BIND_L(..., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); })
 
 numClass ->type
 ->copyParentMethods()
-BIND_F( (), numInstantiate)
+->bind("()", numInstantiate, "ON?N")
 ;
 }

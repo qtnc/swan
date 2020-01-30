@@ -80,7 +80,7 @@ bindGlobal("min", genericComp<'<'>, "**+@0");
 bindGlobal("max", genericComp<'>'>, "**+@0");
 
 numClass
-BIND_F(log, numLog)
+->bind("log", numLog, "NN?N")
 BIND_L(frac, { double unused; f.returnValue(modf(f.getNum(0), &unused)); })
 BIND_L(int, { double re; modf(f.getNum(0), &re); f.returnValue(re); })
 BIND_L(sign, { double d=f.getNum(0); f.returnValue(copysign(d==0?0:1,d)); })

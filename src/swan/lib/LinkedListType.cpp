@@ -128,29 +128,29 @@ f.returnValue(re);
 void QVM::initLinkedListType () {
 linkedListClass
 ->copyParentMethods()
-BIND_F(push, linkedListPush)
-BIND_F(pop, linkedListPop)
-BIND_F(shift, linkedListShift)
-BIND_F(unshift, linkedListUnshift)
-BIND_F(remove, linkedListRemove)
-BIND_F(removeIf, linkedListRemoveIf)
-BIND_F(toString, linkedListToString)
-BIND_F(iterator, linkedListIterator)
+->bind("push", linkedListPush)
+->bind("pop", linkedListPop)
+->bind("shift", linkedListShift)
+->bind("unshift", linkedListUnshift)
+->bind("remove", linkedListRemove)
+->bind("removeIf", linkedListRemoveIf)
+->bind("toString", linkedListToString)
+->bind("iterator", linkedListIterator)
 ;
 
 linkedListIteratorClass
 ->copyParentMethods()
-BIND_F(next, linkedListIteratorNext)
-BIND_F(previous, linkedListIteratorPrevious)
-BIND_F(add, linkedListIteratorInsert)
-BIND_F(insert, linkedListIteratorInsert)
-BIND_F(remove, linkedListIteratorRemove)
+->bind("next", linkedListIteratorNext)
+->bind("previous", linkedListIteratorPrevious)
+->bind("add", linkedListIteratorInsert)
+->bind("insert", linkedListIteratorInsert)
+->bind("remove", linkedListIteratorRemove)
 ;
 
 linkedListClass ->type
 ->copyParentMethods()
-BIND_F( (), linkedListInstantiateFromSequences)
-BIND_F(of, linkedListInstantiateFromItems)
+->bind("()", linkedListInstantiateFromSequences)
+->bind("of", linkedListInstantiateFromItems)
 ;
 
 //println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));

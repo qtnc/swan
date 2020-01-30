@@ -42,8 +42,8 @@ f.returnValue(re);
 
 void QVM::initIterableType () {
 iterableClass
-BIND_F(join, iterableJoin)
-BIND_F(+, iterablePlus)
-BIND_F(toJSON, iterableToJSON)
+->bind("join", iterableJoin)
+->bind("+", iterablePlus)
+->bind("toJSON", iterableToJSON)
 ;
 }

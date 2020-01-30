@@ -149,30 +149,30 @@ f.returnValue(it==map.map.end()? QV::UNDEFINED : it->first);
 void QVM::initDictionaryType () {
 dictionaryClass
 ->copyParentMethods()
-BIND_F( [], dictionarySubscript)
-BIND_F( []=, dictionarySubscriptSetter)
-BIND_F(in, dictionaryIn)
+->bind("[]", dictionarySubscript)
+->bind("[]=", dictionarySubscriptSetter)
+->bind("in", dictionaryIn)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDictionary>(0).map.size())); })
-BIND_F(toString, dictionaryToString)
-BIND_F(iterator, dictionaryIterator)
+->bind("toString", dictionaryToString)
+->bind("iterator", dictionaryIterator)
 BIND_L(clear, { f.getObject<QDictionary>(0).map.clear(); })
-BIND_F(remove, dictionaryRemove)
-BIND_F(lower, dictionaryLowerBound)
-BIND_F(upper, dictionaryUpperBound)
-BIND_F(put, dictionaryPut)
+->bind("remove", dictionaryRemove)
+->bind("lower", dictionaryLowerBound)
+->bind("upper", dictionaryUpperBound)
+->bind("put", dictionaryPut)
 ;
 
 dictionaryIteratorClass
 ->copyParentMethods()
-BIND_F(next, dictionaryIteratorNext)
-BIND_F(previous, dictionaryIteratorPrevious)
-BIND_F(remove, dictionaryIteratorRemove)
+->bind("next", dictionaryIteratorNext)
+->bind("previous", dictionaryIteratorPrevious)
+->bind("remove", dictionaryIteratorRemove)
 ;
 
 dictionaryClass ->type
 ->copyParentMethods()
-BIND_F( (), dictionaryInstantiateFromMappings)
-BIND_F(of, dictionaryInstantiateFromEntries)
+->bind("()", dictionaryInstantiateFromMappings)
+->bind("of", dictionaryInstantiateFromEntries)
 ;
 
 //println("sizeof(QDictionary)=%d", sizeof(QDictionary));

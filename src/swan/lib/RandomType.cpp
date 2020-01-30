@@ -97,20 +97,20 @@ f.returnValue(re);
 void QVM::initRandomType () {
 randomClass
 ->copyParentMethods()
-BIND_F( (), randomCall )
-BIND_F("reset", randomSeed)
-BIND_F( normal, randomNormal)
+->bind("()", randomCall )
+->bind("reset", randomSeed)
+->bind("normal", randomNormal)
 ;
 
 randomClass ->type
 ->copyParentMethods()
-BIND_F( (), randomInstantiate)
+->bind("()", randomInstantiate)
 ;
 
 listClass
-BIND_F(shuffle, listShuffle)
-BIND_F(draw, listDraw)
-BIND_F(permute, listPermute)
+->bind("shuffle", listShuffle)
+->bind("draw", listDraw)
+->bind("permute", listPermute)
 ;
 
 bindGlobal("rand", QV(construct<QRandom>(*this)));

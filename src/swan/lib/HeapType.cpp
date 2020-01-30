@@ -86,25 +86,25 @@ f.returnValue(re);
 void QVM::initHeapType () {
 heapClass
 ->copyParentMethods()
-BIND_F(iterator, heapIterator)
-BIND_F(toString, heapToString)
+->bind("iterator", heapIterator)
+->bind("toString", heapToString)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QHeap>(0).data.size())); })
 BIND_L(clear, { f.getObject<QHeap>(0).data.clear(); })
-BIND_F(push, heapPush)
-BIND_F(remove, heapRemove)
-BIND_F(pop, heapPop)
-BIND_F(first, heapFirst)
+->bind("push", heapPush)
+->bind("remove", heapRemove)
+->bind("pop", heapPop)
+->bind("first", heapFirst)
 ;
 
 heapIteratorClass
 ->copyParentMethods()
-BIND_F(next, heapIteratorNext)
+->bind("next", heapIteratorNext)
 ;
 
 heapClass ->type
 ->copyParentMethods()
-BIND_F( (), heapInstantiateFromSequences)
-BIND_F(of, heapInstantiateFromItems)
+->bind("()", heapInstantiateFromSequences)
+->bind("of", heapInstantiateFromItems)
 ;
 }
 

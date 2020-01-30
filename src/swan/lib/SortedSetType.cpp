@@ -184,37 +184,37 @@ f.returnValue(re);
 void QVM::initSortedSetType () {
 sortedSetClass
 ->copyParentMethods()
-BIND_F(&, setIntersection)
-BIND_F(|, setUnion)
-BIND_F(-, setDifference)
-BIND_F(^, setSymetricDifference)
-BIND_F(iterator, setIterator)
-BIND_F(toString, setToString)
+->bind("&", setIntersection)
+->bind("|", setUnion)
+->bind("-", setDifference)
+->bind("^", setSymetricDifference)
+->bind("iterator", setIterator)
+->bind("toString", setToString)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSortedSet>(0).set.size())); })
 BIND_L(clear, { f.getObject<QSortedSet>(0).set.clear(); })
-BIND_F(add, setAdd)
-BIND_F(remove, setRemove)
-BIND_F(lower, setLowerBound)
-BIND_F(upper, setUpperBound)
-BIND_F(pop, setPop)
-BIND_F(shift, setShift)
-BIND_F(first, setFirst)
-BIND_F(last, setLast)
-BIND_F(in, setIn)
-BIND_F(==, setEquals)
+->bind("add", setAdd)
+->bind("remove", setRemove)
+->bind("lower", setLowerBound)
+->bind("upper", setUpperBound)
+->bind("pop", setPop)
+->bind("shift", setShift)
+->bind("first", setFirst)
+->bind("last", setLast)
+->bind("in", setIn)
+->bind("==", setEquals)
 ;
 
 sortedSetIteratorClass
 ->copyParentMethods()
-BIND_F(next, setIteratorNext)
-BIND_F(previous, setIteratorPrevious)
-BIND_F(remove, setIteratorRemove)
+->bind("next", setIteratorNext)
+->bind("previous", setIteratorPrevious)
+->bind("remove", setIteratorRemove)
 ;
 
 sortedSetClass ->type
 ->copyParentMethods()
-BIND_F( (), setInstantiateFromSequences)
-BIND_F(of, setInstantiateFromItems)
+->bind("()", setInstantiateFromSequences)
+->bind("of", setInstantiateFromItems)
 ;
 
 //println("sizeof(QSortedSet)=%d", sizeof(QSortedSet));

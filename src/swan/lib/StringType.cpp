@@ -345,7 +345,7 @@ void QVM::initStringType () {
 stringClass
 ->copyParentMethods()
 BIND_N(toString)
-BIND_F(toJSON, stringToJSON)
+->bind("toJSON", stringToJSON)
 ->bind("+", stringPlus, "SSS")
 ->bind("in", stringIn, "SSB")
 ->bind("hashCode", stringHashCode, "SN")

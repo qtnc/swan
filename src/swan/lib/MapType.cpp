@@ -88,24 +88,24 @@ mapClass
 ->copyParentMethods()
 BIND_L( [], { f.returnValue(f.getObject<QMap>(0) .get(f.at(1))); })
 BIND_L( []=, { f.returnValue(f.getObject<QMap>(0) .set(f.at(1), f.at(2))); })
-BIND_F(in, mapIn)
+->bind("in", mapIn)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QMap>(0).map.size())); })
-BIND_F(toString, mapToString)
-BIND_F(iterator, mapIterator)
+->bind("toString", mapToString)
+->bind("iterator", mapIterator)
 BIND_L(clear, { f.getObject<QMap>(0).map.clear(); })
-BIND_F(remove, mapRemove)
+->bind("remove", mapRemove)
 BIND_L(reserve, { f.getObject<QMap>(0).map.reserve(f.getNum(1)); })
 ;
 
 mapIteratorClass
 ->copyParentMethods()
-BIND_F(next, mapIteratorNext)
+->bind("next", mapIteratorNext)
 ;
 
 mapClass ->type
 ->copyParentMethods()
-BIND_F( (), mapInstantiateFromMappings)
-BIND_F(of, mapInstantiateFromEntries)
+->bind("()", mapInstantiateFromMappings)
+->bind("of", mapInstantiateFromEntries)
 ;
 
 //println("sizeof(QMap)=%d", sizeof(QMap));

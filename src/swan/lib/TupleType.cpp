@@ -120,25 +120,25 @@ f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
 void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
-BIND_F( [], tupleSubscript)
-BIND_F(iterator, tupleIterator)
+->bind("[]", tupleSubscript)
+->bind("iterator", tupleIterator)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QTuple>(0).length)); })
-BIND_F(toString, tupleToString)
-BIND_F(hashCode, tupleHashCode)
-BIND_F(*, tupleTimes)
-BIND_F(==, tupleEquals)
-BIND_F(compare, tupleCompare)
+->bind("toString", tupleToString)
+->bind("hashCode", tupleHashCode)
+->bind("*", tupleTimes)
+->bind("==", tupleEquals)
+->bind("compare", tupleCompare)
 ;
 
 tupleIteratorClass
 ->copyParentMethods()
-BIND_F(next, tupleIteratorNext)
-BIND_F(previous, tupleIteratorPrevious)
+->bind("next", tupleIteratorNext)
+->bind("previous", tupleIteratorPrevious)
 ;
 
 tupleClass ->type
 ->copyParentMethods()
-BIND_F( (), tupleInstantiateFromSequences)
-BIND_F(of, tupleInstantiateFromItems)
+->bind("()", tupleInstantiateFromSequences)
+->bind("of", tupleInstantiateFromItems)
 ;
 }

@@ -237,7 +237,6 @@ fc.parent = &compiler;
 rootStatement->optimizeStatement()->compile(fc);
 QFunction* func = fc.getFunction(0);
 func->name = "<comprehension>";
-//println("compr func type info = %s", getType(compiler)->resolve(compiler)->toBinString(compiler.vm));
 //###set argtypes
 compiler.result = fc.result;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
@@ -879,7 +878,7 @@ if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = getType(compiler)->resolve(compiler)->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
-//println("func type = %s", func->typeInfo.c_str());
+println("func type = %s", func->typeInfo.c_str());
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));

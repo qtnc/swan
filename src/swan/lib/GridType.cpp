@@ -112,24 +112,24 @@ f.returnValue(re);
 void QVM::initGridType () {
 gridClass
 ->copyParentMethods()
-BIND_F( [], gridSubscript)
-BIND_F( []=, gridSubscriptSetter)
-BIND_F(iterator, gridIterator)
+->bind("[]", gridSubscript)
+->bind("[]=", gridSubscriptSetter)
+->bind("iterator", gridIterator)
 BIND_L(width, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).width)); })
 BIND_L(height, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).height)); })
 BIND_L(length, { auto& g = f.getObject<QGrid>(0); f.returnValue(g.width*g.height); })
-BIND_F(toString, gridToString)
-BIND_F(==, gridEquals)
+->bind("toString", gridToString)
+->bind("==", gridEquals)
 ;
 
 gridIteratorClass
 ->copyParentMethods()
-BIND_F(next, gridIteratorNext)
+->bind("next", gridIteratorNext)
 ;
 
 gridClass ->type
 ->copyParentMethods()
-BIND_F( (), gridInstantiate)
+->bind("()", gridInstantiate)
 ;
 
 #ifndef NO_GRID_PATHFIND

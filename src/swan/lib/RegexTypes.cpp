@@ -157,33 +157,33 @@ f.returnValue(re);
 void QVM::initRegexTypes () {
 regexClass
 ->copyParentMethods()
-BIND_F(test, regexTest)
+->bind("test", regexTest)
 BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QRegex>(0).regex.mark_count())); })
 ;
 
 regexMatchResultClass
 ->copyParentMethods()
-BIND_F( [], regexMatchResultSubscript)
-BIND_F(start, regexMatchResultStart)
-BIND_F(end, regexMatchResultEnd)
-BIND_F(length, regexMatchResultLength)
+->bind("[]", regexMatchResultSubscript)
+->bind("start", regexMatchResultStart)
+->bind("end", regexMatchResultEnd)
+->bind("length", regexMatchResultLength)
 ;
 
 regexIteratorClass
 ->copyParentMethods()
 BIND_N(iterator)
-BIND_F(next, regexIteratorNext)
+->bind("next", regexIteratorNext)
 ;
 
 regexTokenIteratorClass
 ->copyParentMethods()
 BIND_N(iterator)
-BIND_F(next, regexTokenIteratorNext)
+->bind("next", regexTokenIteratorNext)
 ;
 
 regexClass ->type
 ->copyParentMethods()
-BIND_F( (), regexInstantiate)
+->bind("()", regexInstantiate)
 ;
 }
 #endif
