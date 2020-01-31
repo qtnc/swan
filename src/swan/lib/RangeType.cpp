@@ -35,6 +35,21 @@ double re = r.start + n * r.step;
 f.returnValue( (r.end-re)*r.step >= 0? QV(re) : QV::UNDEFINED);
 }
 
+static void rangeStart (QFiber& f) {
+QRange& r = f.getObject<QRange>(0);
+f.returnValue(r.start);
+}
+
+static void rangeEnd (QFiber& f) {
+QRange& r = f.getObject<QRange>(0);
+f.returnValue(r.end);
+}
+
+static void rangeStep (QFiber& f) {
+QRange& r = f.getObject<QRange>(0);
+f.returnValue(r.step);
+}
+
 static void rangeIterator (QFiber& f) {
 QRange& range = f.getObject<QRange>(0);
 auto it = f.vm.construct<QRangeIterator>(f.vm, range);
@@ -88,8 +103,9 @@ rangeClass
 ->bind("toString", rangeToString)
 ->bind("in", rangeIn)
 ->bind("[]", rangeSubscript)
-BIND_L(start, { f.returnValue(f.getObject<QRange>(0).start); })
-BIND_L(end, { f.returnValue(f.getObject<QRange>(0).end); })
+->bind("start", rangeStart)
+->bind("end", rangeEnd)
+->bind("step", rangeStep)
 ;
 
 rangeIteratorClass

@@ -1,5 +1,6 @@
 #include "SwanLib.hpp"
 #include "../../include/cpprintf.hpp"
+#include "../vm/Tuple.hpp"
 #include<cmath>
 #include<cstdlib>
 using namespace std;
@@ -22,6 +23,58 @@ int64_t x = a, y = b;
 return y>0? x>>y : x<<-y;
 }
 
+#define OP(O,N) \
+static void num##N (QFiber& f) { \
+f.returnValue(f.getNum(0) O f.getNum(1)); \
+}
+
+#define OPF(F,N) \
+static void num##N (QFiber& f) { \
+f.returnValue(F(f.getNum(0), f.getNum(1))); \
+}
+
+#define OPB(O,N) \
+static void num##N (QFiber& f) { \
+f.returnValue(static_cast<double>(static_cast<int64_t>(f.getNum(0)) O static_cast<int64_t>(f.getNum(1)))); \
+}
+
+OP(+, Plus)
+OP(-, Minus)
+OP(*, Mul)
+OP(/, Div)
+OPB(|, BinOr)
+OPB(&, BinAnd)
+OPB(^, BinXor)
+OPF(fmod, Mod)
+OPF(pow, Pow)
+OPF(dintdiv, IntDiv)
+OPF(dlshift, LSH)
+OPF(drshift, RSH)
+OP(<, Lt)
+OP(>, Gt)
+OP(<=, Lte)
+OP(>=, Gte)
+OP(==, Eq)
+OP(!=, Neq)
+#undef OP
+#undef OPF
+#undef OPB
+
+static void numNeg (QFiber& f) {
+f.returnValue(-f.getNum(0));
+}
+
+static void numBinNot (QFiber& f) {
+f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); 
+}
+
+static void numToRange (QFiber& f) {
+f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), false)); 
+}
+
+static void numToRangeClosed (QFiber& f) {
+f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); 
+}
 
 static bool numToStringBase (QFiber& f, double val) {
 if (isnan(val)) {
@@ -93,31 +146,36 @@ else f.returnValue(QV::UNDEFINED);
 
 
 void QVM::initNumberType () {
-#define OP(O) BIND_L(O, { f.returnValue(f.getNum(0) O f.getNum(1)); })
-#define OPF(O,F) BIND_L(O, { f.returnValue(F(f.getNum(0), f.getNum(1))); })
-#define OPB(O) BIND_L(O, { f.returnValue(static_cast<double>(static_cast<int64_t>(f.getNum(0)) O static_cast<int64_t>(f.getNum(1)))); })
 numClass
 ->copyParentMethods()
-OP(+) OP(-) OP(*) OP(/)
-OP(<) OP(>) OP(<=) OP(>=) OP(==) OP(!=)
-OPF(%, fmod)
-OPF(**, pow)
-OPF(\\, dintdiv)
-OPF(<<, dlshift) OPF(>>, drshift)
-OPB(|) OPB(&) OPB(^)
-BIND_L(unm, { f.returnValue(-f.getNum(0)); })
-BIND_L(unp, { f.returnValue(+f.getNum(0)); })
-BIND_L(~, { f.returnValue(static_cast<double>(~static_cast<int64_t>(f.getNum(0)))); })
-BIND_L(compare, { f.returnValue(f.getNum(0)  - f.getNum(1)); })
+->bind("+", numPlus, "NNN")
+->bind("-", numMinus, "NNN")
+->bind("*", numMul, "NNN")
+->bind("/", numDiv, "NNN")
+->bind("==", numEq, "NNB")
+->bind("!=", numNeq, "NNB")
+->bind("<", numLt, "NNB")
+->bind(">", numGt, "NNB")
+->bind("<=", numLte, "NNB")
+->bind(">=", numGte, "NNB")
+->bind("%", numMod, "NNN")
+->bind("**", numPow, "NNN")
+->bind("\\", numIntDiv, "NNN")
+->bind("<<", numLSH, "NNN")
+->bind(">>", numRSH, "NNN")
+->bind("|", numBinOr, "NNN")
+->bind("&", numBinAnd, "NNN")
+->bind("^", numBinXor, "NNN")
+->bind("~", numBinNot, "NNN")
+->bind("unm", numNeg, "NN")
+->bind("unp", doNothing, "NN")
+->bind("compare", numMinus, "NNN")
 ->bind("toString", numToString, "NS")
 ->bind("toJSON", numToJSON)
 ->bind("format", numFormat, "NN?S?S?N?N?S") 
-BIND_L(.., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), false)); })
-BIND_L(..., { f.returnValue(rangeMake(f.vm, f.getNum(0), f.getNum(1), true)); })
+->bind("..", numToRange)
+->bind("...", numToRangeClosed)
 ;
-#undef OPF
-#undef OPB
-#undef OP
 
 numClass ->type
 ->copyParentMethods()

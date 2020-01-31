@@ -103,6 +103,21 @@ if (s2.set.end() == s2.set.find(x)) { re=false; break; }
 f.returnValue(re);
 }
 
+static void setLength (QFiber& f) {
+auto& set = f.getObject<QSet>(0);
+f.returnValue(static_cast<double>(set.set.size()));
+}
+
+static void setClear (QFiber& f) {
+auto& set = f.getObject<QSet>(0);
+set.set.clear();
+}
+
+static void setReserve (QFiber& f) {
+auto& set = f.getObject<QSet>(0);
+set.set.reserve(f.getNum(1));
+}
+
 static void setIterator (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
 auto it = f.vm.construct<QSetIterator>(f.vm, set);
@@ -135,11 +150,11 @@ setClass
 ->bind("^", setSymetricDifference)
 ->bind("iterator", setIterator)
 ->bind("toString", setToString)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSet>(0).set.size())); })
-BIND_L(clear, { f.getObject<QSet>(0).set.clear(); })
+->bind("length", setLength)
+->bind("clear", setClear)
 ->bind("add", setAdd)
 ->bind("remove", setRemove)
-BIND_L(reserve, { f.getObject<QSet>(0).set.reserve(f.getNum(1)); })
+->bind("reserve", setReserve)
 ->bind("in", setIn)
 ->bind("==", setEquals)
 ;

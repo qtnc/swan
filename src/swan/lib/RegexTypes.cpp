@@ -82,6 +82,11 @@ cmatch unused;
 f.returnValue(regex_match(const_cast<const char*>(s.begin()), const_cast<const char*>(s.end()), unused, r.regex, r.matchOptions | REGEX_TEST_MATCH_FLAGS));
 }
 
+static void regexLength (QFiber& f) {
+auto& r = f.getObject<QRegex>(0);
+f.returnValue(static_cast<double>(r.regex.mark_count())); 
+}
+
 void stringSearch (QFiber& f) {
 if (f.isString(1)) { stringFind(f); return; }
 QString& s = f.getObject<QString>(0);
@@ -158,7 +163,7 @@ void QVM::initRegexTypes () {
 regexClass
 ->copyParentMethods()
 ->bind("test", regexTest)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QRegex>(0).regex.mark_count())); })
+->bind("length", regexLength)
 ;
 
 regexMatchResultClass
@@ -171,13 +176,13 @@ regexMatchResultClass
 
 regexIteratorClass
 ->copyParentMethods()
-BIND_N(iterator)
+->bind("iterator", doNothing)
 ->bind("next", regexIteratorNext)
 ;
 
 regexTokenIteratorClass
 ->copyParentMethods()
-BIND_N(iterator)
+->bind("iterator", doNothing)
 ->bind("next", regexTokenIteratorNext)
 ;
 

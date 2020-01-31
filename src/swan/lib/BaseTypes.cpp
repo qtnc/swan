@@ -4,6 +4,41 @@
 #include "../../include/cpprintf.hpp"
 using namespace std;
 
+static void boolNot (QFiber& f) {
+f.returnValue(!f.getBool(0)); 
+}
+
+static void boolToString (QFiber& f) {
+f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); 
+}
+
+static void boolInstantiate (QFiber& f) {
+f.returnValue(!f.at(1).isFalsy()); 
+}
+
+static void undefinedToString (QFiber& f) {
+f.returnValue(QV(f.vm, "undefined"));
+}
+
+static void nullToString (QFiber& f) {
+f.returnValue(QV(f.vm, "null"));
+}
+
+static void nullEquals (QFiber& f) {
+f.returnValue(f.isNullOrUndefined(1)); 
+}
+
+static void nullNotEquals (QFiber& f) {
+f.returnValue(!f.isNullOrUndefined(1)); 
+}
+
+static void returnTrue (QFiber& f) {
+f.returnValue(true);
+}
+
+static void returnFalse (QFiber& f) {
+f.returnValue(false);
+}
 
 static void fiberInstantiate (QFiber& f) {
 if (f.getArgCount()==1) f.returnValue(QV(&f, QV_TAG_FIBER));
@@ -126,6 +161,15 @@ f.popCppCallFrame();
 f.returnValue(!re);
 }
 
+static void objectGetClass (QFiber& f) {
+f.returnValue(&f.at(0).getClass(f.vm)); 
+}
+
+static void objclassName (QFiber& f) {
+auto& cls = f.getObject<QClass>(0);
+f.returnValue(QV(f.vm, cls.name.c_str())); 
+}
+
 static void functionInstantiate (QFiber& f) {
 f.returnValue(QV::UNDEFINED);
 if (f.isString(1)) {
@@ -158,11 +202,15 @@ return format("bound(%d):%s", bf.count, getFuncName(bf.method, vm));
 else return "<unknown>";
 }
 
+static void functionName (QFiber& f) {
+f.returnValue(getFuncName(f.at(0), f.vm)); 
+}
+
 void QVM::initBaseTypes () {
 objectClass
 ->copyParentMethods()
-BIND_N(constructor)
-BIND_L(class, { f.returnValue(&f.at(0).getClass(f.vm)); })
+->bind("constructor", doNothing)
+->bind("class", objectGetClass)
 ->bind("toString", objectToString, "OS")
 ->bind("hashCode", objectHashCode, "ON")
 ->bind("is", objectEquals, "OOB")
@@ -173,54 +221,55 @@ BIND_L(class, { f.returnValue(&f.at(0).getClass(f.vm)); })
 ->bind(">", objectGreater, "OOB")
 ->bind("<=", objectLessEquals, "OOB")
 ->bind(">=", objectGreaterEquals, "OOB")
-BIND_L(!, { f.returnValue(QV(false)); })
+->bind("!", returnFalse, "OB")
 ;
 
 classClass
 ->copyParentMethods()
 ->bind("()", objectInstantiate)
 ->bind("is", instanceofOperator, "OOB")
-BIND_L(toString, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
-BIND_L(name, { f.returnValue(QV(f.vm, f.getObject<QClass>(0) .name.c_str())); })
+->bind("toString", objclassName, "OS")
+->bind("name", objclassName, "OS")
 ;
 
 functionClass
 ->copyParentMethods()
-//##BIND_L( (), {  f.callFunc(f.at(0), f.getArgCount() -1);  f.returnValue(f.at(1));  })
 ->bind("bind", functionBind)
-BIND_L(name, { f.returnValue(getFuncName(f.at(0), f.vm)); })
+->bind("name", functionName)
 ;
 
 boolClass
 ->copyParentMethods()
-BIND_L(!, { f.returnValue(!f.getBool(0)); })
-BIND_L(toString, { f.returnValue(QV(f.vm, f.getBool(0)? "true" : "false")); })
+->bind("!", boolNot)
+->bind("toString", boolToString)
 ;
 
 nullClass
 ->copyParentMethods()
-BIND_L(!, { f.returnValue(QV::TRUE); })
-BIND_L(toString, { f.returnValue(QV(f.vm, "null", 4));  })
-BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
+->bind("!", returnTrue)
+->bind("toString", nullToString)
+->bind("==", nullEquals)
+->bind("!=", nullNotEquals)
 ;
 
 undefinedClass
 ->copyParentMethods()
-BIND_L(!, { f.returnValue(QV::TRUE); })
-BIND_L(toString, { f.returnValue(QV(f.vm, "undefined", 9));  })
-BIND_L(==, { f.returnValue(f.isNullOrUndefined(1)); })
+->bind("!", returnTrue)
+->bind("toString", undefinedToString)
+->bind("==", nullEquals)
+->bind("!=", nullEquals)
 ;
 
 iterableClass
 ->copyParentMethods()
-BIND_N(iterator)
+->bind("iterator", doNothing)
 ;
 
 fiberClass
 ->copyParentMethods()
 ->bind("()", fiberNext)
 ->bind("next", fiberNext)
-BIND_N(iterator)
+->bind("iterator", doNothing)
 ;
 
 classClass->type
@@ -233,7 +282,7 @@ objectClass->type
 
 boolClass ->type
 ->copyParentMethods()
-BIND_L( (), { f.returnValue(!f.at(1).isFalsy()); })
+->bind("()", boolInstantiate)
 ;
 
 functionClass ->type

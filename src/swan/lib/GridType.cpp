@@ -109,15 +109,30 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
+static void gridLength (QFiber& f) {
+auto& g = f.getObject<QGrid>(0); 
+f.returnValue(g.width*g.height); 
+}
+
+static void gridWidth (QFiber& f) {
+auto& g = f.getObject<QGrid>(0); 
+f.returnValue(static_cast<double>(g.width)); 
+}
+
+static void gridHeight (QFiber& f) {
+auto& g = f.getObject<QGrid>(0); 
+f.returnValue(static_cast<double>(g.height)); 
+}
+
 void QVM::initGridType () {
 gridClass
 ->copyParentMethods()
 ->bind("[]", gridSubscript)
 ->bind("[]=", gridSubscriptSetter)
 ->bind("iterator", gridIterator)
-BIND_L(width, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).width)); })
-BIND_L(height, { f.returnValue(static_cast<double>(f.getObject<QGrid>(0).height)); })
-BIND_L(length, { auto& g = f.getObject<QGrid>(0); f.returnValue(g.width*g.height); })
+->bind("length", gridLength)
+->bind("width", gridWidth)
+->bind("height", gridHeight)
 ->bind("toString", gridToString)
 ->bind("==", gridEquals)
 ;

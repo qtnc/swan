@@ -281,6 +281,17 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
+static void dequeLength (QFiber& f) {
+QDeque& deque = f.getObject<QDeque>(0);
+f.returnValue(static_cast<double>(deque.data.size())); 
+}
+
+static void dequeClear (QFiber& f) {
+QDeque& deque = f.getObject<QDeque>(0);
+deque.data.clear();
+}
+
+
 static void dequeInstantiateFromSequences (QFiber& f) {
 QDeque* deque = f.vm.construct<QDeque>(f.vm);
 f.returnValue(deque);
@@ -307,9 +318,9 @@ dequeClass
 ->bind("[]", dequeSubscript)
 ->bind("[]=", dequeSubscriptSetter)
 ->bind("iterator", dequeIterator)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDeque>(0).data.size())); })
+->bind("length", dequeLength)
 ->bind("toString", dequeToString)
-BIND_L(clear, { f.getObject<QDeque>(0).data.clear(); })
+->bind("clear", dequeClear)
 ->bind("add", dequePush)
 ->bind("remove", dequeRemove)
 ->bind("removeIf", dequeRemoveIf)

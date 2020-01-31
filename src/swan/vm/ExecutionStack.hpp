@@ -15,14 +15,15 @@ top = base;
 finish = base+initialCapacity;
 }
 inline ~execution_stack () { allocator.deallocate(base, (finish-base) * sizeof(T)); }
-std::pair<T*,size_t> reserve (size_t newCapacity) {
+
+inline std::pair<T*,size_t> reserve (size_t newCapacity) {
 auto re = std::make_pair(base, (finish-base) * sizeof(T));
 if (newCapacity<=finish-base) return re;
-T* newBase = allocator.allocate(newCapacity * sizeof(T));
-callback(base, newBase);
-memcpy(newBase, base, (top-base) * sizeof(T));
-top = newBase + (top-base);
-base = newBase;
+T* newbase = allocator.allocate(newCapacity * sizeof(T));
+callback(base, newbase);
+memcpy(newbase, base, (top-base) * sizeof(T));
+top = newbase + (top-base);
+base = newbase;
 finish = base + newCapacity;
 return re;
 }
@@ -35,15 +36,19 @@ auto old = reserve(newSize);
 top = base + newSize;
 finishReserve(old);
 }
+
 inline void push_back (const T& x) {
 if (top!=finish)  { *top++=x; return; }
 auto old = reserve(2 * (finish-base));
 *top++ = x;
 finishReserve(old);
 }
+inline void push (const T& x) { push_back(x); }
 inline T& pop_back () {
 return *top--;
 }
+inline T& pop () { return pop_back(); }
+
 template<class I> void insert (T* pos, I begin, const I& end) {
 size_t index = pos-base, len = std::distance(begin, end);
 auto old = reserve( (top-base) + len);
@@ -59,6 +64,7 @@ top -= (end-begin);
 }
 inline void insert (T* pos, const T& val) { insert(pos, &val, &val+1); }
 inline void erase (T* pos) { erase(pos, pos+1); }
+
 inline size_t size () const { return top-base; }
 inline bool empty () { return size()==0; }
 inline T& at (int i) { return *(base+i); }
@@ -71,6 +77,8 @@ inline T* end () { return top; }
 inline const T* end () const { return top; }
 inline T& back () { return *(top -1); }
 inline const T& back () const { return *(top -1); }
+inline T& back (int n) { return *(top +n); }
+inline const T& back (int n) const { return *(top +n); }
 };
 
 #endif

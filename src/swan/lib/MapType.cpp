@@ -79,6 +79,31 @@ map.map.erase(it);
 map.incrVersion();
 }}}
 
+static void mapSubscript (QFiber& f) {
+QMap& map = f.getObject<QMap>(0);
+f.returnValue(map.get(f.at(1)));
+}
+
+static void mapSubscriptSetter (QFiber& f) {
+QMap& map = f.getObject<QMap>(0);
+f.returnValue(map .set(f.at(1), f.at(2))); 
+}
+
+static void mapLength (QFiber& f) {
+QMap& map = f.getObject<QMap>(0);
+f.returnValue(static_cast<double>(map.map.size())); 
+}
+
+static void mapClear (QFiber& f) {
+QMap& map = f.getObject<QMap>(0);
+map.map.clear();
+}
+
+static void mapReserve (QFiber& f) {
+QMap& map = f.getObject<QMap>(0);
+map.map.reserve(f.getNum(1)); 
+}
+
 void QVM::initMapType () {
 mappingClass
 ->copyParentMethods()
@@ -86,15 +111,15 @@ mappingClass
 
 mapClass
 ->copyParentMethods()
-BIND_L( [], { f.returnValue(f.getObject<QMap>(0) .get(f.at(1))); })
-BIND_L( []=, { f.returnValue(f.getObject<QMap>(0) .set(f.at(1), f.at(2))); })
+->bind("[]", mapSubscript)
+->bind("[]=", mapSubscriptSetter)
 ->bind("in", mapIn)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QMap>(0).map.size())); })
+->bind("length", mapLength)
 ->bind("toString", mapToString)
 ->bind("iterator", mapIterator)
-BIND_L(clear, { f.getObject<QMap>(0).map.clear(); })
+->bind("clear", mapClear)
 ->bind("remove", mapRemove)
-BIND_L(reserve, { f.getObject<QMap>(0).map.reserve(f.getNum(1)); })
+->bind("reserve", mapReserve)
 ;
 
 mapIteratorClass

@@ -137,13 +137,13 @@ error<domain_error>("Matrix inversion isn't yet supported");
 
 void initGridMatrix (QVM& vm) {
 vm.gridClass
-BIND_F(+, matrixAdd)
-BIND_F(-, matrixSubtract)
-BIND_F(unm, matrixNegate)
-BIND_F(*, matrixMultiply)
-BIND_F(/, matrixDivide)
-BIND_F(**, matrixExpone)
-BIND_F(transpose, matrixTranspose)
+->bind("+", matrixAdd)
+->bind("-", matrixSubtract)
+->bind("unm", matrixNegate)
+->bind("*", matrixMultiply)
+->bind("/", matrixDivide)
+->bind("**", matrixExpone)
+->bind("transpose", matrixTranspose)
 ;
 }
 

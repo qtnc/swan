@@ -307,6 +307,16 @@ f.popCppCallFrame();
 f.returnValue(re);
 }
 
+static void listLength (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+f.returnValue(static_cast<double>(list.data.size()));
+}
+
+static void listClear (QFiber& f) {
+QList& list = f.getObject<QList>(0);
+list.data.clear();
+}
+
 static void listInstantiateFromSequences (QFiber& f) {
 QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
@@ -330,9 +340,9 @@ listClass
 ->bind("[]", listSubscript)
 ->bind("[]=", listSubscriptSetter)
 ->bind("iterator", listIterator)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QList>(0).data.size())); })
+->bind("length", listLength)
 ->bind("toString", listToString)
-BIND_L(clear, { f.getObject<QList>(0).data.clear(); })
+->bind("clear", listClear)
 ->bind("add", listPush)
 ->bind("append", listPush)
 ->bind("remove", listRemove)

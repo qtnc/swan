@@ -54,12 +54,11 @@ return QV::UNDEFINED;
 
 
 FiberState QFiber::run ()  {
-static bool ff1 = false; 
-if (!ff1) { ff1=true; println("OP_END = %d", OP_END); }
 //println(std::cerr, "Running fiber: parent=%s, cur=%s, this=%s", (parentFiber? QV(parentFiber, QV_TAG_FIBER) : QV()).print(), (curFiber? QV(curFiber, QV_TAG_FIBER) : QV()).print(), QV(this, QV_TAG_FIBER).print() );
 vm.activeFiber = this;
 state = FiberState::RUNNING;
-auto frame = callFrames.back();
+auto  frame = callFrames.back();
+auto& stack = this->stack;
 uint8_t op;
 int arg1, arg2;
 //println("Running closure at %#P, stackBase=%d, closure.func.nArgs=%d, vararg=%d", frame.closure, frame.stackBase, frame.closure->func.nArgs, frame.closure->func.vararg);
@@ -98,51 +97,51 @@ CASE(OP_LOAD_LOCAL_4)
 CASE(OP_LOAD_LOCAL_5)
 CASE(OP_LOAD_LOCAL_6)
 CASE(OP_LOAD_LOCAL_7)
-push(stack.at(frame.stackBase + op -OP_LOAD_LOCAL_0));
+stack.push(stack.at(frame.stackBase + op -OP_LOAD_LOCAL_0));
 BREAK
 
 CASE(OP_LOAD_LOCAL)
-push(stack.at(frame.stackBase + frame.read<uint_local_index_t>()));
+stack.push(stack.at(frame.stackBase + frame.read<uint_local_index_t>()));
 BREAK
 
 CASE(OP_LOAD_THIS)
-push(stack.at(frame.stackBase));
+stack.push(stack.at(frame.stackBase));
 BREAK
 
 CASE(OP_LOAD_THIS_FIELD)
-push(stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
+stack.push(stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()]);
 BREAK
 
 CASE(OP_POP)
-pop();
+stack.pop();
 BREAK
 
 CASE(OP_DUP)
-push(top());
+stack.push(stack.back());
 BREAK
 
 CASE(OP_LOAD_UNDEFINED)
-push(QV::UNDEFINED);
+stack.push(QV::UNDEFINED);
 BREAK
 
 CASE(OP_LOAD_NULL)
-push(QV::Null);
+stack.push(QV::Null);
 BREAK
 
 CASE(OP_LOAD_TRUE)
-push(true);
+stack.push(true);
 BREAK
 
 CASE(OP_LOAD_FALSE)
-push(false);
+stack.push(false);
 BREAK
 
 CASE(OP_LOAD_INT8)
-push(static_cast<double>(frame.read<int8_t>()));
+stack.push(static_cast<double>(frame.read<int8_t>()));
 BREAK
 
 CASE(OP_LOAD_CONSTANT)
-push(frame.closure->func.constants[frame.read<uint_constant_index_t>()]);
+stack.push(frame.closure->func.constants[frame.read<uint_constant_index_t>()]);
 BREAK
 
 CASE(OP_STORE_LOCAL_0)
@@ -153,92 +152,92 @@ CASE(OP_STORE_LOCAL_4)
 CASE(OP_STORE_LOCAL_5)
 CASE(OP_STORE_LOCAL_6)
 CASE(OP_STORE_LOCAL_7)
-stack.at(frame.stackBase + op -OP_STORE_LOCAL_0) = top();
+stack.at(frame.stackBase + op -OP_STORE_LOCAL_0) = stack.back();
 BREAK
 
 CASE(OP_STORE_LOCAL)
-stack.at(frame.stackBase + frame.read<uint_local_index_t>()) = top();
+stack.at(frame.stackBase + frame.read<uint_local_index_t>()) = stack.back();
 BREAK
 
 #define C(N) CASE(OP_CALL_METHOD_##N)
 C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 arg1 = frame.read<uint_method_symbol_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callSymbol(arg1, op - OP_CALL_METHOD_0);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 #define C(N) CASE(OP_CALL_SUPER_##N)
 C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
 arg1 = frame.read<uint_method_symbol_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callSuperSymbol(arg1, op - OP_CALL_SUPER_0);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 #define C(N) CASE(OP_CALL_FUNCTION_##N)
 C(0) C(1) C(2) C(3) C(4) C(5) C(6) C(7)
 #undef C
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callCallable(op - OP_CALL_FUNCTION_0);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_LOAD_UPVALUE)
-push(frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get());
+stack.push(frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get());
 BREAK
 
 CASE(OP_STORE_UPVALUE)
-frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get() = top();
+frame.closure->upvalues[frame.read<uint_upvalue_index_t>()]->get() = stack.back();
 BREAK
 
 CASE(OP_LOAD_GLOBAL)
-push(vm.globalVariables.at(frame.read<uint_global_symbol_t>()));
+stack.push(vm.globalVariables.at(frame.read<uint_global_symbol_t>()));
 BREAK
 
 CASE(OP_STORE_GLOBAL)
-vm.globalVariables.at(frame.read<uint_global_symbol_t>()) = top();
+vm.globalVariables.at(frame.read<uint_global_symbol_t>()) = stack.back();
 BREAK
 
 CASE(OP_STORE_THIS_FIELD)
-stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = top();
+stack.at(frame.stackBase).asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = stack.back();
 BREAK
 
 CASE(OP_LOAD_THIS_STATIC_FIELD)
-push( stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
+stack.push( stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] );
 BREAK
 
 CASE(OP_STORE_THIS_STATIC_FIELD)
-stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = top();
+stack.at(frame.stackBase).getClass(vm) .staticFields[frame.read<uint_field_index_t>()] = stack.back();
 BREAK
 
 CASE(OP_LOAD_FIELD)
-top() = top().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()];
+stack.back() = stack.back().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()];
 BREAK
 
 CASE(OP_STORE_FIELD)
-top().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = at(-2);
-pop();
+stack.back().asObject<QInstance>() ->fields[frame.read<uint_field_index_t>()] = stack.back(-2);
+stack.pop();
 BREAK
 
 CASE(OP_LOAD_STATIC_FIELD)
-top() = top().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] ;
+stack.back() = stack.back().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] ;
 BREAK
 
 CASE(OP_STORE_STATIC_FIELD)
-top().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] = at(-2);
-pop();
+stack.back().asObject<QClass>() ->staticFields[frame.read<uint_field_index_t>()] = stack.back(-2);
+stack.pop();
 BREAK
 
 #define G(N,Q) \
 CASE(OP_##N) \
-pop(); Q; BREAK
-#define OPA(N,O) G(N, top().d O  stack.end()->d ) 
-#define OPC(N,O) G(N, top() = top().d O  stack.end()->d ) 
-#define OPB(N,O) G(N, top().d = static_cast<double>(static_cast<int64_t>(top().d) O static_cast<int64_t>(stack.end()->d)) ) 
-#define OPF(N,F) G(N, top().d = F(top().d, stack.end()->d) ) 
+stack.pop(); Q; BREAK
+#define OPA(N,O) G(N, stack.back().d O  stack.end()->d ) 
+#define OPC(N,O) G(N, stack.back() = top().d O  stack.end()->d ) 
+#define OPB(N,O) G(N, stack.back().d = static_cast<double>(static_cast<int64_t>(stack.back().d) O static_cast<int64_t>(stack.end()->d)) ) 
+#define OPF(N,F) G(N, stack.back().d = F(stack.back().d, stack.end()->d) ) 
 OPA(ADD, +=) OPA(SUB, -=)
 OPA(MUL, *=) OPA(DIV, /=)
 OPB(BINAND, &) OPB(BINOR, |) OPB(BINXOR, ^)
@@ -253,15 +252,15 @@ OPC(LT, <) OPC(GT, >) OPC(LTE, <=) OPC(GTE, >=)
 #undef G
 
 CASE(OP_NEG)
-top().d = -top().d;
+stack.back().d = -stack.back().d;
 BREAK
 
 CASE(OP_BINNOT)
-top().d = static_cast<double>(~static_cast<int64_t>(top().d));
+stack.back().d = static_cast<double>(~static_cast<int64_t>(stack.back().d));
 BREAK
 
 CASE(OP_NOT)
-top() = top().isFalsy();
+stack.back() = stack.back().isFalsy();
 BREAK
 
 CASE(OP_JUMP)
@@ -274,40 +273,40 @@ BREAK
 
 CASE(OP_JUMP_IF_FALSY)
 arg1 = frame.read<uint_jump_offset_t>();
-if (top().isFalsy()) frame.bcp += arg1;
-pop();
+if (stack.back().isFalsy()) frame.bcp += arg1;
+stack.pop();
 BREAK
 
 CASE(OP_JUMP_IF_TRUTY)
 arg1 = frame.read<uint_jump_offset_t>();
-if (!top().isFalsy()) frame.bcp += arg1;
-pop();
+if (!stack.back().isFalsy()) frame.bcp += arg1;
+stack.pop();
 BREAK
 
 CASE(OP_JUMP_IF_UNDEFINED)
 arg1 = frame.read<uint_jump_offset_t>();
-if (top().isUndefined()) {
+if (stack.back().isUndefined()) {
 frame.bcp += arg1;
-pop();
+stack.pop();
 }
 BREAK
 
 CASE(OP_AND)
 arg1 = frame.read<uint_jump_offset_t>();
-if (top().isFalsy()) frame.bcp += arg1;
-else pop();
+if (stack.back().isFalsy()) frame.bcp += arg1;
+else stack.pop();
 BREAK
 
 CASE(OP_OR)
 arg1 = frame.read<uint_jump_offset_t>();
-if (!top().isFalsy()) frame.bcp += arg1;
-else pop();
+if (!stack.back().isFalsy()) frame.bcp += arg1;
+else stack.pop();
 BREAK
 
 CASE(OP_NULL_COALESCING)
 arg1 = frame.read<uint_jump_offset_t>();
-if (!top().isNullOrUndefined()) frame.bcp += arg1;
-else pop();
+if (!stack.back().isNullOrUndefined()) frame.bcp += arg1;
+else stack.pop();
 BREAK
 
 CASE(OP_POP_SCOPE) 
@@ -318,7 +317,7 @@ BREAK
 
 CASE(OP_RETURN)
 closeUpvalues(frame.stackBase);
-stack.at(frame.stackBase) = top();
+stack.at(frame.stackBase) = stack.back();
 stack.resize(frame.stackBase +1);
 callFrames.pop_back();
 //print("Returning from closure, ");
@@ -340,7 +339,7 @@ callFrames.back() = frame;
 return state = FiberState::YIELDED;
 
 CASE(OP_LOAD_METHOD)
-top() = loadMethod(top(), frame.read<uint_method_symbol_t>());
+stack.back() = loadMethod(stack.back(), frame.read<uint_method_symbol_t>());
 BREAK
 
 CASE(OP_STORE_METHOD)
@@ -356,60 +355,60 @@ stack.erase(stack.end() -2);
 BREAK
 
 CASE(OP_DUP_M2)
-push(at(-2));
+stack.push(stack.back(-2));
 BREAK
 
 CASE(OP_CALL_METHOD)
 arg1 = frame.read<uint_method_symbol_t>();
 arg2 = frame.read<uint_local_index_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callSymbol(arg1, arg2);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_CALL_SUPER)
 arg1 = frame.read<uint_method_symbol_t>();
 arg2 = frame.read<uint_local_index_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callSuperSymbol(arg1, arg2);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_CALL_FUNCTION)
 arg2 = frame.read<uint_local_index_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callCallable(arg2);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_CALL_METHOD_VARARG)
 arg2 = countArgsToMark(stack);
 arg1 = frame.read<uint_method_symbol_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 callSymbol(arg1, arg2);
 stack.erase(stack.end() -2);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_CALL_SUPER_VARARG)
 arg2 = countArgsToMark(stack);
 arg1 = frame.read<uint_method_symbol_t>();
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 stack.erase(stack.end() -arg2 -1);
 callSuperSymbol(arg1, arg2 -1);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_CALL_FUNCTION_VARARG)
 arg2 = countArgsToMark(stack) -1;
-callFrames.back() = frame;
+this->callFrames.back() = frame;
 stack.erase(stack.end() -arg2 -2);
 callCallable(arg2);
-frame = callFrames.back();
+frame = this->callFrames.back();
 BREAK
 
 CASE(OP_PUSH_VARARG_MARK)
-push(QV(QV_VARARG_MARK));
+stack.push(QV(QV_VARARG_MARK));
 BREAK
 
 CASE(OP_UNPACK_SEQUENCE) 
@@ -429,24 +428,24 @@ pushNewClass(nParents, nStaticFields, nFields);
 BREAK
 
 CASE(OP_THROW) {
-push(top());
+stack.push(stack.back());
 std::runtime_error e(ensureString(-1)->asString());
-pop();
+stack.pop();
 handleException(e);
-frame = callFrames.back();
+frame = this->callFrames.back();
 }BREAK
 
 CASE(OP_TRY)
 arg1 = frame.read<uint32_t>();
 arg2 = frame.read<uint32_t>();
-catchPoints.push_back({ stack.size(), callFrames.size(), static_cast<size_t>(arg1), static_cast<size_t>(arg2) });
+this->catchPoints.push_back({ stack.size(), callFrames.size(), static_cast<size_t>(arg1), static_cast<size_t>(arg2) });
 BREAK
 
 CASE(OP_END_FINALLY)
-catchPoints.pop_back();
+this->catchPoints.pop_back();
 if (state==FiberState::FAILED) {
 handleException(std::runtime_error(ensureString(-1)->asString()));
-frame = callFrames.back();
+frame = this->callFrames.back();
 }
 BREAK
 
@@ -456,9 +455,9 @@ BREAK
 
 CASE(OP_DEBUG)
 //printStack(cout, stack, frame.stackBase);
-println("%s", top().print() );
-if (top().isObject()) {
-if (auto f = dynamic_cast<QClosure*>(top().asObject<QObject>())) {
+println("%s", stack.back().print() );
+if (stack.back().isObject()) {
+if (auto f = dynamic_cast<QClosure*>(stack.back().asObject<QObject>())) {
 f->func.printInstructions();
 }}
 BREAK
@@ -476,13 +475,13 @@ throw;
 catch (std::exception& e) {
 pushSwanExceptionFromCppException(*this, e);
 handleException(e);
-frame = callFrames.back();
+frame = this->callFrames.back();
 goto begin;
 }
 catch(...) {
 pushString("Unknown C++ exception");
 handleException(std::runtime_error("Unknown C++ exception"));
-frame = callFrames.back();
+frame = this->callFrames.back();
 goto begin;
 }
 #undef SWITCH

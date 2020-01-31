@@ -171,6 +171,16 @@ set.incrVersion();
 else f.returnValue(QV::UNDEFINED);
 }
 
+static void setLength (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+f.returnValue(static_cast<double>(set.set.size()));
+}
+
+static void setClear (QFiber& f) {
+QSortedSet& set = f.getObject<QSortedSet>(0);
+set.set.clear();
+}
+
 static void setToString (QFiber& f) {
 QSortedSet& set = f.getObject<QSortedSet>(0);
 string re = "<";
@@ -190,8 +200,8 @@ sortedSetClass
 ->bind("^", setSymetricDifference)
 ->bind("iterator", setIterator)
 ->bind("toString", setToString)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QSortedSet>(0).set.size())); })
-BIND_L(clear, { f.getObject<QSortedSet>(0).set.clear(); })
+->bind("length", setLength)
+->bind("clear", setClear)
 ->bind("add", setAdd)
 ->bind("remove", setRemove)
 ->bind("lower", setLowerBound)

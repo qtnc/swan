@@ -101,7 +101,7 @@ virtual inline void swap (int i1 = -2, int i2 = -1) final override { std::swap(a
 virtual inline void setCopy (int i, int j) final override { at(i) = at(j); }
 virtual inline void insertCopy (int i, int j) final override { stack.insert(&at(i), at(j)); }
 virtual inline void pop () final override { stack.pop_back(); }
-inline QV& top () { return *(stack.end() -1); }
+inline QV& top () { return stack.back(); }
 inline QV& base () { return stack.at(callFrames.back().stackBase); }
 inline void push (const QV& x) { stack.push_back(x); }
 inline void pushCppCallFrame () { callFrames.push_back({ nullptr, nullptr, stack.size() }); }

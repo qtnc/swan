@@ -122,7 +122,7 @@ bindGlobal("loadField", loadField);
 bindGlobal("storeField", storeField);
 
 classClass->type
-BIND_F( (), createClass);
+->bind("()", createClass);
 #endif
 
 bindGlobal("dbg", debugPrint);

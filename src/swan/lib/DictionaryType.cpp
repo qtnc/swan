@@ -146,16 +146,27 @@ auto it = map.map.upper_bound(f.at(1));
 f.returnValue(it==map.map.end()? QV::UNDEFINED : it->first);
 }
 
+static void dictionaryLength (QFiber& f) {
+QDictionary& dic = f.getObject<QDictionary>(0);
+f.returnValue(static_cast<double>(dic.map.size())); 
+}
+
+static void dictionaryClear (QFiber& f) {
+QDictionary& dic = f.getObject<QDictionary>(0);
+dic.map.clear();
+}
+
+
 void QVM::initDictionaryType () {
 dictionaryClass
 ->copyParentMethods()
 ->bind("[]", dictionarySubscript)
 ->bind("[]=", dictionarySubscriptSetter)
 ->bind("in", dictionaryIn)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QDictionary>(0).map.size())); })
+->bind("length", dictionaryLength)
 ->bind("toString", dictionaryToString)
 ->bind("iterator", dictionaryIterator)
-BIND_L(clear, { f.getObject<QDictionary>(0).map.clear(); })
+->bind("clear", dictionaryClear)
 ->bind("remove", dictionaryRemove)
 ->bind("lower", dictionaryLowerBound)
 ->bind("upper", dictionaryUpperBound)

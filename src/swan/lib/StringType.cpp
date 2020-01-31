@@ -31,10 +31,34 @@ return !memcmp(s1.data, s2.data, s2.length);
 }
 
 static bool stringEquals (QFiber& f) {
+if (f.at(0).i==f.at(1).i) return true;
 if (!f.isString(1)) return false;
 QString& s1 = f.getObject<QString>(0), &s2 = f.getObject<QString>(1);
 return stringEquals(s1,s2);
 }
+
+static void stringCmpEq (QFiber& f) {
+f.returnValue(stringEquals(f));
+}
+
+static void stringCmpNeq (QFiber& f) {
+f.returnValue(!stringEquals(f));
+}
+
+static void stringCmp3Way (QFiber& f) {
+f.returnValue(static_cast<double>(stringCompare(f)));
+}
+
+#define OP(O,N) \
+static void stringCmp##N (QFiber& f) { \
+f.returnValue(stringCompare(f) O 0); \
+}
+
+OP(<, Lt)
+OP(>, Gt)
+OP(<=, Lte)
+OP(>=, Gte)
+#undef OP
 
 static void stringInstantiate (QFiber& f) {
 f.callSymbol(f.vm.findMethodSymbol("toString"), f.getArgCount() -1);
@@ -341,10 +365,9 @@ void stringReplaceWithRegex (QFiber& f);
 
 
 void QVM::initStringType () {
-#define OP(O) BIND_L(O, { f.returnValue(stringCompare(f) O 0); })
 stringClass
 ->copyParentMethods()
-BIND_N(toString)
+->bind("toString", doNothing, "SS")
 ->bind("toJSON", stringToJSON)
 ->bind("+", stringPlus, "SSS")
 ->bind("in", stringIn, "SSB")
@@ -352,11 +375,16 @@ BIND_N(toString)
 ->bind("length", stringLength, "SN")
 ->bind("[]", stringSubscript)
 ->bind("iterator", stringIterator)
-BIND_L(compare, { f.returnValue(static_cast<double>(stringCompare(f))); })
-OP(<) OP(>) OP(<=) OP(>=)
+->bind("compare", stringCmp3Way, "SSN")
+->bind("==", stringCmpEq, "SSB")
+->bind("!=", stringCmpNeq, "SSB")
+
+#define OP(O,N) ->bind(#N, stringCmp##N, "SSB")
+OP(<, Lt) 
+OP(>, Gt) 
+OP(<=, Lte) 
+OP(>=, Gte)
 #undef OP
-BIND_L(==, { f.returnValue(stringEquals(f)); })
-BIND_L(!=, { f.returnValue(!stringEquals(f)); })
 
 ->bind("indexOf", stringFind, "SSN?N")
 ->bind("lastIndexOf", stringRfind, "SSN?N")

@@ -74,6 +74,16 @@ QHeap& heap = f.getObject<QHeap>(0);
 f.returnValue(heap.data.size()? heap.data[0] : QV::UNDEFINED);
 }
 
+static void heapLength (QFiber& f) {
+auto& heap = f.getObject<QHeap>(0);
+f.returnValue(static_cast<double>(heap.data.size())); 
+}
+
+static void heapClear (QFiber& f) {
+auto& heap = f.getObject<QHeap>(0);
+heap.data.clear();
+}
+
 static void heapToString (QFiber& f) {
 QHeap& heap = f.getObject<QHeap>(0);
 string re = "[";
@@ -88,8 +98,8 @@ heapClass
 ->copyParentMethods()
 ->bind("iterator", heapIterator)
 ->bind("toString", heapToString)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QHeap>(0).data.size())); })
-BIND_L(clear, { f.getObject<QHeap>(0).data.clear(); })
+->bind("length", heapLength)
+->bind("clear", heapClear)
 ->bind("push", heapPush)
 ->bind("remove", heapRemove)
 ->bind("pop", heapPop)

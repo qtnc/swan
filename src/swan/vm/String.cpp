@@ -2,7 +2,7 @@
 #include "FiberVM.hpp"
 using namespace std;
 
-#define MAX_CACHED_STRING_LENGTH 16
+#define MAX_CACHED_STRING_LENGTH 256
 
 void appendToString (QFiber& f, QV x, string& out) {
 if (x.isString()) {

@@ -117,12 +117,17 @@ if (times>0) for (int i=0; i<times; i++) items.insert(items.end(), &t.data[0], &
 f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
 }
 
+static void tupleLength (QFiber& f) {
+QTuple& tuple = f.getObject<QTuple>(0);
+f.returnValue(static_cast<double>(tuple.length)); 
+}
+
 void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
 ->bind("[]", tupleSubscript)
 ->bind("iterator", tupleIterator)
-BIND_L(length, { f.returnValue(static_cast<double>(f.getObject<QTuple>(0).length)); })
+->bind("length", tupleLength)
 ->bind("toString", tupleToString)
 ->bind("hashCode", tupleHashCode)
 ->bind("*", tupleTimes)

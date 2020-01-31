@@ -307,11 +307,11 @@ RET(x1, y1, true)
 
 void initGridPathfind (QVM& vm) {
 vm.gridClass
-BIND_F(fill, gridFillRect)
-BIND_F(draw, gridDrawLine)
-BIND_F(floodFill, gridFloodFill)
-BIND_F(pathfind, gridPathFind)
-BIND_F(hasDirectPath, gridTestDirectPath)
+->bind("fill", gridFillRect)
+->bind("draw", gridDrawLine)
+->bind("floodFill", gridFloodFill)
+->bind("pathfind", gridPathFind)
+->bind("hasDirectPath", gridTestDirectPath)
 ;
 }
 
