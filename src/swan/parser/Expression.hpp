@@ -213,11 +213,13 @@ const QToken& nearestToken () override { return expr->nearestToken(); }
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override;
 };
 
-struct TypeHintExpression: Expression {
+struct TypeHintExpression: Expression, Functionnable  {
 std::shared_ptr<Expression> expr;
 std::shared_ptr<TypeInfo> type;
 TypeHintExpression (std::shared_ptr<Expression> e, std::shared_ptr<TypeInfo> t): expr(e), type(t) {}
 const QToken& nearestToken () override { return expr->nearestToken(); }
+void makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) override;
+bool isFunctionnable () override;
 void compile (QCompiler& compiler)  override;
 std::shared_ptr<TypeInfo> getType (QCompiler& compiler) override { return type->resolve(compiler); }
 };

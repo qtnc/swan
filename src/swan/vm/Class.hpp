@@ -12,6 +12,7 @@ c_string name;
 std::vector<QV, trace_allocator<QV>> methods;
 int nFields;
 QV staticFields[0];
+
 QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nFields=0);
 QClass* copyParentMethods ();
 QClass* mergeMixinMethods (QClass* mixin);

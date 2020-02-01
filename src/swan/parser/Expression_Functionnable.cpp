@@ -12,6 +12,18 @@ auto functionnable = dynamic_pointer_cast<Functionnable>(expr);
 return functionnable && functionnable->isFunctionnable();
 }
 
+bool TypeHintExpression::isFunctionnable () {
+return isItemFunctionnable(expr);
+}
+
+void TypeHintExpression::makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) {
+auto functionnable = dynamic_pointer_cast<Functionnable>(expr);
+auto sizeBefore = params.size();
+functionnable->makeFunctionParameters(params);
+auto sizeAfter = params.size();
+if (sizeAfter-sizeBefore==1) params.back()->typeHint = type;
+}
+
 bool LiteralTupleExpression::isFunctionnable () {
 return all_of(items.begin(), items.end(), isItemFunctionnable);
 }
