@@ -107,7 +107,7 @@ map.map.reserve(f.getNum(1));
 void QVM::initMapType () {
 mappingClass
 ->copyParentMethods()
-;
+->assoc<QObject>();
 
 mapClass
 ->copyParentMethods()
@@ -120,18 +120,18 @@ mapClass
 ->bind("clear", mapClear)
 ->bind("remove", mapRemove)
 ->bind("reserve", mapReserve)
-;
+->assoc<QMap>();
 
 mapIteratorClass
 ->copyParentMethods()
 ->bind("next", mapIteratorNext)
-;
+->assoc<QMapIterator>();
 
 mapClass ->type
 ->copyParentMethods()
 ->bind("()", mapInstantiateFromMappings)
 ->bind("of", mapInstantiateFromEntries)
-;
+->assoc<QClass>();
 
 //println("sizeof(QMap)=%d", sizeof(QMap));
 }

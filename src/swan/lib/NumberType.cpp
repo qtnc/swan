@@ -180,5 +180,5 @@ numClass
 numClass ->type
 ->copyParentMethods()
 ->bind("()", numInstantiate, "ON?N")
-;
+->assoc<QClass>();
 }

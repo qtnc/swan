@@ -106,16 +106,16 @@ rangeClass
 ->bind("start", rangeStart)
 ->bind("end", rangeEnd)
 ->bind("step", rangeStep)
-;
+->assoc<QRange>();
 
 rangeIteratorClass
 ->copyParentMethods()
 ->bind("next", rangeIteratorNext)
 ->bind("previous", rangeIteratorPrevious)
-;
+->assoc<QRangeIterator>();
 
 rangeClass ->type
 ->copyParentMethods()
 ->bind("()", rangeInstantiate)
-;
+->assoc<QClass>();
 }

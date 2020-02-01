@@ -212,20 +212,20 @@ sortedSetClass
 ->bind("last", setLast)
 ->bind("in", setIn)
 ->bind("==", setEquals)
-;
+->assoc<QSortedSet>();
 
 sortedSetIteratorClass
 ->copyParentMethods()
 ->bind("next", setIteratorNext)
 ->bind("previous", setIteratorPrevious)
 ->bind("remove", setIteratorRemove)
-;
+->assoc<QSortedSetIterator>();
 
 sortedSetClass ->type
 ->copyParentMethods()
 ->bind("()", setInstantiateFromSequences)
 ->bind("of", setInstantiateFromItems)
-;
+->assoc<QClass>();
 
 //println("sizeof(QSortedSet)=%d", sizeof(QSortedSet));
 }

@@ -363,7 +363,7 @@ listClass
 ->bind("reserve", listReserve)
 ->bind("==", listEquals)
 ->bind("*", listTimes)
-;
+->assoc<QList>();
 
 listIteratorClass
 ->copyParentMethods()
@@ -375,13 +375,13 @@ listIteratorClass
 ->bind("set", listIteratorSet)
 ->bind("-", listIteratorMinus)
 ->bind("unp", listIteratorIndex)
-;
+->assoc<QListIterator>();
 
 listClass -> type
 ->copyParentMethods()
 ->bind("()", listInstantiateFromSequences)
 ->bind("of", listInstantiateFromItems)
-;
+->assoc<QClass>();
 
 //println("sizeof(QList)=%d", sizeof(QList));
 }

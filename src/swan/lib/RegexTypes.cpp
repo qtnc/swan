@@ -159,12 +159,13 @@ std::copy(last, s.end(), out);
 }
 f.returnValue(re);
 }
+
 void QVM::initRegexTypes () {
 regexClass
 ->copyParentMethods()
 ->bind("test", regexTest)
 ->bind("length", regexLength)
-;
+->assoc<QRegex>();
 
 regexMatchResultClass
 ->copyParentMethods()
@@ -172,24 +173,24 @@ regexMatchResultClass
 ->bind("start", regexMatchResultStart)
 ->bind("end", regexMatchResultEnd)
 ->bind("length", regexMatchResultLength)
-;
+->assoc<QRegexMatchResult>();
 
 regexIteratorClass
 ->copyParentMethods()
 ->bind("iterator", doNothing)
 ->bind("next", regexIteratorNext)
-;
+->assoc<QRegexIterator>();
 
 regexTokenIteratorClass
 ->copyParentMethods()
 ->bind("iterator", doNothing)
 ->bind("next", regexTokenIteratorNext)
-;
+->assoc<QRegexTokenIterator>();
 
 regexClass ->type
 ->copyParentMethods()
 ->bind("()", regexInstantiate)
-;
+->assoc<QClass>();
 }
 #endif
 

@@ -337,7 +337,7 @@ dequeClass
 ->bind("fill", dequeFill)
 ->bind("resize", dequeResize)
 ->bind("==", dequeEquals)
-;
+->assoc<QDeque>();
 
 dequeIteratorClass
 ->copyParentMethods()
@@ -349,13 +349,13 @@ dequeIteratorClass
 ->bind("set", dequeIteratorSet)
 ->bind("unp", dequeIteratorIndex)
 ->bind("-", dequeIteratorMinus)
-;
+->assoc<QDequeIterator>();
 
 dequeClass -> type
 ->copyParentMethods()
 ->bind("()", dequeInstantiateFromSequences)
 ->bind("of", dequeInstantiateFromItems)
-;
+->assoc<QClass>();
 
 //println("sizeof(QDeque)=%d", sizeof(QDeque));
 }

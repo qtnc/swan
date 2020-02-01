@@ -222,7 +222,7 @@ objectClass
 ->bind("<=", objectLessEquals, "OOB")
 ->bind(">=", objectGreaterEquals, "OOB")
 ->bind("!", returnFalse, "OB")
-;
+->assoc<QObject>();
 
 classClass
 ->copyParentMethods()
@@ -230,13 +230,13 @@ classClass
 ->bind("is", instanceofOperator, "OOB")
 ->bind("toString", objclassName, "OS")
 ->bind("name", objclassName, "OS")
-;
+->assoc<QClass>();
 
 functionClass
 ->copyParentMethods()
 ->bind("bind", functionBind)
 ->bind("name", functionName)
-;
+->assoc<QFunction>();
 
 boolClass
 ->copyParentMethods()
@@ -263,43 +263,43 @@ undefinedClass
 iterableClass
 ->copyParentMethods()
 ->bind("iterator", doNothing)
-;
+->assoc<QObject>();
 
 fiberClass
 ->copyParentMethods()
 ->bind("()", fiberNext)
 ->bind("next", fiberNext)
 ->bind("iterator", doNothing)
-;
+->assoc<QFiber>();
 
 classClass->type
 ->copyParentMethods()
-;
+->assoc<QClass>();
 
 objectClass->type
 ->copyParentMethods()
-;
+->assoc<QClass>();
 
 boolClass ->type
 ->copyParentMethods()
 ->bind("()", boolInstantiate)
-;
+->assoc<QClass>();
 
 functionClass ->type
 ->copyParentMethods()
 ->bind("()", functionInstantiate)
-;
+->assoc<QClass>();
 
 fiberClass ->type
 ->copyParentMethods()
 ->bind("()", fiberInstantiate)
-;
+->assoc<QClass>();
 
 iterableClass ->type
 ->copyParentMethods()
-;
+->assoc<QClass>();
 
 iteratorClass ->type
 ->copyParentMethods()
-;
+->assoc<QClass>();
 }

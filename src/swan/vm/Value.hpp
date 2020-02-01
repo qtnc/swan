@@ -60,7 +60,7 @@ const Swan::Range& asRange () const;
 
 QClass& getClass (QVM& vm);
 Swan::Handle asHandle ();
-inline void gcVisit () { if (isObject()) asObject<QObject>()->gcVisit(); }
+bool gcVisit (QVM& vm);
 
 static const QV Null, UNDEFINED, FALSE, TRUE;
 };

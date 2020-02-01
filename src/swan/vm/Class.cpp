@@ -4,15 +4,22 @@
 #include "VM.hpp"
 #include "ExtraAlgorithms.hpp"
 
-QClass::QClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, int nf):
+QClass::QClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, uint16_t nf, bool nh):
 QObject(type0), 
 vm(vm0), 
-parent(parent0), nFields(nf), name(name0),
+parent(parent0), 
+nFields(nf), 
+nonInheritable(nh), 
+name(name0),
 methods(trace_allocator<QV>(vm))
 { copyParentMethods(); }
 
-QClass* QClass::create (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nStaticFields, int nFields) { 
-return vm.constructVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields); 
+QClass* QClass::create (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nStaticFields, uint16_t nFields) { 
+return vm.constructVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields, false); 
+}
+
+QClass* QClass::createNonInheritable (QVM& vm, QClass* type, QClass* parent, const std::string& name) {
+return vm.constructVLS<QClass, QV>(0, vm, type, parent, name, 0, true); 
 }
 
 QClass* QClass::copyParentMethods () {
@@ -62,8 +69,8 @@ return cls? *cls : *vm.classClass;
 }}
 
 
-QForeignClass::QForeignClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, int nf, DestructorFn destr):
-QClass(vm0, type0, parent0, name0, nf), 
+QForeignClass::QForeignClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, uint16_t nf, DestructorFn destr):
+QClass(vm0, type0, parent0, name0, nf, false), 
 destructor(destr)
 {}
 

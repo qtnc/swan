@@ -157,18 +157,18 @@ setClass
 ->bind("reserve", setReserve)
 ->bind("in", setIn)
 ->bind("==", setEquals)
-;
+->assoc<QSet>();
 
 setIteratorClass
 ->copyParentMethods()
 ->bind("next", setIteratorNext)
-;
+->assoc<QSetIterator>();
 
 setClass ->type
 ->copyParentMethods()
 ->bind("()", setInstantiateFromSequences)
 ->bind("of", setInstantiateFromItems)
-;
+->assoc<QClass>();
 
 //println("sizeof(QSet)=%d", sizeof(QSet));
 }

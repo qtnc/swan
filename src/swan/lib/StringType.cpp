@@ -410,17 +410,17 @@ OP(>=, Gte)
 ->bind("fill", stringFill, "SSNN?S")
 ->bind("trim", stringTrim, "SS")
 ->bind("format", stringFormat, "SO+S")
-;
+->assoc<QString>(true);
 
 stringIteratorClass
 ->copyParentMethods()
 ->bind("next", stringIteratorNext)
 ->bind("previous", stringIteratorPrevious)
-;
+->assoc<QStringIterator>();
 
 stringClass->type
 ->copyParentMethods()
 ->bind("()", stringInstantiate)
-;
+->assoc<QClass>();
 }
 

@@ -136,7 +136,7 @@ linkedListClass
 ->bind("removeIf", linkedListRemoveIf)
 ->bind("toString", linkedListToString)
 ->bind("iterator", linkedListIterator)
-;
+->assoc<QLinkedList>();
 
 linkedListIteratorClass
 ->copyParentMethods()
@@ -145,13 +145,13 @@ linkedListIteratorClass
 ->bind("add", linkedListIteratorInsert)
 ->bind("insert", linkedListIteratorInsert)
 ->bind("remove", linkedListIteratorRemove)
-;
+->assoc<QLinkedListIterator>();
 
 linkedListClass ->type
 ->copyParentMethods()
 ->bind("()", linkedListInstantiateFromSequences)
 ->bind("of", linkedListInstantiateFromItems)
-;
+->assoc<QClass>();
 
 //println("sizeof(QLinkedList)=%d", sizeof(QLinkedList));
 }

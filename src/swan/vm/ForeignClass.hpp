@@ -7,7 +7,7 @@ typedef void(*DestructorFn)(void*);
 DestructorFn destructor;
 size_t id;
 
-QForeignClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, int nUserBytes=0, DestructorFn=nullptr);
+QForeignClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nUserBytes=0, DestructorFn=nullptr);
 virtual QObject* instantiate () override;
 virtual ~QForeignClass () = default;
 virtual size_t getMemSize () override { return sizeof(*this); }

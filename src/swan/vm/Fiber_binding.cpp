@@ -43,7 +43,10 @@ QClass* parent = parents[0].asObject<QClass>();
 QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStaticFields);
 QClass* cls = foreign?
 construct<QForeignClass>(*this, meta, parent, name, nFields):
-QClass::create(*this, meta, parent, name, nStaticFields, nFields+std::max(0, parent->nFields));
+QClass::create(*this, meta, parent, name, nStaticFields, nFields+parent->nFields);
+if (foreign) cls->assoc<QForeignClass>(true);
+else cls->assoc<QClass>(true);
+meta->assoc<QClass>(true);
 for (auto& p: parents) cls->mergeMixinMethods( p.asObject<QClass>() );
 meta->bind("()", instantiate);
 return cls;
@@ -60,7 +63,7 @@ if (it!=parents.end()) {
 error<invalid_argument>("Invalid parent class: %s", it->getClass(vm).name);
 return;
 }
-if (parent->nFields<0) {
+if (parent->nonInheritable) {
 error<invalid_argument>("Can't inherit from built-in class %s", parent->name);
 return;
 }

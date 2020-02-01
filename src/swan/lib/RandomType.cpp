@@ -100,12 +100,12 @@ randomClass
 ->bind("()", randomCall )
 ->bind("reset", randomSeed)
 ->bind("normal", randomNormal)
-;
+->assoc<QRandom>();
 
 randomClass ->type
 ->copyParentMethods()
 ->bind("()", randomInstantiate)
-;
+->assoc<QClass>();
 
 listClass
 ->bind("shuffle", listShuffle)

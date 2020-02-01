@@ -135,17 +135,17 @@ gridClass
 ->bind("height", gridHeight)
 ->bind("toString", gridToString)
 ->bind("==", gridEquals)
-;
+->assoc<QGrid>();
 
 gridIteratorClass
 ->copyParentMethods()
 ->bind("next", gridIteratorNext)
-;
+->assoc<QGridIterator>();
 
 gridClass ->type
 ->copyParentMethods()
 ->bind("()", gridInstantiate)
-;
+->assoc<QClass>();
 
 #ifndef NO_GRID_PATHFIND
 initGridPathfind(*this);

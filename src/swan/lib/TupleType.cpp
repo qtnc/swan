@@ -133,17 +133,17 @@ tupleClass
 ->bind("*", tupleTimes)
 ->bind("==", tupleEquals)
 ->bind("compare", tupleCompare)
-;
+->assoc<QTuple>();
 
 tupleIteratorClass
 ->copyParentMethods()
 ->bind("next", tupleIteratorNext)
 ->bind("previous", tupleIteratorPrevious)
-;
+->assoc<QTupleIterator>();
 
 tupleClass ->type
 ->copyParentMethods()
 ->bind("()", tupleInstantiateFromSequences)
 ->bind("of", tupleInstantiateFromItems)
-;
+->assoc<QClass>();
 }

@@ -45,5 +45,5 @@ iterableClass
 ->bind("join", iterableJoin)
 ->bind("+", iterablePlus)
 ->bind("toJSON", iterableToJSON)
-;
+->assoc<QObject>();
 }

@@ -104,17 +104,17 @@ heapClass
 ->bind("remove", heapRemove)
 ->bind("pop", heapPop)
 ->bind("first", heapFirst)
-;
+->assoc<QHeap>();
 
 heapIteratorClass
 ->copyParentMethods()
 ->bind("next", heapIteratorNext)
-;
+->assoc<QHeapIterator>();
 
 heapClass ->type
 ->copyParentMethods()
 ->bind("()", heapInstantiateFromSequences)
 ->bind("of", heapInstantiateFromItems)
-;
+->assoc<QClass>();
 }
 

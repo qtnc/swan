@@ -171,20 +171,20 @@ dictionaryClass
 ->bind("lower", dictionaryLowerBound)
 ->bind("upper", dictionaryUpperBound)
 ->bind("put", dictionaryPut)
-;
+->assoc<QDictionary>();
 
 dictionaryIteratorClass
 ->copyParentMethods()
 ->bind("next", dictionaryIteratorNext)
 ->bind("previous", dictionaryIteratorPrevious)
 ->bind("remove", dictionaryIteratorRemove)
-;
+->assoc<QDictionaryIterator>();
 
 dictionaryClass ->type
 ->copyParentMethods()
 ->bind("()", dictionaryInstantiateFromMappings)
 ->bind("of", dictionaryInstantiateFromEntries)
-;
+->assoc<QClass>();
 
 //println("sizeof(QDictionary)=%d", sizeof(QDictionary));
 }
