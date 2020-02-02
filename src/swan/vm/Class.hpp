@@ -10,6 +10,9 @@ bool(*gcVisit)(QObject*);
 size_t(*gcMemSize)(QObject*);
 void*(*gcOrigin)(QObject*);
 void(*gcDestroy)(QObject*);
+QObject*(*instantiate)(QObject*);
+bool(*join)(QObject*, struct QFiber&, const std::string&, std::string&);
+bool(*copyInto)(QObject*, QFiber&, CopyVisitor&);
 };
 
 template<class T> void baseGCDestroy (QObject*  x) {
@@ -32,8 +35,20 @@ template<class T> void* baseGCOrigin (QObject* x) {
 return static_cast<T*>(x);
 }
 
+template<class T> QObject* baseInstantiate (QObject*  x) {
+return static_cast<T*>(x)->instantiate();
+}
+
+template<class T> bool baseJoin (QObject* obj, struct QFiber& f, const std::string& delim, std::string& out) {
+return static_cast<T*>(obj) ->join(f, delim, out);
+}
+
+template<class T> bool baseCopyInto  (QObject* obj, struct QFiber& f, CopyVisitor& out) {
+return static_cast<T*>(obj) ->copyInto(f, out);
+}
+
 template<class T> ClassGCInfo* baseClassGCInfo (bool vls=false) {
-static ClassGCInfo info = { baseGCVisit<T>, vls? baseGCMemSize<T> : baseGCMemSizeStatic<T>, baseGCOrigin<T>, baseGCDestroy<T>  };
+static ClassGCInfo info = { baseGCVisit<T>, vls? baseGCMemSize<T> : baseGCMemSizeStatic<T>, baseGCOrigin<T>, baseGCDestroy<T>, baseInstantiate<T>, baseJoin<T>, baseCopyInto<T>    };
 return &info;
 }
 
@@ -63,10 +78,10 @@ else return re;
 static QClass* create (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nStaticFields=0, uint16_t nFields=0);
 static QClass* createNonInheritable (QVM& vm, QClass* type, QClass* parent, const std::string& name);
 
-virtual QObject* instantiate ();
-virtual ~QClass () = default;
-virtual bool gcVisit () final override;
-virtual size_t getMemSize () override { return sizeof(*this) + sizeof(QV) * type->nFields; }
+QObject* instantiate ();
+~QClass () = default;
+bool gcVisit ();
+inline size_t getMemSize ()  { return sizeof(*this) + sizeof(QV) * type->nFields; }
 };
 
 #endif

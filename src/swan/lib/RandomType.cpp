@@ -30,7 +30,8 @@ f.returnValue(static_cast<double>( dist(r.rand) ));
 }} else {//not num
 vector<double> weights;
 vector<QV, trace_allocator<QV>> qw(f.vm);
-f.getObject<QSequence>(1) .copyInto(f, qw);
+auto citr = copyVisitor(std::back_inserter(qw));
+f.at(1).copyInto(f, citr);
 for (QV& x: qw) weights.push_back(x.asNum());
 discrete_distribution<size_t> dist(weights.begin(), weights.end());
 f.returnValue( static_cast<double>( dist(r.rand) ) );
@@ -75,7 +76,8 @@ for (int i=0, n=tmp.size(); i<count && i<n; i++) re->data.push_back(tmp[i]);
 else if (f.getArgCount()>=2 && !f.at(-1).isInstanceOf(f.vm.randomClass)) {
 vector<double> weights;
 vector<QV, trace_allocator<QV>> qw(f.vm);
-f.getObject<QSequence>(-1) .copyInto(f, qw);
+auto citr = copyVisitor(std::back_inserter(qw));
+f.at(-1).copyInto(f, citr);
 for (QV& x: qw) weights.push_back(x.asNum());
 weights.resize(l.data.size());
 discrete_distribution<size_t> dist(weights.begin(), weights.end());

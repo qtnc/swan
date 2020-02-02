@@ -34,8 +34,9 @@ if (n>0) set->set.insert(&f.at(1), &f.at(1) +n);
 static void setInstantiateFromSequences (QFiber& f) {
 QSet* set = f.vm.construct<QSet>(f.vm);
 f.returnValue(set);
+auto citr = copyVisitor(std::inserter(set->set, set->set.end()));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, *set);
+f.at(i).copyInto(f, citr);
 }
 }
 

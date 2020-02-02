@@ -35,10 +35,10 @@ upvalues(nullptr), bytecode(nullptr), bytecodeEnd(nullptr)
 {}
 
 QClosure::QClosure (QVM& vm, QFunction& f):
-QObject(vm.functionClass), func(f) {}
+QObject(vm.closureClass), func(f) {}
 
 BoundFunction::BoundFunction (QVM& vm, const QV& m, size_t c):
-QObject(vm.functionClass), method(m), count(c) {}
+QObject(vm.boundFunctionClass), method(m), count(c) {}
 
 BoundFunction* BoundFunction::create (QVM& vm, const QV& m, size_t c, const QV* a) {
 auto bf = vm.constructVLS<BoundFunction, QV>(c, vm, m, c);
@@ -46,9 +46,8 @@ memcpy(bf->args, a, c*sizeof(QV));
 return bf;
 }
 
-
 StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
-QObject(vm.functionClass), func(func0) {}
+QObject(vm.stdFunctionClass), func(func0) {}
 
 QFunction* QFunction::create (QVM& vm, int nArgs, int nConsts, int nUpvalues, int bcSize) {
 QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + bcSize, vm);
@@ -64,7 +63,7 @@ return type->vm.constructVLS<QInstance, QV>(nFields, type);
 }
 
 size_t QInstance::getMemSize () { 
-return sizeof(*this) + sizeof(QV) * std::max(0, type->nFields); 
+return sizeof(*this) + sizeof(QV) * type->nFields; 
 }
 
 QForeignInstance* QForeignInstance::create (QClass* type, int nBytes) { 
@@ -72,7 +71,7 @@ return type->vm.constructVLS<QForeignInstance, char>(nBytes, type);
 }
 
 size_t QForeignInstance::getMemSize () { 
-return sizeof(*this) + std::max(0, type->nFields); 
+return sizeof(*this) + type->nFields; 
 }
 
 QForeignInstance::~QForeignInstance () {

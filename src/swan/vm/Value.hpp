@@ -61,6 +61,7 @@ const Swan::Range& asRange () const;
 QClass& getClass (QVM& vm);
 Swan::Handle asHandle ();
 bool gcVisit (QVM& vm);
+bool copyInto (struct QFiber&, struct CopyVisitor&) const;
 
 static const QV Null, UNDEFINED, FALSE, TRUE;
 };

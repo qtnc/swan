@@ -25,8 +25,9 @@ else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
 }
 QHeap* heap = f.vm.construct<QHeap>(f.vm, sorter);
 f.returnValue(heap);
+auto citr = copyVisitor(std::back_inserter(heap->data));
 for (int i=start, l=finish; i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, heap->data);
+f.at(i).copyInto(f, citr);
 }
 std::make_heap(heap->data.begin(), heap->data.end(), QVBinaryPredicate(f.vm, heap->sorter));
 }

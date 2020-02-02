@@ -110,9 +110,8 @@ else if (f.isRange(1)) {
 int start, end;
 f.getRange(1).makeBounds(length, start, end);
 deque.data.erase(deque.data.begin()+start, deque.data.begin()+end);
-vector<QV, trace_allocator<QV>> tmp(f.vm);
-f.getObject<QSequence>(2) .copyInto(f, tmp);
-deque.data.insert(deque.data.begin()+start, tmp.begin(), tmp.end());
+auto citr = copyVisitor(std::inserter(deque.data, deque.data.begin()+start));
+f.at(2).copyInto(f, citr);
 f.returnValue(f.at(2));
 deque.incrVersion();
 }
@@ -295,11 +294,9 @@ deque.data.clear();
 static void dequeInstantiateFromSequences (QFiber& f) {
 QDeque* deque = f.vm.construct<QDeque>(f.vm);
 f.returnValue(deque);
-vector<QV, trace_allocator<QV>> tmp(f.vm);
+auto citr = copyVisitor(std::back_inserter(deque->data));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-tmp.clear();
-f.getObject<QSequence>(i) .copyInto(f, tmp);
-deque->data.insert(deque->data.end(), tmp.begin(), tmp.end());
+f.at(i).copyInto(f, citr);
 }
 }
 

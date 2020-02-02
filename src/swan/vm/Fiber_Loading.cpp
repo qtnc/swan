@@ -46,10 +46,11 @@ vector<pair<QV,QV>> upvalues;
 if (!adctx.isNullOrUndefined()) {
 compiler.parent = &parent;
 vector<QV, trace_allocator<QV>> items(vm), tmp(vm);
-adctx.asObject<QSequence>() ->copyInto(*this, items);
+auto citr = copyVisitor(std::back_inserter(items)), citr2 = copyVisitor(std::back_inserter(tmp));
+adctx.copyInto(*this, citr);
 for (auto& val: items) {
 tmp.clear();
-val.asObject<QSequence>() ->copyInto(*this, tmp);
+val.copyInto(*this, citr2);
 if (tmp.size()<1 || !tmp.begin()->isString()) continue;
 upvalues.push_back(make_pair(*tmp.begin(), *tmp.rbegin() ));
 }

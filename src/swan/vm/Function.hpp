@@ -28,9 +28,9 @@ QV constants[];
 
 static QFunction* create (QVM& vm, int nArgs, int nConstants, int nUpvalues, int bcSize);
 QFunction (QVM& vm);
-virtual bool gcVisit () final override;
-virtual ~QFunction () = default;
-virtual size_t getMemSize () override { return  bytecodeEnd - reinterpret_cast<char*>(this); }
+bool gcVisit ();
+~QFunction () = default;
+inline size_t getMemSize ()  { return  bytecodeEnd - reinterpret_cast<char*>(this); }
 void printInstructions () const;
 };
 

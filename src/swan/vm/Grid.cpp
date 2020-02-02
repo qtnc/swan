@@ -12,12 +12,14 @@ return grid;
 }
 
 
-void QGrid::join (QFiber& f, const string& delim, string& re) {
+bool QGrid::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (QV *x = data, *end=data+(width*height); x<end; x++) {
 if (notFirst) re+=delim;
 notFirst=true;
 appendToString(f, *x, re);
-}}
+}
+return true;
+}
 
 #endif

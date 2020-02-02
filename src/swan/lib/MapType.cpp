@@ -14,9 +14,10 @@ static void mapInstantiateFromEntries (QFiber& f) {
 QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> tuple(f.vm);
+auto citr = copyVisitor(std::back_inserter(tuple));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 tuple.clear();
-f.getObject<QSequence>(i) .copyInto(f, tuple);
+f.at(i).copyInto(f, citr);
 if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }
 }
@@ -25,12 +26,13 @@ static void mapInstantiateFromMappings (QFiber& f) {
 QMap* map = f.vm.construct<QMap>(f.vm);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);
+auto citr = copyVisitor(std::back_inserter(pairs)), citr2 = copyVisitor(std::back_inserter(tuple));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
 pairs.clear();
-f.getObject<QSequence>(i) .copyInto(f, pairs);
+f.at(i).copyInto(f, citr);
 for (QV& pair: pairs) {
 tuple.clear();
-pair.asObject<QSequence>()->copyInto(f, tuple);
+pair.copyInto(f, citr2);
 if (tuple.size()) map->map[tuple[0]] = tuple.back();
 }}
 }

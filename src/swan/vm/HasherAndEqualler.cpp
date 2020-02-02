@@ -26,8 +26,8 @@ h = h*5+0xe6546b64;
 }
 uint32_t k = 0;
 switch(reinterpret_cast<uintptr_t>(end) &3) {
-case 3: k ^= end[-3] <<16;
-case 2: k ^= end[-2] << 8;
+case 3: k ^= end[-3] <<16; [[fallthrough]];
+case 2: k ^= end[-2] << 8; [[fallthrough]];
 case 1: k ^= end[-1];
 k*= C1;
 k = rot(k, 15);

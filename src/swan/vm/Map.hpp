@@ -24,9 +24,9 @@ inline QV& set (const QV& key, const QV& value) {
 incrVersion();
 return map[key] = value; 
 }
-virtual ~QMap () = default;
-virtual bool gcVisit () override;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QMap () = default;
+bool gcVisit ();
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QMapIterator: QObject {
@@ -34,11 +34,11 @@ QMap& map;
 QMap::iterator iterator;
 uint32_t version;
 QMapIterator (QVM& vm, QMap& m);
-virtual bool gcVisit () override;
-virtual ~QMapIterator() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QMapIterator() = default;
 inline void incrVersion () { version++; map.incrVersion(); }
 inline void checkVersion () { ::checkVersion(version, map.version); }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 #endif

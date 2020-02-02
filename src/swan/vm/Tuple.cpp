@@ -9,11 +9,13 @@ memcpy(tuple->data, data, length*sizeof(QV));
 return tuple;
 }
 
-void QTuple::join (QFiber& f, const string& delim, string& re) {
+bool QTuple::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (QV *x = data, *end=data+length; x<end; x++) {
 if (notFirst) re+=delim;
 notFirst=true;
 appendToString(f, *x, re);
-}}
+}
+return true;
+}
 

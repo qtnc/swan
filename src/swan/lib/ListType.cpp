@@ -123,7 +123,8 @@ int start, end;
 f.getRange(1).makeBounds(length, start, end);
 list.data.erase(list.data.begin()+start, list.data.begin()+end);
 list.incrVersion();
-f.getObject<QSequence>(2) .copyInto(f, list.data, start);
+auto citr = copyVisitor(std::inserter(list.data, list.data.begin()+start));
+f.at(2).copyInto(f, citr);
 f.returnValue(f.at(2));
 }
 else f.returnValue(QV::UNDEFINED);
@@ -320,8 +321,9 @@ list.data.clear();
 static void listInstantiateFromSequences (QFiber& f) {
 QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
+auto citr = copyVisitor(std::back_inserter(list->data));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, list->data);
+f.at(i).copyInto(f, citr);
 }
 }
 

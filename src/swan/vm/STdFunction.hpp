@@ -7,8 +7,8 @@ struct StdFunction: QObject {
 typedef std::function<void(Swan::Fiber&)> Func;
 Func func;
 StdFunction (QVM& vm, const Func& func);
-virtual ~StdFunction () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~StdFunction () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 #endif

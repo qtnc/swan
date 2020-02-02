@@ -457,7 +457,8 @@ CASE(OP_DEBUG)
 //printStack(cout, stack, frame.stackBase);
 println("%s", stack.back().print() );
 if (stack.back().isObject()) {
-if (auto f = dynamic_cast<QClosure*>(stack.back().asObject<QObject>())) {
+if (stack.back().isClosure()) {
+auto f = stack.back().asObject<QClosure>();
 f->func.printInstructions();
 }}
 BREAK

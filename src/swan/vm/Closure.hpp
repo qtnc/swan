@@ -6,9 +6,9 @@ struct QClosure: QObject {
 struct QFunction& func;
 struct Upvalue* upvalues[];
 QClosure (QVM& vm, QFunction& f);
-virtual bool gcVisit () final override;
-virtual ~QClosure () = default;
-virtual size_t getMemSize () override ;
+bool gcVisit ();
+~QClosure () = default;
+size_t getMemSize () ;
 };
 
 #endif

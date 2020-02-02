@@ -6,7 +6,7 @@ struct QForeignInstance: QSequence  {
 char userData[];
 QForeignInstance (QClass* type): QSequence(type) {}
 static QForeignInstance* create (QClass* type, int nBytes);
-virtual ~QForeignInstance ();
-virtual size_t getMemSize () override ;
+~QForeignInstance ();
+size_t getMemSize () ;
 };
 #endif

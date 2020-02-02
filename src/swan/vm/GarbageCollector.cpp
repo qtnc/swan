@@ -248,17 +248,6 @@ return false;
 }
 #endif
 
-static QV makeqv (QObject* obj) {
-#define T(C,G) if (dynamic_cast<C*>(obj)) return QV(obj, G);
-T(QClosure, QV_TAG_CLOSURE)
-T(QFiber, QV_TAG_FIBER)
-T(BoundFunction, QV_TAG_BOUND_FUNCTION)
-T(QFunction, QV_TAG_NORMAL_FUNCTION)
-T(QString, QV_TAG_STRING)
-#undef T
-return obj;
-}
-
 static inline void unmarkAll (QObject* initial) {
 for (auto it=initial; it; it = it->gcNext()) {
 it->gcUnmark();

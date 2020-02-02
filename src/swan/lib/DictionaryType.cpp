@@ -22,10 +22,11 @@ else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
 }
 QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 vector<QV, trace_allocator<QV>> tuple(f.vm);
+auto citr = copyVisitor(std::back_inserter(tuple));
 f.returnValue(map);
 for (int i=start, l=finish; i<l; i++) {
 tuple.clear();
-f.getObject<QSequence>(i) .copyInto(f, tuple);
+f.at(i).copyInto(f, citr);
 if (tuple.size())  map->set(tuple[0], tuple.back());
 }
 }
@@ -40,12 +41,13 @@ else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
 QDictionary* map = f.vm.construct<QDictionary>(f.vm, sorter);
 f.returnValue(map);
 vector<QV, trace_allocator<QV>> pairs(f.vm), tuple(f.vm);
+auto citr = copyVisitor(std::back_inserter(pairs)), citr2 = copyVisitor(std::back_inserter(tuple));
 for (int i=start, l=finish; i<l; i++) {
 pairs.clear();
-f.getObject<QSequence>(i) .copyInto(f, pairs);
+f.at(i).copyInto(f, citr);
 for (QV& pair: pairs) {
 tuple.clear();
-pair.asObject<QSequence>() ->copyInto(f, tuple);
+pair.copyInto(f, citr2);
 if (tuple.size()) map->set(tuple[0], tuple.back());
 }}
 }

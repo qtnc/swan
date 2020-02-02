@@ -37,16 +37,16 @@ regex regex;
 regex_constants::match_flag_type matchOptions;
 static std::pair<regex_constants::syntax_option_type, regex_constants::match_flag_type>  parseOptions (const char* options);
 QRegex (QVM& vm, const char* begin, const char* end, regex_constants::syntax_option_type regexOptions, regex_constants::match_flag_type matchOptions);
-virtual ~QRegex () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QRegex () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QRegexMatchResult: QObject {
 cmatch match;
 QRegexMatchResult (QVM& vm): QObject(vm.regexMatchResultClass) {}
 QRegexMatchResult (QVM& vm, const cmatch& m): QObject(vm.regexMatchResultClass), match(m)  {}
-virtual ~QRegexMatchResult () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QRegexMatchResult () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QRegexIterator: QSequence {
@@ -54,9 +54,9 @@ regex_iterator<const char*> it, end;
 QString& str;
 QRegex& regex;
 QRegexIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options);
-virtual bool gcVisit () override;
-virtual ~QRegexIterator () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QRegexIterator () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QRegexTokenIterator: QSequence {
@@ -64,9 +64,9 @@ regex_token_iterator<const char*> it, end;
 QString& str;
 QRegex& regex;
 QRegexTokenIterator (QVM& vm, QString& s, QRegex& r, regex_constants::match_flag_type options, int g);
-virtual bool gcVisit () override;
-virtual ~QRegexTokenIterator () = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QRegexTokenIterator () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 #endif
 

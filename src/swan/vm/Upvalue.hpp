@@ -13,9 +13,9 @@ Upvalue (QFiber& f, int slot);
 explicit Upvalue (QFiber& f, const QV& value);
 inline QV& get () { return *value; }
 inline void close () { closedValue = *value; value = &closedValue; }
-virtual bool gcVisit () override;
-virtual ~Upvalue() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~Upvalue() = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 #endif

@@ -9,11 +9,13 @@ data(trace_allocator<QV>(vm)),
 version(0)
 {}
 
-void QList::join (QFiber& f, const string& delim, string& re) {
+bool QList::join (QFiber& f, const string& delim, string& re) {
 bool notFirst=false;
 for (QV& x: data) {
 if (notFirst) re+=delim;
 notFirst=true;
 appendToString(f, x, re);
-}}
+}
+return true;
+}
 

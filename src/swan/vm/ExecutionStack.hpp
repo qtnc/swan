@@ -4,6 +4,7 @@
 #include "../../include/cpprintf.hpp"
 
 template<class T, class Alloc = std::allocator<T>, class F = std::function<void(const T*, const T*)>> struct execution_stack {
+typedef T value_type;
 T *base, *top, *finish;
 Alloc allocator;
 F callback;

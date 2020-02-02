@@ -212,11 +212,8 @@ f.pop();
 void QFiber::unpackSequence () {
 QV val = top();
 pop();
-vector<QV, trace_allocator<QV>> buffer(vm);
-QSequence* seq = val.isObject()? dynamic_cast<QSequence*>(val.asObject<QObject>()): nullptr;
-if (seq) seq->copyInto(*this, buffer);
-else error<invalid_argument>("Invalid target for unpack operation");
-stack.insert(stack.end(), buffer.begin(), buffer.end());
+auto citr = copyVisitor(std::back_inserter(stack));
+if (!val.copyInto(*this, citr))  error<invalid_argument>("Invalid target for unpack operation");
 }
 
 Upvalue* QFiber::captureUpvalue (int slot) {

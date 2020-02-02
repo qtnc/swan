@@ -112,8 +112,9 @@ list.incrVersion();
 static void linkedListInstantiateFromSequences (QFiber& f) {
 QLinkedList* list = f.vm.construct<QLinkedList>(f.vm);
 f.returnValue(list);
+auto citr = copyVisitor(std::back_inserter(list->data));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, *list);
+f.at(i).copyInto(f, citr);
 }
 }
 

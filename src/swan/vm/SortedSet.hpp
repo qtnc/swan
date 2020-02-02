@@ -19,14 +19,10 @@ QSortedSet (struct QVM& vm, QV& sorter0);
 inline void incrVersion () { version++; }
 iterator find (const QV& key);
 bool add (const QV& key, bool allowDuplicate = false);
-virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { set.insert(v.begin(), v.end()); incrVersion(); }
-virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { 
-auto it = start<0? v.end() +start +1 : v.begin() + start;
-v.insert(it, set.begin(), set.end());
-}
-virtual ~QSortedSet () = default;
-virtual bool gcVisit () override;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QSortedSet () = default;
+bool gcVisit ();
+inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(set.begin(), set.end(), std::ref(out)); return true; }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QSortedSetIterator: QObject {
@@ -35,11 +31,11 @@ QSortedSet::iterator iterator;
 uint32_t version;
 bool forward;
 QSortedSetIterator (QVM& vm, QSortedSet& s);
-virtual bool gcVisit () override;
-virtual ~QSortedSetIterator() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QSortedSetIterator() = default;
 inline void incrVersion () { version++; set.incrVersion(); }
 inline void checkVersion () { ::checkVersion(version, set.version); }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 #endif

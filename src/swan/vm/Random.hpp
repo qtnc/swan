@@ -9,7 +9,8 @@
 struct QRandom: QObject {
 std::mt19937 rand;
 QRandom (QVM& vm): QObject(vm.randomClass), rand(time(nullptr)) {}
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QRandom () = default;
+inline size_t getMemSize () { return sizeof(*this); }
 };
 #endif
 #endif

@@ -25,8 +25,9 @@ else if (f.at(-1).isCallable()) { sorter=f.at(-1); finish--; }
 }
 QSortedSet* set = f.vm.construct<QSortedSet>(f.vm, sorter);
 f.returnValue(set);
+auto citr = copyVisitor(std::inserter(set->set, set->set.end()));
 for (int i=start, l=finish; i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, *set);
+f.at(i).copyInto(f, citr);
 }
 }
 

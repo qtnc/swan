@@ -152,9 +152,8 @@ void handleException (const std::exception& e);
 FiberState run ();
 virtual ~QFiber ();
 virtual void release () final override;
-virtual bool gcVisit () override;
-virtual void* gcOrigin () override;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+void* gcOrigin ();
 };
 
 template<class E, class... A> inline void error (const char* msg, A&&... args) {

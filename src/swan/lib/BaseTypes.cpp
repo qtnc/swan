@@ -1,6 +1,7 @@
 #include "SwanLib.hpp"
 #include "../vm/Fiber_inlines.hpp"
 #include "../vm/BoundFunction.hpp"
+#include "../vm/StdFunction.hpp"
 #include "../../include/cpprintf.hpp"
 using namespace std;
 
@@ -62,7 +63,7 @@ if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined(
 error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
-QObject* instance = cls.instantiate();
+QObject* instance = cls.gcInfo->instantiate(&cls);
 f.setObject(0, instance);
 f.pushCppCallFrame();
 f.callSymbol(ctorSymbol, f.getArgCount());
@@ -288,7 +289,19 @@ boolClass ->type
 functionClass ->type
 ->copyParentMethods()
 ->bind("()", functionInstantiate)
-->assoc<QClass>();
+->assoc<QFunction>(true);
+
+closureClass
+->copyParentMethods()
+->assoc<QClosure>(true);
+
+boundFunctionClass
+->copyParentMethods()
+->assoc<BoundFunction>(true);
+
+stdFunctionClass
+->copyParentMethods()
+->assoc<StdFunction>();
 
 fiberClass ->type
 ->copyParentMethods()

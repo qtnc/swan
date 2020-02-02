@@ -6,9 +6,9 @@ struct QInstance: QSequence {
 QV fields[];
 QInstance (QClass* type): QSequence(type) {}
 static QInstance* create (QClass* type, int nFields);
-virtual ~QInstance () = default;
-virtual bool gcVisit () final override;
-virtual size_t getMemSize () override ;
+~QInstance () = default;
+bool gcVisit ();
+size_t getMemSize ();
 };
 
 #endif

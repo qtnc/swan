@@ -36,6 +36,7 @@ uint16_t gcTreshholdFactor, gcLock;
 QObject* firstGCObject;
 
 QClass *boolClass, *classClass, *fiberClass, *functionClass, *nullClass, *numClass, *objectClass, *undefinedClass;
+QClass *closureClass, *boundFunctionClass, *stdFunctionClass;
 QClass *listClass, *mapClass, *rangeClass, *setClass, *stringClass, *tupleClass;
 QClass *iterableClass, *iteratorClass, *mappingClass, *listIteratorClass, *stringIteratorClass, *setIteratorClass, *mapIteratorClass, *rangeIteratorClass, *tupleIteratorClass;
 #ifndef NO_REGEX

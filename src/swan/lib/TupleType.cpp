@@ -10,8 +10,9 @@ f.returnValue(tuple);
 
 static void tupleInstantiateFromSequences (QFiber& f) {
 vector<QV, trace_allocator<QV>> items(f.vm);
+auto citr = copyVisitor(std::back_inserter(items));
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.getObject<QSequence>(i) .copyInto(f, items);
+f.at(i).copyInto(f, citr);
 }
 f.returnValue(QTuple::create(f.vm, items.size(), &items[0]));
 }

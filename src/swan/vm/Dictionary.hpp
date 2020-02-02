@@ -19,10 +19,10 @@ QDictionary (struct QVM& vm, QV& sorter);
 iterator get (const QV& key);
 iterator getr (const QV& key);
 void set (const QV& key, const QV& value);
-virtual ~QDictionary () = default;
-virtual bool gcVisit () override;
-virtual size_t getMemSize () override { return sizeof(*this); }
+~QDictionary () = default;
+bool gcVisit ();
 inline void incrVersion () { version++; }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 struct QDictionaryIterator: QObject {
@@ -31,11 +31,11 @@ QDictionary::iterator iterator;
 uint32_t version;
 bool forward;
 QDictionaryIterator (QVM& vm, QDictionary& m);
-virtual bool gcVisit () override;
-virtual ~QDictionaryIterator() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QDictionaryIterator() = default;
 inline void incrVersion () { version++; map.incrVersion(); }
 inline void checkVersion () { ::checkVersion(version, map.version); }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 
 #endif

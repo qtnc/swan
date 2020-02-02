@@ -18,7 +18,7 @@ if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined(
 error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
-QObject* instance = cls.instantiate();
+QObject* instance = cls.gcInfo->instantiate(&cls);
 f.setObject(0, instance);
 f.callSymbol(ctorSymbol, f.getArgCount());
 f.returnValue(instance);
@@ -67,10 +67,10 @@ if (parent->nonInheritable) {
 error<invalid_argument>("Can't inherit from built-in class %s", parent->name);
 return;
 }
-if (dynamic_cast<QForeignClass*>(parent)) {
-error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
-return;
-}
+//if (dynamic_cast<QForeignClass*>(parent)) {
+//error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
+//return;
+//}
 if (nFields+parent->nFields>=std::numeric_limits<uint_field_index_t>::max()) {
 error<invalid_argument>("Too many member fields");
 return;
@@ -134,7 +134,8 @@ else return getOptionalHandle(stackIndex, defaultValue);
 
 vector<double> QFiber::getNumList (int stackIndex) {
 vector<QV, trace_allocator<QV>> v0(vm);
-getObject<QSequence>(stackIndex) .copyInto(*this, v0);
+auto citr = copyVisitor(std::back_inserter(v0));
+at(stackIndex).copyInto(*this, citr);
 vector<double> v;
 for (QV x: v0) v.push_back(x.d);
 return v;
@@ -143,7 +144,8 @@ return v;
 vector<string> QFiber::getStringList (int stackIndex) {
 vector<string> v;
 vector<QV, trace_allocator<QV>> v0(vm);
-getObject<QSequence>(stackIndex) .copyInto(*this, v0);
+auto citr = copyVisitor(std::back_inserter(v0));
+at(stackIndex).copyInto(*this, citr);
 for (QV x: v0) v.push_back(x.asString());
 return v;
 }

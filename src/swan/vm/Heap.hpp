@@ -23,20 +23,11 @@ QSequence(vm.heapClass),
 data(trace_allocator<QV>(vm)),
 sorter(sorter), version(0)
 {}
-virtual bool gcVisit () override;
-virtual ~QHeap () = default;
-
-virtual void insertFrom (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override {
-data.insert(data.end(), v.begin(), v.end());
-std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter));
-incrVersion();
-}
-virtual void copyInto (QFiber& f, std::vector<QV, trace_allocator<QV>>& v, int start = -1) final override { 
-auto it = start<0? v.end() +start +1 : v.begin() + start;
-v.insert(it, data.begin(), data.end());
-}
-
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QHeap () = default;
+inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(data.begin(), data.end(), std::ref(out)); return true; }
+inline void resort () { std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter)); }
+inline size_t getMemSize () { return sizeof(*this); }
 
 inline void push (const QV& x) {
 data.push_back(x);
@@ -66,11 +57,11 @@ QHeap& heap;
 QHeap::iterator iterator;
 uint32_t version;
 QHeapIterator (QVM& vm, QHeap& m): QObject(vm.heapIteratorClass), heap(m), iterator(m.data.begin()), version(m.version)  {}
-virtual bool gcVisit () override;
-virtual ~QHeapIterator() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QHeapIterator() = default;
 inline void incrVersion () { version++; heap.incrVersion(); }
 inline void checkVersion () { ::checkVersion(version, heap.version); }
+inline size_t getMemSize () { return sizeof(*this); }
 };
 #endif
 #endif

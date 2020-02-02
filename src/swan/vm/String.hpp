@@ -16,16 +16,15 @@ QString (QVM& vm, size_t len);
 inline std::string asString () { return std::string(data, length); }
 inline char* begin () { return data; }
 inline char* end () { return data+length; }
-virtual ~QString ();
-virtual size_t getMemSize () override { return sizeof(*this) + sizeof(char) * (length+1); }
+~QString ();
+inline size_t getMemSize () { return sizeof(*this) + sizeof(char) * (length+1); }
 };
 
 struct QStringIterator: QObject {
 QString& str;
 char* iterator;
 QStringIterator (QVM& vm, QString& m);
-virtual bool gcVisit () override;
-virtual ~QStringIterator() = default;
-virtual size_t getMemSize () override { return sizeof(*this); }
+bool gcVisit ();
+~QStringIterator() = default;
 };
 #endif
