@@ -70,11 +70,17 @@ importHook(defaultImportHook)
 GCLocker gcLocker(*this);
 objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);
 classClass = QClass::createNonInheritable(*this, nullptr, objectClass, "Class");
+addToGC(classClass);
+addToGC(objectClass);
+
+auto functionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "FunctionMetaClass");
+auto closureMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ClosureMetaClass");
+auto stdFunctionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "StdFunctionMetaClass");
+auto boundFunctionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "BoundFunctionMetaClass");
 
 auto boolMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "BoolMetaClass");
 auto classMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ClassMetaClass");
 auto fiberMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "FiberMetaClass");
-auto functionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "FunctionMetaClass");
 auto iterableMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "IterableMetaClass");
 auto iteratorMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "IteratorMetaClass");
 auto listMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ListMetaClass");
@@ -87,11 +93,13 @@ auto setMetaClass = QClass::createNonInheritable(*this, classClass, classClass, 
 auto stringMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "StringMetaClass");
 auto tupleMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "TupleMetaClass");
 
-boolClass = QClass::createNonInheritable(*this, boolMetaClass, objectClass, "Bool");
 functionClass = QClass::createNonInheritable(*this, functionMetaClass, objectClass, "Function");
-closureClass = QClass::createNonInheritable(*this, functionMetaClass, functionClass, "Closure");
-boundFunctionClass = QClass::createNonInheritable(*this, functionMetaClass, boundFunctionClass, "BoundFunction");
-stdFunctionClass = QClass::createNonInheritable(*this, functionMetaClass, functionClass, "StdFunction");
+closureClass = QClass::createNonInheritable(*this, closureMetaClass, functionClass, "Closure");
+boundFunctionClass = QClass::createNonInheritable(*this, boundFunctionMetaClass, functionClass, "BoundFunction");
+stdFunctionClass = QClass::createNonInheritable(*this, stdFunctionMetaClass, functionClass, "StdFunction");
+
+boolClass = QClass::createNonInheritable(*this, boolMetaClass, objectClass, "Bool");
+classClass->type = classMetaClass;
 iterableClass = QClass::create(*this, iterableMetaClass, objectClass, "Iterable", 0, 0);
 iteratorClass = QClass::create(*this, iteratorMetaClass, objectClass, "Iterator", 0, 0);
 fiberClass = QClass::createNonInheritable(*this, fiberMetaClass, iterableClass, "Fiber");
@@ -100,6 +108,7 @@ mappingClass = QClass::create(*this, mappingMetaClass, iterableClass, "Mapping",
 mapClass = QClass::createNonInheritable(*this, mapMetaClass, mappingClass, "Map");
 nullClass = QClass::createNonInheritable(*this, classClass, objectClass, "null");
 numClass = QClass::createNonInheritable(*this, numMetaClass, objectClass, "Num");
+objectClass->type = objectMetaClass;
 rangeClass = QClass::createNonInheritable(*this, rangeMetaClass, iterableClass, "Range");
 setClass = QClass::createNonInheritable(*this, setMetaClass, iterableClass, "Set");
 stringClass = QClass::createNonInheritable(*this, stringMetaClass, iterableClass, "String");
@@ -147,8 +156,6 @@ gridClass = QClass::createNonInheritable(*this, gridMetaClass, iterableClass, "G
 gridIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "GridIterator");
 #endif
 
-objectClass->type = objectMetaClass;
-classClass->type = classMetaClass;
 init();
 }
 

@@ -9,8 +9,10 @@ QObject(type0),
 vm(vm0), 
 parent(parent0), 
 nFields(nf), 
-nonInheritable(nh), 
+nonInheritable(nh),
+foreign(false),
 name(name0),
+gcInfo(nullptr),
 methods(trace_allocator<QV>(vm))
 { copyParentMethods(); }
 
@@ -51,7 +53,8 @@ return this;
 }
 
 QObject* QClass::instantiate () {
-return QInstance::create(this, nFields);
+if (foreign) return QForeignInstance::create(this, nFields);
+else return QInstance::create(this, nFields);
 }
 
 
@@ -73,10 +76,5 @@ QForeignClass::QForeignClass (QVM& vm0, QClass* type0, QClass* parent0, const st
 QClass(vm0, type0, parent0, name0, nf, false), 
 destructor(destr)
 {}
-
-
-QObject* QForeignClass::instantiate () {
-return QForeignInstance::create(this, nFields);
-}
 
 

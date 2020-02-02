@@ -101,8 +101,8 @@ else if (isClosure()) return format("%s@%#0$16llX: %s", ("Closure"), i, printFun
 else if (i==QV_VARARG_MARK) return "<VarArgMark>"; 
 else {
 QObject* obj = asObject<QObject>();
-QClass* cls = dynamic_cast<QClass*>(obj);
-QString* str = dynamic_cast<QString*>(obj);
+QClass* cls = isInstanceOf(obj->type->vm.classClass)? static_cast<QClass*>(obj) : nullptr;
+QString* str = isInstanceOf(obj->type->vm.stringClass)? static_cast<QString*>(obj) : nullptr;
 if (cls) return format("Class:%s@%#0$16llX", cls->name, i);
 else if (str) return format("String:'%s'@%#0$16llX", str->data, i);
 else return format("%s@%#0$16llX", obj->type->name, i);

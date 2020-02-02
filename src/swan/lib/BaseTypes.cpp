@@ -63,7 +63,7 @@ if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined(
 error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
-QObject* instance = cls.gcInfo->instantiate(&cls);
+QObject* instance = cls.instantiate();
 f.setObject(0, instance);
 f.pushCppCallFrame();
 f.callSymbol(ctorSymbol, f.getArgCount());
@@ -239,6 +239,18 @@ functionClass
 ->bind("name", functionName)
 ->assoc<QFunction>();
 
+closureClass
+->copyParentMethods()
+->assoc<QClosure>(true);
+
+boundFunctionClass
+->copyParentMethods()
+->assoc<BoundFunction>(true);
+
+stdFunctionClass
+->copyParentMethods()
+->assoc<StdFunction>();
+
 boolClass
 ->copyParentMethods()
 ->bind("!", boolNot)
@@ -279,34 +291,34 @@ classClass->type
 
 objectClass->type
 ->copyParentMethods()
-->assoc<QClass>();
+->assoc<QClass>(true);
 
 boolClass ->type
 ->copyParentMethods()
 ->bind("()", boolInstantiate)
-->assoc<QClass>();
+->assoc<QClass>(true);
 
 functionClass ->type
 ->copyParentMethods()
 ->bind("()", functionInstantiate)
-->assoc<QFunction>(true);
+->assoc<QClass>(true);
 
-closureClass
+closureClass->type
 ->copyParentMethods()
-->assoc<QClosure>(true);
+->assoc<QClass>(true);
 
-boundFunctionClass
+boundFunctionClass->type
 ->copyParentMethods()
-->assoc<BoundFunction>(true);
+->assoc<QClass>(true);
 
-stdFunctionClass
+stdFunctionClass->type
 ->copyParentMethods()
-->assoc<StdFunction>();
+->assoc<QClass>(true);
 
 fiberClass ->type
 ->copyParentMethods()
 ->bind("()", fiberInstantiate)
-->assoc<QClass>();
+->assoc<QClass>(true);
 
 iterableClass ->type
 ->copyParentMethods()
@@ -314,5 +326,13 @@ iterableClass ->type
 
 iteratorClass ->type
 ->copyParentMethods()
-->assoc<QClass>();
+->assoc<QClass>(true);
+
+nullClass->type
+->copyParentMethods()
+->assoc<QClass>(true);
+
+undefinedClass->type
+->copyParentMethods()
+->assoc<QClass>(true);
 }

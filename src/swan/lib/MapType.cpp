@@ -129,6 +129,10 @@ mapIteratorClass
 ->bind("next", mapIteratorNext)
 ->assoc<QMapIterator>();
 
+mappingClass->type
+->copyParentMethods()
+->assoc<QClass>();
+
 mapClass ->type
 ->copyParentMethods()
 ->bind("()", mapInstantiateFromMappings)

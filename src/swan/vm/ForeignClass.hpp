@@ -8,7 +8,6 @@ DestructorFn destructor;
 size_t id;
 
 QForeignClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nUserBytes=0, DestructorFn=nullptr);
-QObject* instantiate ();
 ~QForeignClass () = default;
 };
 

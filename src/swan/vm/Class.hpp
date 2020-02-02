@@ -4,13 +4,13 @@
 #include "Value.hpp"
 #include "Allocator.hpp"
 #include "Array.hpp"
+#include "../../include/cpprintf.hpp"
 
 struct ClassGCInfo {
 bool(*gcVisit)(QObject*);
 size_t(*gcMemSize)(QObject*);
 void*(*gcOrigin)(QObject*);
 void(*gcDestroy)(QObject*);
-QObject*(*instantiate)(QObject*);
 bool(*join)(QObject*, struct QFiber&, const std::string&, std::string&);
 bool(*copyInto)(QObject*, QFiber&, CopyVisitor&);
 };
@@ -23,20 +23,12 @@ template<class T> bool baseGCVisit (QObject*  x) {
 return static_cast<T*>(x)->gcVisit();
 }
 
-template<class T> size_t baseGCMemSizeStatic (QObject* x) {
-return sizeof(T);
-}
-
 template<class T> size_t baseGCMemSize (QObject* x) {
 return static_cast<T*>(x) ->getMemSize();
 }
 
 template<class T> void* baseGCOrigin (QObject* x) {
 return static_cast<T*>(x);
-}
-
-template<class T> QObject* baseInstantiate (QObject*  x) {
-return static_cast<T*>(x)->instantiate();
 }
 
 template<class T> bool baseJoin (QObject* obj, struct QFiber& f, const std::string& delim, std::string& out) {
@@ -48,7 +40,7 @@ return static_cast<T*>(obj) ->copyInto(f, out);
 }
 
 template<class T> ClassGCInfo* baseClassGCInfo (bool vls=false) {
-static ClassGCInfo info = { baseGCVisit<T>, vls? baseGCMemSize<T> : baseGCMemSizeStatic<T>, baseGCOrigin<T>, baseGCDestroy<T>, baseInstantiate<T>, baseJoin<T>, baseCopyInto<T>    };
+static ClassGCInfo info = { baseGCVisit<T>, baseGCMemSize<T>, baseGCOrigin<T>, baseGCDestroy<T>, baseJoin<T>, baseCopyInto<T>    };
 return &info;
 }
 
@@ -59,7 +51,7 @@ c_string name;
 std::vector<QV, trace_allocator<QV>> methods;
 ClassGCInfo* gcInfo;
 uint16_t nFields;
-bool nonInheritable :1;
+bool nonInheritable :1, foreign :1;
 QV staticFields[0];
 
 QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nFields, bool nonInheritable);

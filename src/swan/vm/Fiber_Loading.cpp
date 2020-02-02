@@ -62,6 +62,8 @@ parent.localVariables.emplace_back( token, 3, false );
 
 QFunction* func = compiler.getFunction();
 if (!func || CR_SUCCESS!=compiler.result) throw Swan::CompilationException(CR_INCOMPLETE==compiler.result);
+stack.push(QV(func, QV_TAG_NORMAL_FUNCTION));
+
 auto nUpvalues = func->upvaluesEnd - func->upvalues;
 QClosure* closure = vm.constructVLS<QClosure, Upvalue*>(nUpvalues, vm, *func);
 
@@ -70,7 +72,7 @@ int j = func->upvalues[i].slot;
 closure->upvalues[i] = vm.construct<Upvalue>(*this, upvalues[j].second);
 }
 
-stack.push_back(QV(closure, QV_TAG_CLOSURE));
+stack.back() = QV(closure, QV_TAG_CLOSURE);
 return 1;
 }
 

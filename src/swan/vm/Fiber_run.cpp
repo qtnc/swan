@@ -39,6 +39,10 @@ print(out, "%s", stack.at(i).print());
 println(out, "");
 }
 
+static void printStack (QFiber::Stack& stack, int base) {
+printStack(std::cerr, stack, base);
+}
+
 QV QFiber::loadMethod (QV& obj, int symbol) {
 QClass& cls = obj.getClass(vm);
 if (cls.isSubclassOf(vm.classClass)) {

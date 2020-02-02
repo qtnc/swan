@@ -18,12 +18,13 @@ void gcDefragMem ();
 
 bool QV::gcVisit (QVM& vm) {
 if (!isObject()) return false;
-return getClass(vm) .gcInfo ->gcVisit(asObject<QObject>());
+auto obj = asObject<QObject>();
+return obj->type->gcInfo->gcVisit(obj);
 }
 
 bool QObject::gcVisit () {
 if (gcMark()) return true;
-type->gcVisit();
+if (type) type->gcVisit();
 return false;
 }
 
@@ -35,9 +36,9 @@ return false;
 
 bool QClass::gcVisit () {
 if (QObject::gcVisit()) return true;
-if (parent) parent->gcVisit();
-for (int i=0, n=type->nFields; i<n; i++) staticFields[i].gcVisit(type->vm);
-for (QV& val: methods) val.gcVisit(type->vm);
+if (parent) parent->type->gcInfo->gcVisit(parent);
+for (int i=0, n=type->nFields; i<n; i++) staticFields[i].gcVisit(vm);
+for (QV& val: methods) val.gcVisit(vm);
 return false;
 }
 
@@ -50,7 +51,7 @@ return false;
 bool QClosure::gcVisit () {
 if (QObject::gcVisit()) return true;
 func.gcVisit();
-for (auto upv = upvalues, end = upvalues + (func.upvaluesEnd - func.upvalues); upv<end; ++upv) (*upv)->gcVisit();
+for (auto upv = upvalues, end = upvalues + (func.upvaluesEnd - func.upvalues); upv<end; ++upv) if (*upv) (*upv)->gcVisit();
 return false;
 }
 
@@ -63,7 +64,7 @@ return false;
 
 bool QFiber::gcVisit () {
 if (QObject::gcVisit()) return true;
-for (QV& val: stack) val.gcVisit(type->vm);
+for (QV& val: stack) val.gcVisit(vm);
 for (auto& cf: callFrames) if (cf.closure) cf.closure->gcVisit();
 for (auto upv: openUpvalues) if (upv) upv->gcVisit();
 if (parentFiber) parentFiber->gcVisit();
@@ -249,11 +250,16 @@ return false;
 #endif
 
 static inline void unmarkAll (QObject* initial) {
+//println("Unmark start");
 for (auto it=initial; it; it = it->gcNext()) {
+//println("Unmarking %p %s", it, QV(it).print());
 it->gcUnmark();
-}}
+}
+//println("Unmark end");
+}
 
 static inline void doSweep (QVM& vm, QObject*& initial) {
+//println("Sweep start");
 QObject* prev = nullptr;
 size_t used=0, collected=0, total = 0;
 for (QObject* ptr = initial; ptr; ) {
@@ -269,7 +275,9 @@ auto next = ptr->gcNext();
 if (prev) prev->gcNext(next);
 auto gci = ptr->type->gcInfo;
 void* origin = gci->gcOrigin(ptr);
+char* p0 = reinterpret_cast<char*>(origin), *p1 = reinterpret_cast<char*>(ptr);
 size_t size = gci->gcMemSize(ptr);
+//println("%p-%p=%d, size=%d, %s %s", reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p0), p1-p0, size, ptr->type->name, QV(ptr).print());
 gci->gcDestroy(ptr);
 vm.deallocate(origin, size);
 ptr = next;
@@ -278,6 +286,7 @@ collected++;
 }
 if (prev) prev->gcNext(nullptr);
 //println(std::cerr, "GC: %d/%d used (%d%%), %d/%d collected (%d%%)", used, total, 100*used/total, collected, total, 100*collected/total);
+//println("Sweep end");
 }
 
 void QVM::garbageCollect () {
@@ -286,7 +295,8 @@ void QVM::garbageCollect () {
 unmarkAll(firstGCObject);
 
 vector<QObject*> roots = { 
-boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass, undefinedClass
+boolClass, classClass, fiberClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, nullClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass, undefinedClass
+, functionClass, closureClass, stdFunctionClass, boundFunctionClass
 , listIteratorClass, mapIteratorClass, rangeIteratorClass, setIteratorClass, stringIteratorClass, tupleIteratorClass
 #ifndef NO_REGEX
 , regexClass, regexMatchResultClass, regexIteratorClass, regexTokenIteratorClass
@@ -303,7 +313,7 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 #endif
 };
 roots.insert(roots.end(), fibers.begin(), fibers.end());
-for (QObject* obj: roots) obj->gcVisit();
+for (QObject* obj: roots) obj->type->gcInfo->gcVisit(obj);
 for (QV& gv: globalVariables) gv.gcVisit(*this);
 for (auto& kh: keptHandles) QV(kh.first).gcVisit(*this);
 for (auto& im: imports) im.second.gcVisit(*this);

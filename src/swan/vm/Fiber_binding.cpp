@@ -18,7 +18,7 @@ if (ctorSymbol>=cls.methods.size() || cls.methods[ctorSymbol].isNullOrUndefined(
 error<invalid_argument>("%s can't be instantiated, it has no method 'constructor'", cls.name);
 return;
 }
-QObject* instance = cls.gcInfo->instantiate(&cls);
+QObject* instance = cls.instantiate();
 f.setObject(0, instance);
 f.callSymbol(ctorSymbol, f.getArgCount());
 f.returnValue(instance);
@@ -44,8 +44,8 @@ QClass* meta = QClass::create(*this, classClass, classClass, metaName, 0, nStati
 QClass* cls = foreign?
 construct<QForeignClass>(*this, meta, parent, name, nFields):
 QClass::create(*this, meta, parent, name, nStaticFields, nFields+parent->nFields);
-if (foreign) cls->assoc<QForeignClass>(true);
-else cls->assoc<QClass>(true);
+if (foreign) cls->assoc<QForeignInstance>(true);
+else cls->assoc<QInstance>(true);
 meta->assoc<QClass>(true);
 for (auto& p: parents) cls->mergeMixinMethods( p.asObject<QClass>() );
 meta->bind("()", instantiate);
@@ -67,10 +67,10 @@ if (parent->nonInheritable) {
 error<invalid_argument>("Can't inherit from built-in class %s", parent->name);
 return;
 }
-//if (dynamic_cast<QForeignClass*>(parent)) {
-//error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
-//return;
-//}
+if (parent->foreign) {
+error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
+return;
+}
 if (nFields+parent->nFields>=std::numeric_limits<uint_field_index_t>::max()) {
 error<invalid_argument>("Too many member fields");
 return;
@@ -89,6 +89,7 @@ GCLocker gcLocker(vm);
 vector<QV> parents(stack.end() -nParents, stack.end());
 QForeignClass* cls = static_cast<QForeignClass*>(vm.createNewClass(name, parents, 0, nUserBytes, true));
 cls->id = id;
+cls->foreign = true;
 stack.erase(stack.end() -nParents, stack.end());
 vm.foreignClassIds[id] = cls;
 push(cls);
