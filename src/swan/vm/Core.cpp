@@ -84,8 +84,8 @@ return sizeof(*this) + sizeof(QV) * (func.upvaluesEnd - func.upvalues);
 }
 
 void QVM::addToGC (QObject* obj) {
-//if (gcMemUsage >=gcTreshhold && !gcLock) garbageCollect();
-if (!gcLock) garbageCollect();
+if (gcMemUsage >=gcTreshhold && !gcLock) garbageCollect();
+//if (!gcLock) garbageCollect();
 obj->gcNext(firstGCObject);
 firstGCObject  = obj;
 }

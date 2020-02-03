@@ -459,12 +459,12 @@ BREAK
 
 CASE(OP_DEBUG)
 //printStack(cout, stack, frame.stackBase);
-println("%s", stack.back().print() );
+/*println("%s", stack.back().print() );
 if (stack.back().isObject()) {
 if (stack.back().isClosure()) {
 auto f = stack.back().asObject<QClosure>();
 f->func.printInstructions();
-}}
+}}*/
 BREAK
 
 CASE(OP_END)
