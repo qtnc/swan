@@ -13,6 +13,7 @@ void*(*gcOrigin)(QObject*);
 void(*gcDestroy)(QObject*);
 bool(*join)(QObject*, struct QFiber&, const std::string&, std::string&);
 bool(*copyInto)(QObject*, QFiber&, CopyVisitor&);
+int(*getLength)(QObject*);
 };
 
 template<class T> void baseGCDestroy (QObject*  x) {
@@ -39,8 +40,12 @@ template<class T> bool baseCopyInto  (QObject* obj, struct QFiber& f, CopyVisito
 return static_cast<T*>(obj) ->copyInto(f, out);
 }
 
+template<class T> int baseGetLength  (QObject* x) {
+return static_cast<T*>(x) ->getLength();
+}
+
 template<class T> ClassGCInfo* baseClassGCInfo (bool vls=false) {
-static ClassGCInfo info = { baseGCVisit<T>, baseGCMemSize<T>, baseGCOrigin<T>, baseGCDestroy<T>, baseJoin<T>, baseCopyInto<T>    };
+static ClassGCInfo info = { baseGCVisit<T>, baseGCMemSize<T>, baseGCOrigin<T>, baseGCDestroy<T>, baseJoin<T>, baseCopyInto<T>, baseGetLength<T>     };
 return &info;
 }
 

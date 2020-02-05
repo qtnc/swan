@@ -17,6 +17,7 @@ uint32_t version;
 QSet (QVM& vm);
 inline void incrVersion () { version++; }
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(set.begin(), set.end(), std::ref(out)); return true; }
+inline int getLength () { return set.size(); }
 bool join (QFiber& f, const std::string& delim, std::string& out);
 ~QSet () = default;
 bool gcVisit ();

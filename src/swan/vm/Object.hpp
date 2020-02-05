@@ -35,6 +35,7 @@ bool gcVisit ();
 void* gcOrigin ();
 inline bool join (struct QFiber& f, const std::string& delim, std::string& out) { return false; }
 inline bool copyInto (struct QFiber& f, CopyVisitor& out) { return false; }
+inline int getLength () { return -2; }
 ~QObject() = default;
 inline size_t getMemSize () { return sizeof(*this); }
 };

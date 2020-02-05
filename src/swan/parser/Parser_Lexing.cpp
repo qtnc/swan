@@ -138,7 +138,7 @@ if (c!=ending) {
 parser.cur = { T_STRING, begin, static_cast<size_t>(in-begin), QV::UNDEFINED };
 parser.parseError("Unterminated string");
 }
-return QV(vm, re);
+return QString::create(vm, re);
 }
 
 const QToken& QParser::prevToken () {

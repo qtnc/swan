@@ -23,6 +23,7 @@ return data[n];
 }
 bool join (QFiber& f, const std::string& delim, std::string& out);
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(data.begin(), data.end(), std::ref(out)); return true; }
+inline int getLength () { return data.size(); }
 ~QDeque () = default;
 bool gcVisit ();
 inline size_t getMemSize () { return sizeof(*this); }

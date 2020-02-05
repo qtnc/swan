@@ -146,6 +146,16 @@ QToken token = c1->token;
 token.value = BASE_NUMBER_BINOPS[op](v1.d, v2.d);
 return make_shared<ConstantExpression>(token);
 }
+else if (op==T_EQEQ) {
+QToken token = c1->token;
+token.value = v1.i==v2.i;
+return make_shared<ConstantExpression>(token);
+}
+else if (op==T_EXCLEQ) {
+QToken token = c1->token;
+token.value = v1.i!=v2.i;
+return make_shared<ConstantExpression>(token);
+}
 //other operations on non-number
 }
 else if (c1 && op==T_BARBAR) return c1->token.value.isFalsy()? right : left;

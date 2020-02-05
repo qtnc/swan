@@ -23,6 +23,7 @@ void set (const QV& key, const QV& value);
 bool gcVisit ();
 inline void incrVersion () { version++; }
 inline size_t getMemSize () { return sizeof(*this); }
+inline int getLength () { return map.size(); }
 };
 
 struct QDictionaryIterator: QObject {

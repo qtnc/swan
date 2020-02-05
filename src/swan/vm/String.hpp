@@ -18,6 +18,7 @@ inline char* begin () { return data; }
 inline char* end () { return data+length; }
 ~QString ();
 inline size_t getMemSize () { return sizeof(*this) + sizeof(char) * (length+1); }
+inline int getLength () { return length; }
 };
 
 struct QStringIterator: QObject {

@@ -26,6 +26,7 @@ sorter(sorter), version(0)
 bool gcVisit ();
 ~QHeap () = default;
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(data.begin(), data.end(), std::ref(out)); return true; }
+inline int getLength () { return data.size(); }
 inline void resort () { std::make_heap(data.begin(), data.end(), QVBinaryPredicate(type->vm, sorter)); }
 inline size_t getMemSize () { return sizeof(*this); }
 

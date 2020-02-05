@@ -22,6 +22,7 @@ bool add (const QV& key, bool allowDuplicate = false);
 ~QSortedSet () = default;
 bool gcVisit ();
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(set.begin(), set.end(), std::ref(out)); return true; }
+inline int getLength () { return set.size(); }
 inline size_t getMemSize () { return sizeof(*this); }
 };
 

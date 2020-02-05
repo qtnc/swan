@@ -20,6 +20,7 @@ bool join (QFiber& f, const std::string& delim, std::string& out);
 bool gcVisit ();
 inline size_t getMemSize () { return sizeof(*this) + sizeof(QV) * width * height; }
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(data, data+width*height, std::ref(out)); return true; }
+inline int getLength () { return width*height; }
 
 inline void makeBounds (int& x, int& y) {
 if (x<0) x+=width;

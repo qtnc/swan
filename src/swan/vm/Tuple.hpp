@@ -21,6 +21,7 @@ inline size_t getMemSize () { return sizeof(*this) + sizeof(QV) * length; }
 inline QV* begin () { return data; }
 inline QV* end () { return data+length; }
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(begin(), end(), std::ref(out)); return true; }
+inline int getLength () { return length; }
 };
 
 struct QTupleIterator: QObject {

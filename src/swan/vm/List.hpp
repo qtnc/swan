@@ -21,6 +21,7 @@ if (n<0) n+=data.size();
 return data[n];
 }
 inline bool copyInto (QFiber& f, CopyVisitor& out) { std::for_each(data.begin(), data.end(), std::ref(out)); return true; }
+inline int getLength () { return data.size(); }
 bool join (QFiber& f, const std::string& delim, std::string& out);
 ~QList () = default;
 bool gcVisit ();

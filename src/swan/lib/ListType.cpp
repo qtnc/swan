@@ -1,6 +1,7 @@
 #include "../../include/cpprintf.hpp"
 #include "SwanLib.hpp"
 #include "../vm/List.hpp"
+#include "../vm/Tuple.hpp"
 using namespace std;
 
 void checkVersion (uint32_t v1, uint32_t v2) {
@@ -119,12 +120,26 @@ if (i<0) i+=length;
 f.returnValue(list.data.at(i) = f.at(2));
 }
 else if (f.isRange(1)) {
-int start, end;
+auto& dest = f.at(2);
+auto& dcls = dest.getClass(f.vm);
+int start, end, insertlen = dcls.gcInfo->getLength(dest.asObject<QObject>());
 f.getRange(1).makeBounds(length, start, end);
-list.data.erase(list.data.begin()+start, list.data.begin()+end);
 list.incrVersion();
+if (insertlen<0) {
+list.data.erase(list.data.begin()+start, list.data.begin()+end);
 auto citr = copyVisitor(std::inserter(list.data, list.data.begin()+start));
-f.at(2).copyInto(f, citr);
+dest.copyInto(f, citr);
+}
+else {
+int diff = insertlen - (end-start);
+if (diff<0) list.data.erase(list.data.begin()+start, list.data.begin()+start-diff);
+else if (diff>0) list.data.insert(list.data.begin()+start, diff, QV::UNDEFINED);
+if (&dcls==f.vm.listClass) memcpy(&list.data[start], &(dest.asObject<QList>()->data[0]), sizeof(QV)*insertlen);
+else if (&dcls==f.vm.tupleClass) memcpy(&list.data[start], dest.asObject<QTuple>()->data, sizeof(QV)*insertlen);
+else {
+auto citr = copyVisitor(list.data.begin()+start);
+dest.copyInto(f, citr);
+}}
 f.returnValue(f.at(2));
 }
 else f.returnValue(QV::UNDEFINED);
@@ -321,11 +336,21 @@ list.data.clear();
 static void listInstantiateFromSequences (QFiber& f) {
 QList* list = f.vm.construct<QList>(f.vm);
 f.returnValue(list);
-auto citr = copyVisitor(std::back_inserter(list->data));
+int totalLen = 0;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.at(i).copyInto(f, citr);
+int ll = f.at(i).getClass(f.vm).gcInfo->getLength(f.at(i).asObject<QObject>());
+if (ll<0) { totalLen=-1; break; }
+totalLen+=ll;
 }
+if (totalLen<0) {
+auto citr = copyVisitor(std::back_inserter(list->data));
+for (int i=1, l=f.getArgCount(); i<l; i++) f.at(i).copyInto(f, citr);
 }
+else {
+list->data.resize(totalLen);
+auto citr = copyVisitor(list->data.begin());
+for (int i=1, l=f.getArgCount(); i<l; i++) f.at(i).copyInto(f, citr);
+}}
 
 static void listToString (QFiber& f) {
 QList& list = f.getObject<QList>(0);

@@ -27,6 +27,7 @@ return map[key] = value;
 ~QMap () = default;
 bool gcVisit ();
 inline size_t getMemSize () { return sizeof(*this); }
+inline int getLength () { return map.size(); }
 };
 
 struct QMapIterator: QObject {

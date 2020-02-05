@@ -26,6 +26,7 @@ return strnatcmp(s1.data, s2.data);
 }
 
 bool stringEquals (QString& s1, QString& s2) {
+if (s1.data == s2.data) return true;
 if (s1.length!=s2.length) return false;
 return !memcmp(s1.data, s2.data, s2.length);
 }
