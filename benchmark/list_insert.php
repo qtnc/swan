@@ -7,7 +7,7 @@ $a = array();
 $b = array();
 $c = array();
 for ($i=0; $i<$n; $i++) {
-array_push($a, $i);
+$a[]=$i;
 array_unshift($b, $i);
 array_splice($c, $i/2, 0, $i);
 $sum += $a[0] + $b[0] + $c[0] + $a[$i ] + $b[$i ] + $c[$i ];
