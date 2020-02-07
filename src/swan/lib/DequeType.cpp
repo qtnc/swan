@@ -107,13 +107,24 @@ if (i<0) i+=length;
 f.returnValue(deque.data.at(i) = f.at(2));
 }
 else if (f.isRange(1)) {
-int start, end;
+auto& dest = f.at(2);
+auto& dcls = dest.getClass(f.vm);
+int start, end, insertlen = dcls.gcInfo->getLength(dest.asObject<QObject>());
 f.getRange(1).makeBounds(length, start, end);
+deque.incrVersion();
+if (insertlen<0) {
 deque.data.erase(deque.data.begin()+start, deque.data.begin()+end);
 auto citr = copyVisitor(std::inserter(deque.data, deque.data.begin()+start));
-f.at(2).copyInto(f, citr);
+dest.copyInto(f, citr);
+}
+else {
+int diff = insertlen - (end-start);
+if (diff<0) deque.data.erase(deque.data.begin()+start, deque.data.begin()+start-diff);
+else if (diff>0) deque.data.insert(deque.data.begin()+start, diff, QV::UNDEFINED);
+auto citr = copyVisitor(deque.data.begin()+start);
+dest.copyInto(f, citr);
+}
 f.returnValue(f.at(2));
-deque.incrVersion();
 }
 else f.returnValue(QV::UNDEFINED);
 }
@@ -134,6 +145,18 @@ value = f.at(2);
 }
 else if (n==2) value = f.at(1);
 std::fill(deque.data.begin()+from, deque.data.begin()+to, value);
+}
+
+static void dequeReverse (QFiber& f) {
+QDeque& deque = f.getObject<QDeque>(0);
+reverse(deque.data.begin(), deque.data.end());
+}
+
+static void dequeRotate (QFiber& f) {
+QDeque& deque  = f.getObject<QDeque>(0);
+int offset = f.getNum(1);
+auto middle = offset>=0? deque.data.begin()+offset : deque.data.end()+offset;
+rotate(deque.data.begin(), middle, deque.data.end());
 }
 
 static void dequeResize (QFiber& f) {
@@ -294,9 +317,20 @@ deque.data.clear();
 static void dequeInstantiateFromSequences (QFiber& f) {
 QDeque* deque = f.vm.construct<QDeque>(f.vm);
 f.returnValue(deque);
-auto citr = copyVisitor(std::back_inserter(deque->data));
+int totalLen = 0;
 for (int i=1, l=f.getArgCount(); i<l; i++) {
-f.at(i).copyInto(f, citr);
+int ll = f.at(i).getClass(f.vm).gcInfo->getLength(f.at(i).asObject<QObject>());
+if (ll<0) { totalLen=-1; break; }
+totalLen+=ll;
+}
+if (totalLen<0) {
+auto citr = copyVisitor(std::back_inserter(deque->data));
+for (int i=1, l=f.getArgCount(); i<l; i++) f.at(i).copyInto(f, citr);
+}
+else {
+deque->data.resize(totalLen);
+auto citr = copyVisitor(deque->data.begin());
+for (int i=1, l=f.getArgCount(); i<l; i++) f.at(i).copyInto(f, citr);
 }
 }
 
@@ -332,6 +366,8 @@ dequeClass
 ->bind("lower", dequeLowerBound)
 ->bind("upper", dequeUpperBound)
 ->bind("fill", dequeFill)
+->bind("reverse", dequeReverse)
+->bind("rotate", dequeRotate)
 ->bind("resize", dequeResize)
 ->bind("==", dequeEquals)
 ->assoc<QDeque>();

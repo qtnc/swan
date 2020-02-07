@@ -137,11 +137,12 @@ return BinaryOperation::create(left, op, right);
 
 shared_ptr<Expression> QParser::parseInfixIs (shared_ptr<Expression> left) {
 bool negate = match(T_EXCL);
-auto& rule = rules[T_IS];
+auto op = match(T_IN)? T_IN : T_IS;
+auto& rule = rules[op];
 auto priority = rule.priority;
 if (rule.flags&P_RIGHT) --priority;
 shared_ptr<Expression> right = parseExpression(priority);
-right = BinaryOperation::create(left, T_IS, right);
+right = BinaryOperation::create(left, op, right);
 if (negate) right = make_shared<UnaryOperation>(T_EXCL, right);
 return right;
 }

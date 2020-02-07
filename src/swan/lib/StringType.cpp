@@ -376,7 +376,7 @@ stringClass
 ->bind("length", stringLength, "SN")
 ->bind("[]", stringSubscript)
 ->bind("iterator", stringIterator)
-->bind("compare", stringCmp3Way, "SSN")
+->bind("<=>", stringCmp3Way, "SSN")
 ->bind("==", stringCmpEq, "SSB")
 ->bind("!=", stringCmpNeq, "SSB")
 

@@ -96,7 +96,7 @@ f.returnValue(re);
 static void tupleCompare (QFiber& f) {
 QTuple &t1 = f.getObject<QTuple>(0), &t2 = f.getObject<QTuple>(1);
 if (t1.length != t2.length) { f.returnValue(static_cast<double>(t1.length-t2.length)); return; }
-int compareSymbol = f.vm.findMethodSymbol("compare");
+int compareSymbol = f.vm.findMethodSymbol("<=>");
 double re = 0;
 for (uint32_t i=0, n=t1.length; !re && i<n; i++) {
 f.pushCppCallFrame();
@@ -133,7 +133,7 @@ tupleClass
 ->bind("hashCode", tupleHashCode)
 ->bind("*", tupleTimes)
 ->bind("==", tupleEquals)
-->bind("compare", tupleCompare)
+->bind("<=>", tupleCompare)
 ->assoc<QTuple>();
 
 tupleIteratorClass

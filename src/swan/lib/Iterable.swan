@@ -41,14 +41,14 @@ for x in this: val=x
 return val
 }
 
-Iterable::sorted = def>: List.of(this).sort
-Iterable::reversed = def>: List.of(this).reverse
+Iterable::sorted = def>: List(this).sort
+Iterable::reversed = def>: List(this).reverse
 
 Iterable::map = def>f: f(x) for x in this
 Iterable::filter = def>f: x for x in this if f(x)
 
 Iterable::reduce = def>(f,a){
-for x in this: a = a==null ? x : f(a,x)
+for x in this: a = a is undefined ? x : f(a,x)
 return a
 }
 

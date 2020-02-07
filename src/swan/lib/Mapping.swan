@@ -16,3 +16,9 @@ return o
 Mapping::keys = def>: k for [k, v] in this
 Mapping::values = def>: v for [k, v] in this
 Mapping::flipped = def>: (v,k) for [k, v] in this
+
+Mapping::| = Mapping::+
+Mapping::& = def>(m): (this.class)( (k,v) for [k,v] in this if k in m)
+Mapping::- = def>(m): (this.class)( (k,v) for [k,v] in this if k not in m)
+Mapping::^ = def(a,b): (a-b) | (b-a)
+

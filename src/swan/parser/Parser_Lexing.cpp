@@ -194,8 +194,11 @@ case '~': RET
 case '@': RET
 case '!': RET2('=')
 case '=': RET2('=')
-case '<': RET3('<', '=')
 case '>': RET3('>', '=')
+//case '<': RET3('<', '=')
+case '<':
+if (utf8peek(in, end)=='=') { utf8::next(in, end); RET2('>') }
+else { RET2('<') }
 case '#': skipComment(in, end, '#'); return nextNameToken(eatEq);
 }
 if (isName(c)) {
@@ -259,8 +262,11 @@ case '@': RET2('=', T_ATEQ, T_AT)
 case '~': RET(T_TILDE)
 case '!': RET2('=', T_EXCLEQ, T_EXCL)
 case '=': RET3('=', T_EQEQ, '>', T_EQGT, T_EQ) 
-case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
 case '>': RET22('>', '=', T_GTGTEQ, T_GTGT, T_GTE, T_GT) 
+//case '<': RET22('<', '=', T_LTLTEQ, T_LTLT, T_LTE, T_LT) 
+case '<':
+if (utf8peek(in, end)=='<') { utf8::next(in, end); RET2('=', T_LTLTEQ, T_LTLT) }
+else { RET22('=', '>', T_LTEQGT, T_LTE, T_EXCLEQ, T_LT) }
 case '?': 
 if (utf8peek(in, end)=='.') { utf8::next(in, end); RET(T_DOTQUEST) } 
 else { RET22('?', '=', T_QUESTQUESTEQ, T_QUESTQUEST, T_QUESTQUESTEQ, T_QUEST) }

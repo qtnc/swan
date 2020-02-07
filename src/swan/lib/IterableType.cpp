@@ -13,7 +13,7 @@ static void iterablePlus (QFiber& f) {
 QV s1 = f.at(0), s2 = f.at(1);
 QClass& cls = s1.getClass(f.vm);
 f.pushCppCallFrame();
-f.push(cls.type->methods[f.vm.findMethodSymbol("of")]);
+f.push(&cls);
 f.push(&cls);
 f.push(s1);
 f.push(s2);

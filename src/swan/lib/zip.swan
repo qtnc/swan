@@ -1,7 +1,7 @@
 global function zip (...seqs){
 let zipper 
 if seqs.length==0: return ()
-else if !(seqs[-1] is Iterable) {
+else if seqs[-1] is not Iterable {
 zipper = seqs[-1]
 seqs = seqs[0..-1]
 }

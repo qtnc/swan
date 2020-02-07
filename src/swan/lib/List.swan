@@ -3,6 +3,10 @@ List::slice = slice
 Tuple::slice = slice
 Deque::slice = slice
 
-List::splice = def>(start, end, items...): this[Range(start, end, end<0)] = items
+let splice = def>(start, end, items...): this[Range(start, end, end<0)] = items
+List::splice = splice
+Deque::splice = splice
 
-List::rotated = def>n: List.of(this).rotate(n)
+let rotated = def>n: List(this).rotate(n)
+List::rotated = rotated
+Deque::rotated = rotated

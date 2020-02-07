@@ -169,7 +169,7 @@ numClass
 ->bind("~", numBinNot, "NNN")
 ->bind("unm", numNeg, "NN")
 ->bind("unp", doNothing, "NN")
-->bind("compare", numMinus, "NNN")
+->bind("<=>", numMinus, "NNN")
 ->bind("toString", numToString, "NS")
 ->bind("toJSON", numToJSON)
 ->bind("format", numFormat, "NN?S?S?N?N?S") 

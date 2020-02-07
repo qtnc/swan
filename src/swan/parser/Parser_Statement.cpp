@@ -99,6 +99,7 @@ return sw;
 }
 
 void ForStatement::parseHead (QParser& parser) {
+bool paren = parser.match(T_LEFT_PAREN);
 parser.parseVarList(loopVariables);
 if (loopVariables.size()==1 && (loopVariables[0]->flags&VD_NODEFAULT) && parser.match(T_IN)) {
 parser.skipNewlines();
@@ -109,7 +110,9 @@ traditional=true;
 inExpression = parser.parseExpression();
 parser.consume(T_SEMICOLON, "Expected ';' after traditional for loop condition");
 incrExpression = parser.parseExpression();
-}}
+}
+if (paren) parser.consume(T_RIGHT_PAREN, "Expected ')' to close for loop declaration");
+}
 
 shared_ptr<Statement> QParser::parseFor () {
 shared_ptr<ForStatement> forSta = make_shared<ForStatement>(cur);

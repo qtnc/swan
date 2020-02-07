@@ -115,7 +115,7 @@ QV x1 = f.at(0), x2 = f.at(1);
 f.pushCppCallFrame();
 f.push(x1);
 f.push(x2);
-f.callSymbol(f.vm.findMethodSymbol("compare"), 2);
+f.callSymbol(f.vm.findMethodSymbol("<=>"), 2);
 double re = f.at(-1).asNum();
 f.pop();
 f.popCppCallFrame();
@@ -217,7 +217,7 @@ objectClass
 ->bind("is", objectEquals, "OOB")
 ->bind("==", objectEquals, "OOB")
 ->bind("!=", objectNotEquals, "OOB")
-->bind(findMethodSymbol("compare"), QV::UNDEFINED)
+->bind(findMethodSymbol("<=>"), QV::UNDEFINED)
 ->bind("<", objectLess, "OOB")
 ->bind(">", objectGreater, "OOB")
 ->bind("<=", objectLessEquals, "OOB")
