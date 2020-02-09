@@ -14,7 +14,7 @@ _ac = 0
 
 class NthToggle is Toggle {
   constructor (startState as Bool, maxCounter as Num) {
-    super(startState)
+    super.constructor(startState)
     _countMax = maxCounter
     _count = 0
   }

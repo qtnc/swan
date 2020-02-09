@@ -93,7 +93,7 @@ QV& method = stack.at(newStackBase -1);
 const QClass& cls = method.getClass(vm);
 
 if (method.isClosure()) {
-QClosure* closure = method.asObject<QClosure>();
+auto closure = method.asObject<QClosure>();
 stack.erase(stack.begin() + newStackBase -1);
 callClosure(*closure, nArgs);
 return;
@@ -108,34 +108,33 @@ callFrames.pop_back();
 return;
 }
 else if (method.hasTag(QV_TAG_DATA)) {
-int symbol = vm.findMethodSymbol(("()"));
-QClass& cls = method.getClass(vm);
+auto symbol = vm.findMethodSymbol(("()"));
 callSymbol(symbol, nArgs+1);
 return;
 }
 else if (method.isFiber()) {
-QFiber& f = *method.asObject<QFiber>();
-callFiber(f, nArgs);
+auto fiber = method.asObject<QFiber>();
+callFiber(*fiber, nArgs);
 stack.erase(stack.begin() + newStackBase -1);
 return;
 }
 else if (method.isGenericSymbolFunction()) {
-uint_method_symbol_t symbol = method.asInt<uint_method_symbol_t>();
+auto symbol = method.asInt<uint_method_symbol_t>();
 stack.erase(stack.end() -nArgs -1);
 callSymbol(symbol, nArgs);
 return;
 }
 else if (method.isBoundFunction()) {
-BoundFunction& bf = *method.asObject<BoundFunction>();
-stack.insert(stack.begin() + newStackBase, bf.args, bf.args+bf.count);
-method = bf.method;
-callCallable(nArgs+bf.count);
+auto bf = method.asObject<BoundFunction>();
+stack.insert(stack.begin() + newStackBase, bf->args, bf->args+bf->count);
+method = bf->method;
+callCallable(nArgs+bf->count);
 return;
 }
 else if (method.isStdFunction()) {
-const StdFunction::Func& func = method.asObject<StdFunction>()->func;
+auto& stdfunc = method.asObject<StdFunction>()->func;
 callFrames.push_back({nullptr, nullptr, newStackBase});
-func(*this);
+stdfunc(*this);
 stack.at(newStackBase -1) = stack.at(newStackBase);
 stack.resize(newStackBase);
 callFrames.pop_back();
