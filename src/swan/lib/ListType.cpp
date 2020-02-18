@@ -265,7 +265,7 @@ f.returnValue(re==end? -1.0 : static_cast<double>(re-list.data.begin()));
 
 static void listSort (QFiber& f) {
 QList& list = f.getObject<QList>(0);
-if (f.getArgCount()>=2) stable_sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.vm, f.at(1)));
+if (f.getArgCount()>=2 && !f.at(1).isUndefined()) stable_sort(list.data.begin(), list.data.end(), QVBinaryPredicate(f.vm, f.at(1)));
 else stable_sort(list.data.begin(), list.data.end(), QVLess(f.vm));
 }
 

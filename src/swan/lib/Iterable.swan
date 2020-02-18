@@ -41,8 +41,10 @@ for x in this: val=x
 return val
 }
 
-Iterable::sorted = def>: List(this).sort
-Iterable::reversed = def>: List(this).reverse
+global def sorted (l,c): List(l).sort(c)
+global def reversed (l): List(l).reverse
+Iterable::sorted = sorted
+Iterable::reversed = reversed
 
 Iterable::map = def>f: f(x) for x in this
 Iterable::filter = def>f: x for x in this if f(x)
@@ -78,3 +80,18 @@ for x in this {
 yield (n, x)
 n+=1
 }}
+
+Iterable::bunches = def>n: def*{
+let it = this.iterator, l = []; l.resize(n)
+repeat {
+for i = 0; i<n; i+=1: l[i] = it.next
+yield Tuple(l)
+} while l[-1] is not undefined
+}
+
+def flatten>{
+for i in this {
+if i.class == this.class: flatten(i)
+else yield i
+}}
+Iterable::flatten = def>: def*: flatten(this)

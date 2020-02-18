@@ -9,7 +9,7 @@ QRange (QVM& vm, double s, double e, double p, bool i): QSequence(vm.rangeClass)
 QRange (QVM& vm, const Swan::Range& r): QSequence(vm.rangeClass), Swan::Range(r) {}
 ~QRange () = default;
 inline size_t getMemSize () { return sizeof(*this); }
-inline int getLength () {  return ((end-start)/step) + inclusive?1:0; }
+inline int getLength () {  return ((end-start)/step) + (inclusive?1:0); }
 };
 
 struct QRangeIterator: QObject {

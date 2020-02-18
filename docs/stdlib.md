@@ -133,7 +133,7 @@ Methods:
 - floodFill(x, y, value): fills the grid with the specified value, using the flood fill algorithm starting at the given point
 - hasDirectPath(startX, startY, endX, endY, traversaleTest): test if there exist a direct path between (startX, startY) and (endX, endY). Return a 3-tuple (result, impactX, impactY) telling if there is a direct path, and if not, where is the impact point. See below for a description of the traversalTest callback.
 - iterator: return an iterator to iterate through the value in the grid. Values are ordered left to right, top to bottom.
-- pathfind(startX, startY, endX, endY, traversalTest): try to find a path between (startX, startY) and (endX, endY) using A* pathfinding algorithm. If a path is found, return a list of 2-tuple indicating the path to follow. Null is returned if no path is found.
+- pathfind(startX, startY, endX, endY, traversalTest): try to find a path between (startX, startY) and (endX, endY) using A\* pathfinding algorithm. If a path is found, return a list of 2-tuple indicating the path to follow. Null is returned if no path is found.
 
 **Pathfinding traversal test callback**  
 The traversal test callback takes 6 arguments and must return a value indicating whether or not a given way is traversable (allow traveling through it).
@@ -166,6 +166,7 @@ Methods:
 
 - all(predicate): return true if predicate(x) returned true for all x in the sequence. Return true for empty sequence.
 - any(predicate): return true if predicate(x) returned true for at least one x in the sequence. Return false for empty sequence.
+- bunches(n): return a sequence which returns the items of this iterable in bunches of n-tuples. For example, `[1..10].bunches(3)` would give `(1, 2, 3)`, then `(4, 5, 6)` and finally `(7, 8, 9)`. The last returned element is filled with undefined if necessary to always return a n-tuple.
 - count(needle): return the number of elements in the sequence that are equal to needle.
 - countIf(predicate): return the number of x in the sequence for which predicate(x) returned true
 - dropWhile(predicate): return a sequence with all x in this Iterable, until predicate(x) returns true
@@ -173,6 +174,7 @@ Methods:
 - filter(predicate): return a sequence containing only x for which predicate(x) returned true
 - find(predicate)): return the first x for which predicate(x) returns true, or null if none returned true.
 - first: return the first element of the sequence. Note that the sequence may don't have a predictable orders, e.g. Set
+- flatten: return and iterator flattening nested structures. For example `[1, [2, 3], 4, [5, [6, [7, 8], 9]]` would become `[1, 2, 3, 4, 5, 6, 7, 8, 9]`.
 - iterator: return an iterator to iterate through the elements of this iterable sequence
 - join(separator=""): return a string by concatenating all elements from the sequence in turn, separating them with the given separator.
 - last: return the last element of the sequence. Note that the sequence may don't have a predictable orders, e.g. Set
@@ -181,13 +183,9 @@ Methods:
 - max(comparator=max): return the greatest element of the sequence according to the comparator given. If comparator is omited, the global function max is taken.
 - min(comparator=min): return the least element of the sequence according to the comparator given. If comparator is omited, the global function min is taken.
 - none(predicate): return true if predicate(x) returned true for none of the x in the sequence. Return true for empty sequence.
-- reduce(reducer, initial=null): iteratively reduce elements from this Iterable using the reducer given. Return null for empty sequence, initial if the sequence has a single element.
+- reduce(reducer, initial=null): iteratively reduce elements from this Iterable using the reducer given. Return null for empty sequence, initial if the sequence has a single element. For example, `[1, 2, 3, 4, 5].reduce(::+)` would yield 15, suming 1+2+3+4+5.
 - skip(n): return a sequence with n first elements skipped
 - skipWhile(predicate): return a sequence with all x in this Iterable, skipping initial elements as long as predicate(x) returns true
-- toList: return a list containing the elements of this Iterable
-- toMap: return a map containing the elements of this Iterable
-- toSet: return a set containing the elements of this Iterable
-- toTuple: return a tuple containing the elements of this Iterable
 
 ## LinkedList: is Iterable
 A linked list is a collection of items connected together via linked nodes. IN principle, all items are of the same type, though this isn't enforeced.
@@ -276,6 +274,7 @@ Methods:
 
 ## Mapping: is Iterable
 The Mapping class represent the parent of all mappable types, i.e. structures that hold a mapping of key/value pairs. Map and Dictionary are Mappable.
+Operators `|, &, -, ^` are defined and work similarely as manipulating a set of keys.
 
 - flipped: return a map where keys become values and values become keys.
 - get(key, func): return this[key] if it is present in the map; otherwise, compute func(key) and store it in the map before returning it.
@@ -495,6 +494,8 @@ Methods:
 - format(fmt, map): create a string where expression $([a-z]+) are replaced by the corresponding value in the map.
 - gcd(...values), lcm(...values): compute the GCD (greatest common divisor) or LCM (least common multiple) of the values given. Return 1 if called without any argument.
 - max(...items), min(...items): return the least or greatest of the given items
+- reversed(iterable): return a list with the elements of iterable appearing in reverse order
+- sorted(iterable, comparator=::<): return a list with elements of iterable sorted according to the comparator given
 - zip(sequences..., grouping=Tuple): take two or more sequences and map them together using the grouping function provided. For example, `zip([1,2,3], [4,5,6])` would yield a sequence `[(1,4), (2,5), (3,6)]`. Giving another grouping function allows to produce something else than just tuples; for example `zip([1,2,3], [4,5,6], ::+)` would yield `[5, 7, 9]` (1+4, 2+5, 3+6). Stops with the shortest of the sequences given.
 
 ## Math functions
