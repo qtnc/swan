@@ -91,7 +91,7 @@ writeVLN(out, func.constantsEnd - func.constants);
 writeVLN(out, func.upvaluesEnd - func.upvalues);
 writeVLN(out, func.bytecodeEnd - func.bytecode);
 writeVLN(out, func.nArgs);
-writeVLN(out, func.iField);
+write<uint_field_index_t>(out, func.iField);
 write<uint8_t>(out, func.flags);
 writeString(out, func.file.str());
 writeString(out, func.name.str());
@@ -118,7 +118,7 @@ func.file = readString(in);
 func.name = readString(in);
 for (auto [i, ptr] = tuple{ 0, func.constants }; i<nConsts; ++i, ++ptr) *ptr = (readQVBytecode(vm, in, references, globalTable, methodTable));
 for (auto [i, ptr] = tuple{ 0, func.upvalues }; i<nUpvalues; ++i, ++ptr) {
-int slot = readVLN(in);
+uint_local_index_t slot = readVLN(in);
 bool upper = read<uint8_t>(in);
 *ptr = { slot, upper };
 }

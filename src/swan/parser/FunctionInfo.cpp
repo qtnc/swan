@@ -63,7 +63,7 @@ continue;
 case 'Q': {
 const char* b = str;
 while(str&&*str&&*str!=';') ++str;
-QToken tok = { T_NAME, b, str-b, QV::UNDEFINED };
+QToken tok = { T_NAME, b, static_cast<size_t>(str-b), QV::UNDEFINED };
 return make_shared<NamedTypeInfo>(tok)->resolve(compiler);
 }
 case 'C': {

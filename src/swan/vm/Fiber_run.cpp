@@ -354,12 +354,17 @@ CASE(OP_STORE_STATIC_METHOD)
 storeStaticMethod(frame.read<uint_method_symbol_t>());
 BREAK
 
-CASE(OP_POP_M2)
-stack.erase(stack.end() -2);
-BREAK
+// CASE(OP_POP_M2)
+//stack.erase(stack.end() -2);
+//BREAK
 
-CASE(OP_DUP_M2)
-stack.push(stack.back(-2));
+//CASE(OP_DUP_M2)
+//stack.push(stack.back(-2));
+//BREAK
+
+CASE(OP_SWAP) 
+arg1 = frame.read<uint8_t>();
+std::swap( stack.back(reinterpret_cast<int2x4_t*>(&arg1)->first), stack.back(reinterpret_cast<int2x4_t*>(&arg1)->second) );
 BREAK
 
 CASE(OP_CALL_METHOD)

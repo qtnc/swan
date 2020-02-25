@@ -27,10 +27,11 @@ OP(STORE_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
 OP(STORE_STATIC_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
 
 OP(DUP, 1, 0, 0),
-OP(DUP_M2, 1, 0, 0),
+OP(SWAP, 0, 1, 1),
+//OP(DUP_M2, 1, 0, 0),
 
 OP(POP, -1, 0, 0),
-OP(POP_M2, -1, 0, 0),
+//OP(POP_M2, -1, 0, 0),
 OP(POP_SCOPE, 0, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 
 OP(RETURN, 0, 0, 0),

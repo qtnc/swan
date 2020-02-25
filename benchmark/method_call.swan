@@ -5,7 +5,7 @@ _ac = 0
   }
 
   value () as Bool { _state }
-  activate as Toggle {
+  activate {
     _state = !_state
     return this
   }
@@ -19,7 +19,7 @@ class NthToggle is Toggle {
     _count = 0
   }
 
-  activate as NthToggle {
+  activate {
     _count += 1
     if (_count >= _countMax) {
       super.activate

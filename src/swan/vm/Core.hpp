@@ -42,6 +42,11 @@ typedef uint8_t uint_upvalue_index_t;
 typedef uint8_t uint_local_index_t;
 typedef uint8_t uint_field_index_t;
 
+struct int2x4_t {
+int8_t first :4;
+int8_t second :4;
+};
+
 enum FiberState {
 INITIAL,
 RUNNING,

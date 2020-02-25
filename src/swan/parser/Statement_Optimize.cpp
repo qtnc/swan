@@ -111,6 +111,7 @@ return shared_this();
 shared_ptr<Statement> BlockStatement::optimizeStatement () { 
 if (optimized) return shared_this(); 
 for (auto& sta: statements) sta=sta->optimizeStatement(); 
+if (statements.size()==1) return statements[0];
 doHoisting();
 optimized = true;
 return shared_this(); 

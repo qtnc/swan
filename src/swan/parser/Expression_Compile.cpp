@@ -379,12 +379,13 @@ int fieldSlot = cls->findField(token, &fieldType);
 assignedValue->compile(compiler);
 if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
-else {
+else  {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, fieldSlot);
-}}
+}
+}
 
 void StaticFieldExpression::compile (QCompiler& compiler) {
 int atLevel = 0;
@@ -670,10 +671,12 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
+uint64_t fflags = 0;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super));
-compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super, &fflags));
+if (fflags&2) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
+else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
@@ -681,12 +684,13 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
+uint64_t fflags = 0;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
-type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super));
+type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fflags));
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) compiler.writeOpCallSuper(call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -700,15 +704,21 @@ void MemberLookupOperation::compileAssignment (QCompiler& compiler, shared_ptr<E
 shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
+uint64_t fflags = 0;
 string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
+QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
 assignedValue->compile(compiler);
-type = compiler.resolveCallType(left, setter->token, 1, &assignedValue, !!super);
-compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
+type = compiler.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fflags);
+if (fflags&4) {
+compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
+compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
+}
+else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
-compiler.compileError(right->nearestToken(), ("Bad operand for '.' operator in assignment"));
+compiler.compileError(right->nearestToken(), "Bad operand for '.' operator in assignment");
 }
 
 void MethodLookupOperation::compile (QCompiler& compiler) {
@@ -862,6 +872,7 @@ make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(co
 
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
 QCompiler fc(compiler.parser);
+shared_ptr<Expression> lastExpr = nullptr;
 fc.parent = &compiler;
 fc.curMethod = this;
 compiler.parser.curMethodNameToken = name;
@@ -869,7 +880,17 @@ compileParams(fc);
 body=body->optimizeStatement();
 fc.writeDebugLine(body->nearestToken());
 body->compile(fc);
-if (body->isExpression()) fc.writeOp(OP_POP);
+if (body->isExpression()) {
+fc.writeOp(OP_POP);
+lastExpr = static_pointer_cast<Expression>(body);
+if (auto fe = dynamic_pointer_cast<FieldExpression>(body)) {
+flags|=FD_GETTER;
+iField = compiler.curClass->findField(fe->token);
+}}
+else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
+if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
+}
+if (lastExpr) returnTypeHint = compiler.mergeTypes(returnTypeHint, lastExpr->getType(compiler));
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->vararg = (flags&FD_VARARG);
@@ -878,7 +899,14 @@ if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = getType(compiler)->resolve(compiler)->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
-//println("func type = %s", func->typeInfo.c_str());
+if (flags&FD_GETTER) {
+func->iField = iField;
+func->fieldGetter = true;
+}
+else if (flags&FD_SETTER) {
+func->iField = iField;
+func->fieldSetter = true;
+}
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));

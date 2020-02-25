@@ -335,7 +335,7 @@ auto call = parseMethodCall(expr);
 return BinaryOperation::create(superExpr, T_DOT, call);
 }
 consume(T_DOT, ("Expected '.' or '('  after 'super'"));
-shared_ptr<Expression> expr = parseExpression();
+shared_ptr<Expression> expr = parseExpression(P_MEMBER);
 return BinaryOperation::create(superExpr, T_DOT, expr);
 }
 
