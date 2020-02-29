@@ -8,7 +8,7 @@ typedef T value_type;
 T *base, *top, *finish;
 Alloc allocator;
 F callback;
-inline execution_stack (const F& cb = nullptr, size_t initialCapacity = 4, const Alloc& alloc0 = std::allocator<T>()):  
+inline execution_stack (const F& cb = nullptr, size_t initialCapacity = 16, const Alloc& alloc0 = std::allocator<T>()):  
 base(nullptr), top(nullptr), finish(nullptr), 
 callback(cb), allocator(alloc0) {
 base = allocator.allocate(initialCapacity * sizeof(T));

@@ -110,7 +110,7 @@ int QCompiler::addUpvalue (int slot, bool upperUpvalue) {
 auto it = find_if(upvalues.begin(), upvalues.end(), [&](auto& x){ return x.slot==slot && x.upperUpvalue==upperUpvalue; });
 if (it!=upvalues.end()) return it - upvalues.begin();
 int i = upvalues.size();
-upvalues.push_back({ slot, upperUpvalue });
+upvalues.push_back({ static_cast<uint_local_index_t>(slot), upperUpvalue });
 return i;
 }
 
