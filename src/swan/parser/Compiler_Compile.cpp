@@ -32,7 +32,10 @@ if (constants.size() >= std::numeric_limits<uint_constant_index_t>::max()) compi
 if (vm.methodSymbols.size()  >= std::numeric_limits<uint_method_symbol_t>::max()) compileError(sta->nearestToken(), "Too many method symbols");
 if (vm.globalVariables.size()  >= std::numeric_limits<uint_global_symbol_t>::max()) compileError(sta->nearestToken(), "Too many global variables");
 // Implicit return last expression
-if (lastOp==OP_POP) {
+if (sta->isExpression()) {
+writeOp(OP_RETURN);
+}
+else if (lastOp==OP_POP) {
 seek(-1);
 writeOp(OP_RETURN);
 }
