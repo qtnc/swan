@@ -3,7 +3,6 @@
 #include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
-#include "Set.hpp"
 
 struct QGrid: QSequence {
 uint32_t width, height;

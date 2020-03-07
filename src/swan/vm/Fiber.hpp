@@ -1,6 +1,5 @@
 #ifndef _____SWAN_FIBER_HPP_____
 #define _____SWAN_FIBER_HPP_____
-#include "Core.hpp"
 #include "Value.hpp"
 #include "Iterable.hpp"
 #include "String.hpp"

@@ -1,6 +1,6 @@
 #ifndef _____SWAN_OBJECT_HPP_____
 #define _____SWAN_OBJECT_HPP_____
-#include "Core.hpp"
+#include "Constants.hpp"
 #include<string>
 
 struct CopyVisitor {

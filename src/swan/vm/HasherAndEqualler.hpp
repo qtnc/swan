@@ -1,6 +1,5 @@
 #ifndef _____HASHER_AND_EQUALLER_HPP_____
 #define _____HASHER_AND_EQUALLER_HPP_____
-#include "Core.hpp"
 #include "Value.hpp"
 #include<utility>
 #include<cstring>

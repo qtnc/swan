@@ -1,6 +1,5 @@
 #ifndef _____SWAN_SEQUENCE_HPP_____
 #define _____SWAN_SEQUENCE_HPP_____
-#include "Core.hpp"
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"

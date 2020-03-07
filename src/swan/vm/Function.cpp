@@ -1,6 +1,3 @@
-#include "Core.hpp"
-//#include "Upvalue.hpp"
-#include "Object.hpp"
 #include "Function.hpp"
 #include "VM.hpp"
 #include "../../include/cpprintf.hpp"

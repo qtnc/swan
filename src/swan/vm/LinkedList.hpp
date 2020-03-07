@@ -4,7 +4,6 @@
 #include "Iterable.hpp"
 #include "Value.hpp"
 #include "VM.hpp"
-#include "Set.hpp"
 #include "Allocator.hpp"
 #include<list>
 

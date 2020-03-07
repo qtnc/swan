@@ -5,7 +5,7 @@
 #include "Value.hpp"
 #include "Iterable.hpp"
 #include "ExtraAlgorithms.hpp"
-#include "Array.hpp"
+#include "CString.hpp"
 #include "OpCodeInfo.hpp"
 #include "Fiber_inlines.hpp"
 #include<string>

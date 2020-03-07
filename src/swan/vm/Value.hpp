@@ -1,7 +1,7 @@
 #ifndef ____SWAN_VALUE_HPP_____
 #define ____SWAN_VALUE_HPP_____
 #include "../../include/Swan.hpp"
-#include "Core.hpp"
+#include "Constants.hpp"
 #include "Object.hpp"
 #include<string>
 

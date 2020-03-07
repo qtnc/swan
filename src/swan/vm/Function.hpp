@@ -3,7 +3,7 @@
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
-#include "Array.hpp"
+#include "CString.hpp"
 #include<string>
 #include<vector>
 

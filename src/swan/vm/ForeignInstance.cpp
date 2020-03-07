@@ -1,5 +1,3 @@
-#include "Core.hpp"
-#include "Object.hpp"
 #include "ForeignInstance.hpp"
 #include "ForeignClass.hpp"
 #include "VM.hpp"

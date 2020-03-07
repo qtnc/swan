@@ -1,4 +1,3 @@
-#include "Core.hpp"
 #include "Object.hpp"
 #include "VM.hpp"
 #include "../../include/cpprintf.hpp"
