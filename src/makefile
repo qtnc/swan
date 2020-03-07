@@ -78,7 +78,7 @@ $(DLL_LIB): $(OBJS) $(CPPRINTF_OBJS)
 	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -o $@ $^ $(DLL_LDFLAGS)
 
 swan/lib/builtin-code.h: $(SWANS)
-	@luajit fileToCStr.lua BUILTIN_CODE $^ >$@
+	@python fileToCStr.py BUILTIN_CODE $^ >$@
 
 $(OBJDIR)swan/vm/VM_Init.o: swan/lib/builtin-code.h
 
