@@ -263,18 +263,18 @@ Similarly to Java, when you implement *hashCode*, you should also implement the 
 If Swan has been compiled with grid/matrix support, an additional Grid type is available.
 It represents a 2D table, which gamers often call grid or 2D map, and which mathematicians call matrix. Each cell contains a value and is usually designated by its column (X) and row (Y).
 
-A special syntax for writing literal grids exist, in two forms:
+The syntax for writing literal grids is as following:
 
 ```
-| 1, 2, 3 |
-| 4, 5, 6 |
-| 7, 8, 9 |
+[
+  1, 2, 3;
+  4, 5, 6;
+  7, 8, 9
+]
 ```
 
-Which can also be written in its shortened form:  
-`| 1, 2, 3; 4, 5, 6; 7, 8, 9 |`
-
-You may mix the two forms, though it's quite unusual.
+Which can also be written in a one-line shortened form:  
+`[1, 2, 3; 4, 5, 6; 7, 8, 9]`
 
 ## Functions and closures
 Functions can capture variables to form closures.

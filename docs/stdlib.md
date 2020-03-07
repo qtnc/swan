@@ -116,7 +116,7 @@ A grid is a bidimensional structure. It is indexed with two indices x (represent
 Grid can be used as 2D map, or as matrix in the mathmatical sense. A few useful methods covering these two topics are provided, pathfinding as well as matrix multiplication ammong others.
 
 - Constructor: Grid(width, height): construct a grid with the given size, initially filled with 0s.
-- Implicit construction when using the construction syntax `| ... |`
+- Implicit construction when using the construction syntax `[ ..., ...; ... ]`
 - Operators: `[], []=, +, -, *, /, **`
 - Unary operators: -
 - Comparison oprators: ==, !=
