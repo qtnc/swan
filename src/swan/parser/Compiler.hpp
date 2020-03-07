@@ -106,7 +106,6 @@ inline QToken createTempName () { return parser.createTempName(); }
 template<class... A> inline void compileError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = CR_FAILED; }
 template<class... A> inline void compileWarn (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }
 template<class... A> inline void compileInfo (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::INFO, format(fmt, args...)); }
-void dump ();
 
 QCompiler (QParser& p): vm(p.vm), parser(p), parent(nullptr), curClass(nullptr)  {}
 void compile ();

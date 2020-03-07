@@ -9,7 +9,7 @@ union QV {
 uint64_t i;
 double d;
 
-std::string print () const;
+std::string toString () const;
 
 inline explicit QV(): i(QV_UNDEFINED) {}
 inline explicit QV(uint64_t x): i(x) {}

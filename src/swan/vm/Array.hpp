@@ -160,11 +160,12 @@ inline c_string& operator= (c_string&& c) { ptr = std::move(c.ptr); return *this
 inline c_string& operator= (const char* s) { assign(s); return *this; }
 inline c_string& operator= (const std::string& s) { assign(s.begin(), s.end()); return *this; }
 inline const char* begin () const { return &ptr[0]; }
-inline const char* data () const { return &ptr[0]; }
-inline const char* c_str () const { return &ptr[0]; }
+inline const char* data () const { return ptr? &ptr[0] : nullptr; }
+inline const char* c_str () const { return ptr? &ptr[0] : nullptr; }
 std::string str () const { return ptr?&ptr[0]:""; }
 inline size_t size () const { return ptr?strlen(&ptr[0]):0; }
 inline bool empty () const { return size()==0; }
+inline explicit operator bool () const { return size()>0; }
 };
 
 std::ostream& operator<< (std::ostream& out, const c_string& s);

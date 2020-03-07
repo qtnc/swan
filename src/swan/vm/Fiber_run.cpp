@@ -23,11 +23,12 @@ count++;
 return count;
 }
 
+#ifdef DEBUG
 static void printStack (ostream& out, QFiber::Stack& stack, int base) {
 print(out, "Stack base=%d, size=%d: [", base, stack.size());
 for (int i=base, n=stack.size(); i<n; i++) {
 if (i>0) print(out, ", ");
-print(out, "%s", stack.at(i).print());
+print(out, "%s", stack.at(i).toString());
 }
 println(out, "");
 }
@@ -35,6 +36,7 @@ println(out, "");
 static void printStack (QFiber::Stack& stack, int base) {
 printStack(std::cerr, stack, base);
 }
+#endif
 
 QV QFiber::loadMethod (QV& obj, int symbol) {
 QClass& cls = obj.getClass(vm);

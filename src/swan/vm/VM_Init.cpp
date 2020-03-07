@@ -1,4 +1,5 @@
 #include "VM.hpp"
+#include "OpCodeInfo.hpp"
 #include "../../include/cpprintf.hpp"
 #include<boost/algorithm/string.hpp>
 #include<fstream>
@@ -220,6 +221,7 @@ f.call(0);
 f.pop();
 
 println("sizeof(QObject)=%d, sizeof(QFiber)=%d, sizeof(QInstance)=%d, sizeof(QClass)=%d, sizeof(QFunction)=%d, sizeof(QVM)=%d", sizeof(QObject), sizeof(QFiber), sizeof(QInstance), sizeof(QClass), sizeof(QFunction), sizeof(QVM));
+println("OP_END=%d", OP_END);
 println("End of init, mem usage = %d", gcMemUsage);
 }
 
