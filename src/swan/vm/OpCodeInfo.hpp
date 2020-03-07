@@ -2,11 +2,13 @@
 #define _____SWAN_OPCODE_INFO_HPP_____
 
 struct OpCodeInfo {
-int stackEffect, nArgs, argFormat;
+int8_t stackEffect;
+uint8_t szArgs;
+uint16_t argFormat;
 };
 
 enum QOpCode {
-#define OP(name, stackEffect, nArgs, argFormat) OP_##name
+#define OP(name, stackEffect, szArgs, argFormat) OP_##name
 #include "OpCodes.hpp"
 #undef OP
 };

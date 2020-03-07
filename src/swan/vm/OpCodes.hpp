@@ -3,35 +3,33 @@ OP(LOAD_NULL, 1, 0, 0),
 OP(LOAD_TRUE, 1, 0, 0),
 OP(LOAD_FALSE, 1, 0, 0),
 OP(LOAD_INT8, 1, sizeof(uint8_t), sizeof(uint8_t)),
-OP(LOAD_CONSTANT, 1, sizeof(uint_constant_index_t), sizeof(uint_constant_index_t)),
-OP(LOAD_CLOSURE, 1, sizeof(uint_constant_index_t), sizeof(uint_constant_index_t)),
+OP(LOAD_CONSTANT, 1, sizeof(uint_constant_index_t), 0xC),
+OP(LOAD_CLOSURE, 1, sizeof(uint_constant_index_t), 0xC),
 
 OP(LOAD_THIS, 1, 0, 0),
 OP(LOAD_LOCAL, 1, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 OP(LOAD_UPVALUE, 1, sizeof(uint_upvalue_index_t), sizeof(uint_upvalue_index_t)),
-OP(LOAD_GLOBAL, 1, sizeof(uint_global_symbol_t), sizeof(uint_global_symbol_t)),
+OP(LOAD_GLOBAL, 1, sizeof(uint_global_symbol_t), 0xB),
 OP(LOAD_THIS_FIELD, 1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(LOAD_THIS_STATIC_FIELD, 1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(LOAD_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(LOAD_STATIC_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
-OP(LOAD_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
+OP(LOAD_METHOD, 0, sizeof(uint_method_symbol_t), 0xA),
 
 OP(STORE_LOCAL, 0, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 OP(STORE_UPVALUE, 0, sizeof(uint_upvalue_index_t), sizeof(uint_upvalue_index_t)),
-OP(STORE_GLOBAL, 0, sizeof(uint_global_symbol_t), sizeof(uint_global_symbol_t)),
+OP(STORE_GLOBAL, 0, sizeof(uint_global_symbol_t), 0xB),
 OP(STORE_THIS_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(STORE_THIS_STATIC_FIELD, 0, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(STORE_FIELD, -1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
 OP(STORE_STATIC_FIELD, -1, sizeof(uint_field_index_t), sizeof(uint_field_index_t)),
-OP(STORE_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
-OP(STORE_STATIC_METHOD, 0, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
+OP(STORE_METHOD, 0, sizeof(uint_method_symbol_t), 0xA),
+OP(STORE_STATIC_METHOD, 0, sizeof(uint_method_symbol_t), 0xA),
 
 OP(DUP, 1, 0, 0),
-OP(SWAP, 0, 1, 1),
-//OP(DUP_M2, 1, 0, 0),
+OP(SWAP, 0, 1, 0x7),
 
 OP(POP, -1, 0, 0),
-//OP(POP_M2, -1, 0, 0),
 OP(POP_SCOPE, 0, sizeof(uint_local_index_t), sizeof(uint_local_index_t)),
 
 OP(RETURN, 0, 0, 0),
@@ -55,11 +53,11 @@ L(0), L(1), L(2), L(3), L(4), L(5), L(6), L(7),
 L(0), L(1), L(2), L(3), L(4), L(5), L(6), L(7), 
 #undef L
 
-#define C(N) OP(CALL_METHOD_##N, 1-N, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t))
+#define C(N) OP(CALL_METHOD_##N, 1-N, sizeof(uint_method_symbol_t), 0xA)
 C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), 
 #undef C
 
-#define C(N) OP(CALL_SUPER_##N, 1-N, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t))
+#define C(N) OP(CALL_SUPER_##N, 1-N, sizeof(uint_method_symbol_t), 0xA)
 C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7),
 #undef C
 
@@ -67,16 +65,16 @@ C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7),
 C(0), C(1), C(2), C(3), C(4), C(5), C(6), C(7), 
 #undef C
 
-OP(CALL_METHOD, 255, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | (sizeof(uint_method_symbol_t)<<0)),
-OP(CALL_SUPER, 255, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | (sizeof(uint_method_symbol_t)<<0)),
-OP(CALL_FUNCTION, 255, sizeof(uint8_t), sizeof(uint8_t)),
+OP(CALL_METHOD, 127, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | 0xA),
+OP(CALL_SUPER, 127, sizeof(uint8_t) + sizeof(uint_method_symbol_t), (sizeof(uint8_t)<<4) | 0xA),
+OP(CALL_FUNCTION, 127, sizeof(uint8_t), sizeof(uint8_t)),
 
-OP(CALL_METHOD_VARARG, 255, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
-OP(CALL_SUPER_VARARG, 255, sizeof(uint_method_symbol_t), sizeof(uint_method_symbol_t)),
-OP(CALL_FUNCTION_VARARG, 255, 0, 0),
+OP(CALL_METHOD_VARARG, 127, sizeof(uint_method_symbol_t), 0xA),
+OP(CALL_SUPER_VARARG, 127, sizeof(uint_method_symbol_t), 0xA),
+OP(CALL_FUNCTION_VARARG, 127, 0, 0),
 
 OP(PUSH_VARARG_MARK, 1, 0, 0),
-OP(UNPACK_SEQUENCE, 255, 0, 0),
+OP(UNPACK_SEQUENCE, 127, 0, 0),
 
 OP(TRY, 0, 8, 0x44),
 OP(THROW, 0, 0, 0),

@@ -90,6 +90,7 @@ writeVLN(out, reinterpret_cast<uintptr_t>(&func));
 writeVLN(out, func.constantsEnd - func.constants);
 writeVLN(out, func.upvaluesEnd - func.upvalues);
 writeVLN(out, func.bytecodeEnd - func.bytecode);
+writeVLN(out, func.debugItemsEnd-func.debugItems);
 writeVLN(out, func.nArgs);
 write<uint_field_index_t>(out, func.iField);
 write<uint8_t>(out, func.flags);
@@ -100,8 +101,11 @@ for (auto upv = func.upvalues, end = func.upvaluesEnd; upv<end; ++upv) {
 writeVLN(out, upv->slot);
 write<uint8_t>(out, upv->upperUpvalue);
 }
+for (DebugItem *di=func.debugItems, *de=func.debugItemsEnd; di<de; ++di) {
+writeVLN(out, di->offset);
+writeVLN(out, di->line);
+}
 out.write(func.bytecode, func.bytecodeEnd-func.bytecode);
-//println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
 }
 
 static QV readFunctionBytecode (QVM& vm, istream& in, unordered_map<uintptr_t, QObject*>& references, unordered_map<int,int>& globalTable, unordered_map<int,int>& methodTable) {
@@ -109,8 +113,9 @@ size_t fnref = readVLN(in);
 int nConsts = readVLN(in);
 int nUpvalues = readVLN(in);
 int bcSize = readVLN(in);
+int nDbgItems = readVLN(in);
 int nArgs = readVLN(in);
-QFunction& func = *QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize);
+QFunction& func = *QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize, nDbgItems);
 references[fnref] = &func;
 func.iField = read<uint_field_index_t>(in);
 func.flags = read<uint8_t>(in);
@@ -122,8 +127,11 @@ uint_local_index_t slot = readVLN(in);
 bool upper = read<uint8_t>(in);
 *ptr = { slot, upper };
 }
+for (auto [i, ptr] = tuple(0, func.debugItems); i<nDbgItems; ++i, ++ptr) {
+ptr->offset = readVLN(in);
+ptr->line = readVLN(in);
+}
 in.read(func.bytecode, bcSize);
-//println("%s:%s: %d args, %d constants, %d upvalues, %d bytes BC length", func.file, func.name, static_cast<int>(func.nArgs), func.constants.size(), func.upvalues.size(), func.bytecode.size());
 for (auto bc = func.bytecode, end = func.bytecodeEnd; bc<end; ) {
 uint8_t op = *bc++;
 switch(op) {
@@ -145,7 +153,7 @@ case OP_CALL_SUPER_VARARG:
 translateSymbol(*reinterpret_cast<uint_method_symbol_t*>(const_cast<char*>(bc)), methodTable);
 break;
 }
-bc += OPCODE_INFO[op].nArgs;
+bc += OPCODE_INFO[op].szArgs;
 }
 return QV(&func, QV_TAG_NORMAL_FUNCTION);
 }

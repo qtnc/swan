@@ -37,7 +37,7 @@ QFunction (QVM& vm);
 bool gcVisit ();
 ~QFunction () = default;
 inline size_t getMemSize ()  { return  bytecodeEnd - reinterpret_cast<char*>(this); }
-void printInstructions () const;
+void disasm (std::ostream& out) const;
 };
 
 #endif

@@ -18,6 +18,7 @@ INFIX_OP(BACKSLASH, InfixOp, \\, FACTOR, LEFT),
 INFIX_OP(PERCENT, InfixOp, %, FACTOR, LEFT),
 INFIX_OP(STARSTAR, InfixOp, **, EXPONENT, LEFT),
 INFIX_OP(AMP, InfixOp, &, BITWISE, LEFT),
+INFIX_OP(BAR, InfixOp, |, BITWISE, LEFT),
 INFIX_OP(CIRC, InfixOp, ^, BITWISE, LEFT),
 INFIX_OP(LTLT, InfixOp, <<, BITWISE, LEFT),
 INFIX_OP(GTGT, InfixOp, >>, BITWISE, LEFT),
@@ -65,11 +66,6 @@ PREFIX(DOLLAR, DebugExpression, $),
 OPERATOR(SLASH, LiteralRegex, InfixOp, /, /, FACTOR, LEFT),
 #else
 INFIX_OP(SLASH, InfixOp, /, FACTOR, LEFT),
-#endif
-#ifndef NO_GRID
-OPERATOR(BAR, LiteralGrid, InfixOp, |, |, BITWISE, LEFT),
-#else
-INFIX_OP(BAR, InfixOp, |, BITWISE, LEFT),
 #endif
 
 { T_LEFT_PAREN, { &QParser::parseGroupOrTuple, &QParser::parseMethodCall, nullptr, &QParser::parseMethodDecl, nullptr, ("()"), P_CALL, P_LEFT }},

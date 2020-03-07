@@ -80,16 +80,15 @@ f.returnValue(f.at(3));
 
 static void gridToString (QFiber& f) {
 QGrid& grid = f.getObject<QGrid>(0);
-string re = "";
+string re = "[";
 for (uint32_t y=0; y<grid.height; y++) {
-if (y>0) re += "\r\n";
-re += "| ";
+if (y>0) re += "; ";
 for (uint32_t x=0; x<grid.width; x++) {
 if (x>0) re += ", ";
 appendToString(f, grid.at(x,y), re);
 }
-re += " |";
 }
+re += "]";
 f.returnValue(re);
 }
 

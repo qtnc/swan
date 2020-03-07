@@ -14,48 +14,75 @@
 #include<unordered_set>
 using namespace std;
 
-extern const char* OPCODE_NAMES[];
+static const char* OPCODE_NAMES[] = {
+#define OP(name, stackEffect, nArgs, argFormat) #name
+#include "../vm/OpCodes.hpp"
+#undef OP
+, nullptr
+};
 
 OpCodeInfo OPCODE_INFO[] = {
-#define OP(name, stackEffect, nArgs, argFormat) { stackEffect, nArgs, argFormat }
+#define OP(name, stackEffect, szArgs, argFormat) { stackEffect, szArgs, argFormat }
 #include "../vm/OpCodes.hpp"
 #undef OP
 };
 
-const uint8_t* printOpCode (const uint8_t* bc) {
-if (!OPCODE_NAMES[*bc]) {
-println(std::cerr, "Unknown opcode: %d(%<#0$2X)", *bc);
-println(std::cerr, "Following bytes: %0$2X %0$2X %0$2X %0$2X %0$2X %0$2X %0$2X %0$2X", bc[0], bc[1], bc[2], bc[3], bc[4], bc[5], bc[6], bc[7]);
-return bc+8;
-}
-int nArgs = OPCODE_INFO[*bc].nArgs, argFormat = OPCODE_INFO[*bc].argFormat;
-print("%s", OPCODE_NAMES[*bc]);
+const uint8_t* printOpCode (const uint8_t* bc, int offset, const QFunction& func, std::ostream& out) {
+QVM& vm = func.type->vm;
+int nArgs=0, argFormat = OPCODE_INFO[*bc].argFormat;
+print(out, "%s", OPCODE_NAMES[*bc]);
 bc++;
+if (argFormat>=0x1000) nArgs=4;
+else if (argFormat>=0x100) nArgs=3;
+else if (argFormat>=0x10) nArgs=2;
+else if (argFormat>1) nArgs=1;
 for (int i=0; i<nArgs; i++) {
 int arglen = argFormat&0x0F;
 argFormat>>=4;
 switch(arglen){
 case 1:
-print(", %d", static_cast<int>(*bc));
+print(out, ", %d", static_cast<int>(*bc));
 bc++;
 break;
 case 2:
-print(", %d", *reinterpret_cast<const uint16_t*>(bc));
+print(out, ", %d", *reinterpret_cast<const uint16_t*>(bc));
 bc+=2;
 break;
 case 4:
-print(", %d", *reinterpret_cast<const uint32_t*>(bc));
+print(out, ", %d", *reinterpret_cast<const uint32_t*>(bc));
 bc+=4;
 break;
 case 8:
-print(", %d", *reinterpret_cast<const uint64_t*>(bc));
+print(out, ", %d", *reinterpret_cast<const uint64_t*>(bc));
 bc+=8;
 break;
+case 0x7: {
+auto x = *reinterpret_cast<const int2x4_t*>(bc);
+print(out, ", %d, %d", x.first, x.second);
+bc++;
+}break;
+case 0xA: {
+auto symbol = *reinterpret_cast<const uint_method_symbol_t*>(bc);
+print(out, ", %d (%s)", symbol, vm.methodSymbols[symbol]);
+bc+=sizeof(symbol);
+}break;
+case 0xB: {
+auto index = *reinterpret_cast<const uint_global_symbol_t*>(bc);
+auto& name = std::find_if(vm.globalSymbols.begin(), vm.globalSymbols.end(), [&](auto& p){ return p.second.index==index; }) ->first;
+print(out, ", %d (%s)", index, name);
+bc+=sizeof(index);
+}break;
+case 0xC: {
+auto index = *reinterpret_cast<const uint_constant_index_t*>(bc);
+print(out, ", %d (%s)", index, func.constants[index].print() );
+bc+=sizeof(index);
+}break;
 }}
-println("");
+println(out, "\t\t[%+d]", offset);
 return bc;
 }
 
+/*
 void QCompiler::dump () {
 if (!parent) {
 println("\nOpcode list: ");
@@ -77,15 +104,17 @@ string bcs = out.str();
 println("\nBytecode length: %d bytes", bcs.length());
 for (const uint8_t *bc = reinterpret_cast<const uint8_t*>( bcs.data() ), *end = bc + bcs.length(); bc<end; ) bc = printOpCode(bc);
 }
+*/
 
 static string printFuncInfo (const QFunction& func) {
 return format("%s (arity=%d, consts=%d, upvalues=%d, bc=%d, file=%s)", func.name, static_cast<int>(func.nArgs), func.constantsEnd-func.constants, func.upvaluesEnd-func.upvalues, func.bytecodeEnd-func.bytecode, func.file);
 }
 
-void QFunction::printInstructions () const {
-auto bc = reinterpret_cast<const uint8_t*>( bytecode );
+
+void QFunction::disasm (std::ostream& out)  const {
+auto bc = reinterpret_cast<const uint8_t*>( bytecode ), bcBeg=bc;
 auto bcEnd = reinterpret_cast<const uint8_t*>( bytecodeEnd );
-for (; bc<bcEnd; )  bc = printOpCode(bc);
+for (; bc<bcEnd; )  bc = printOpCode(bc, bc-bcBeg, *this, out);
 }
 
 string QV::print () const {

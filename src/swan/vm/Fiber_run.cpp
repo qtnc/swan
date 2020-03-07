@@ -14,13 +14,6 @@ double dintdiv (double, double);
 
 void pushSwanExceptionFromCppException (QFiber& f, const std::exception& e);
 
-const char* OPCODE_NAMES[] = {
-#define OP(name, stackEffect, nArgs, argFormat) #name
-#include "OpCodes.hpp"
-#undef OP
-, nullptr
-};
-
 static inline int countArgsToMark (QFiber::Stack& stack) {
 int count = 0;
 for (int i=stack.size() -1; i>=0; i--) {

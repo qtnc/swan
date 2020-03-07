@@ -91,6 +91,13 @@ cout << f.ensureString(i)->asString();
 cout << endl;
 }
 
+void dbgDisasm (QFiber& f) {
+QFunction& func = f.getObject<QClosure>(0) .func;
+ostringstream out;
+func.disasm(out);
+f.returnValue(out.str());
+}
+
 void QVM::initGlobals () {
 QClass* globalClasses[] = { 
 boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, listClass, mapClass, mappingClass, numClass, objectClass, rangeClass, setClass, stringClass, tupleClass
@@ -126,4 +133,5 @@ classClass->type
 #endif
 
 bindGlobal("dbg", debugPrint);
+bindGlobal("disasm", dbgDisasm);
 }

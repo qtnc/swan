@@ -393,6 +393,7 @@ shared_ptr<LiteralListExpression> list = make_shared<LiteralListExpression>(cur)
 if (!match(T_RIGHT_BRACKET)) {
 do {
 list->items.push_back(parseUnpackOrExpression());
+if (match(T_SEMICOLON)) return parseLiteralGrid(list->type, list->items);
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close list literal"));
@@ -436,24 +437,22 @@ consume(T_RIGHT_BRACE, ("Expected '}' to close map literal"));
 return map;
 }
 
-shared_ptr<Expression> QParser::parseLiteralGrid () {
-QToken token = cur;
+shared_ptr<Expression> QParser::parseLiteralGrid (QToken token, vector<shared_ptr<Expression>>& initialRow) {
 vector<vector<shared_ptr<Expression>>> data;
-begin: do {
+if (initialRow.size()>0) data.push_back(initialRow);
+do {
 data.emplace_back();
 auto& row = data.back();
 do {
 skipNewlines();
-auto expr = parseExpression(P_BITWISE);
+auto expr = parseExpression();
 if (!expr) return nullptr;
 row.push_back(expr);
 } while(match(T_COMMA));
 if (row.size() != data[0].size()) parseError("All rows must be of the same size (%d)", data[0].size());
-if (match(T_SEMICOLON)) goto begin;
+} while(match(T_SEMICOLON));
 skipNewlines();
-consume(T_BAR, "Expected '|' to close literal grid expression");
-skipNewlines();
-} while(match(T_BAR));
+consume(T_RIGHT_BRACKET, "Expected ']' to close grid literal");
 return make_shared<LiteralGridExpression>(token, data);
 }
 
@@ -472,17 +471,26 @@ shared_ptr<Expression> QParser::parseGroupOrTuple () {
 auto initial = cur;
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, vector<shared_ptr<Expression>>() );
 shared_ptr<Expression> expr = parseUnpackOrExpression();
-bool isTuple = expr->isUnpack();
+bool isTuple = expr->isUnpack(), isVector = match(T_SEMICOLON);
 skipNewlines();
-if (isTuple) consume(T_COMMA, "Expected ',' for single-item tuple");
-else isTuple = match(T_COMMA);
+if (!isVector) isTuple = match(T_COMMA);
 if (isTuple) {
 vector<shared_ptr<Expression>> items = { expr };
 if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
 do {
 items.push_back(parseUnpackOrExpression());
 } while(match(T_COMMA));
-consume(T_RIGHT_PAREN, ("Expected ')' to close tuple"));
+consume(T_RIGHT_PAREN, ("Expected ')' to close literal tuple"));
+return make_shared<LiteralTupleExpression>(initial, items);
+}
+else if (isVector) {
+vector<shared_ptr<Expression>> items = { expr };
+if (match(T_RIGHT_PAREN)) return make_shared<LiteralTupleExpression>(initial, items );
+do {
+items.push_back(parseExpression());
+} while(match(T_SEMICOLON));
+consume(T_RIGHT_PAREN, ("Expected ')' to close literal vector"));
+initial.type = T_SEMICOLON;
 return make_shared<LiteralTupleExpression>(initial, items);
 }
 else {

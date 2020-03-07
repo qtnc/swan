@@ -137,8 +137,13 @@ compiler.writeOp(OP_POP);
 }}
 
 void LiteralTupleExpression::compile (QCompiler& compiler) {
-int tupleSymbol = compiler.vm.findGlobalSymbol(("Tuple"), LV_EXISTING | LV_FOR_READ);
+bool isVector = type.type==T_SEMICOLON;
+int tupleSymbol = compiler.vm.findGlobalSymbol((isVector?"Vector":"Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
+if (isVector) {
+for (auto item: items) if (item->isUnpack()) compiler.compileError(item->nearestToken(), "Spread expression not permitted here");
+if (items.size()<1 || items.size()>4) compiler.compileError(type, "A vector can't contain more than 4 elements");
+}
 if (isSingleSequence()) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, tupleSymbol);
 items[0]->compile(compiler);
@@ -168,6 +173,7 @@ compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data[0].size());
 compiler.writeOpArg<uint8_t>(OP_LOAD_INT8, data.size());
 for (auto& row: data) {
 for (auto& value: row) {
+if (value->isUnpack()) compiler.compileError(value->nearestToken(), "Spread expression not permitted here");
 value->compile(compiler);
 }}
 if (size>argLimit) compiler.writeOp(OP_CALL_FUNCTION_VARARG);

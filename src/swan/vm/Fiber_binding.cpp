@@ -184,7 +184,7 @@ case OP_STORE_FIELD:
 *reinterpret_cast<uint_field_index_t*>(const_cast<char*>(bc)) += offset;
 break;
 }
-bc += OPCODE_INFO[op].nArgs;
+bc += OPCODE_INFO[op].szArgs;
 }
 }
 
