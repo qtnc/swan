@@ -22,13 +22,11 @@ f.call(1);
 static void buildStackTraceLine (QCallFrame& frame, std::vector<Swan::StackTraceElement>& stackTrace) {
 if (!frame.closure) return;
 const QFunction& func = frame.closure->func;
-int line = -1;
-for (auto bc = func.bytecode, end = func.bytecodeEnd; bc<frame.bcp && bc<end; ) {
-uint8_t op = *bc++;
-if (op==OP_DEBUG_LINE) line = *reinterpret_cast<const int16_t*>(bc);
-bc += OPCODE_INFO[op].nArgs;
-}
-stackTrace.push_back({ func.name.str(), func.file.str(), line });
+DebugItem item = { frame.bcp - func.bytecode, -1 },
+*found = lower_bound(func.debugItems, func.debugItemsEnd, item, [](auto& a, auto& b){ return a.offset<b.offset; });
+if (found!=func.debugItemsEnd)  item = *found;
+else if (func.debugItemsEnd-func.debugItems>0) item = func.debugItemsEnd[-1];
+stackTrace.push_back({ func.name.str(), func.file.str(), item.line });
 }
 
 

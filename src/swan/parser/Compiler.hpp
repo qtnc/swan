@@ -38,6 +38,7 @@ struct ClassDeclaration* curClass = nullptr;
 struct FunctionDeclaration* curMethod = nullptr;
 QCompiler* parent = nullptr;
 std::ostringstream out;
+std::vector<DebugItem> debugItems;
 std::vector<LocalVariable> localVariables, globalVariables;
 std::vector<Upvariable> upvalues;
 std::vector<Loop> loops;

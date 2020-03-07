@@ -50,13 +50,14 @@ QFunction* QCompiler::getFunction (int nArgs) {
 compile();
 
 string bc = out.str();
-size_t nConsts = constants.size(), nUpvalues = upvalues.size(), bcSize = bc.size();
+size_t nConsts = constants.size(), nUpvalues = upvalues.size(), bcSize = bc.size(), dbgi = debugItems.size();
 
-QFunction* function = QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize);
+QFunction* function = QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize, dbgi);
 copy(make_move_iterator(constants.begin()), make_move_iterator(constants.end()), function->constants);
 copy(make_move_iterator(upvalues.begin()), make_move_iterator(upvalues.end()), function->upvalues);
+copy(make_move_iterator(debugItems.begin()), make_move_iterator(debugItems.end()), function->debugItems);
 memmove(function->bytecode, bc.data(), bcSize);
-function->file = parent&&!vm.compileDbgInfo? "" : parser.filename;
+function->file = parser.filename;
 result = result? result : parser.result;
 return function;
 }

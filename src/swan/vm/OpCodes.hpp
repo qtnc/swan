@@ -84,8 +84,6 @@ OP(END_FINALLY, 0, 0, 0),
 
 OP(NEW_CLASS, -1, 3*sizeof(uint_field_index_t), (sizeof(uint_field_index_t)<<8)|(sizeof(uint_field_index_t)<<4)|sizeof(uint_field_index_t) ), // pop name, pop parent, push new class
 
-OP(DEBUG_LINE, 0, sizeof(uint16_t), sizeof(uint16_t)),
-
 /* Optimized instructions when we are sure to operate on numbers */
 OP(ADD, -1, 0, 0),
 OP(SUB, -1, 0, 0),

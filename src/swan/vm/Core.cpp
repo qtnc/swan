@@ -49,11 +49,12 @@ return bf;
 StdFunction::StdFunction (QVM& vm, const StdFunction::Func& func0):
 QObject(vm.stdFunctionClass), func(func0) {}
 
-QFunction* QFunction::create (QVM& vm, int nArgs, int nConsts, int nUpvalues, int bcSize) {
-QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + bcSize, vm);
+QFunction* QFunction::create (QVM& vm, int nArgs, int nConsts, int nUpvalues, int bcSize, int nDebugItems) {
+QFunction* function = vm.constructVLS<QFunction, char>(nConsts*sizeof(QV) + nUpvalues*sizeof(Upvariable) + nDebugItems*sizeof(DebugItem) + bcSize, vm);
 function->constantsEnd = function->constants + nConsts;
 function->upvaluesEnd = function->upvalues + nUpvalues;
 function->bytecodeEnd = function->bytecode + bcSize;
+function->debugItemsEnd = function->debugItems + nDebugItems;
 function->nArgs = nArgs;
 return function;
 }

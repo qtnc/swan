@@ -3,7 +3,9 @@
 using namespace std;
 
 void QCompiler::writeDebugLine (const QToken& tk) {
-if (parser.vm.compileDbgInfo) writeOpArg<int16_t>(OP_DEBUG_LINE, parser.getPositionOf(tk.start).first);
+int16_t line = parser.getPositionOf(tk.start).first;
+if (debugItems.size()>0 && debugItems.back().line==line) return;
+debugItems.push_back({ writePosition(), line });
 }
 
 int QCompiler::writeOpJumpBackTo  (QOpCode op, int pos) { 
