@@ -69,7 +69,7 @@ void bindGlobal (const std::string& name, const QV& value, bool isConst=false);
 void bindGlobal (const std::string& name, QNativeFunction value, const char* typeInfo);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
-void addToGC (QObject* obj);
+inline void addToGC (QObject* obj);
 
 void initBaseTypes();
 void initNumberType();

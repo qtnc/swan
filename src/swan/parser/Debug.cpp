@@ -1,3 +1,4 @@
+#ifdef DEBUG
 #include "Parser.hpp"
 #include "Compiler.hpp"
 #include "../vm/ExtraAlgorithms.hpp"
@@ -29,7 +30,7 @@ bc++;
 if (argFormat>=0x1000) nArgs=4;
 else if (argFormat>=0x100) nArgs=3;
 else if (argFormat>=0x10) nArgs=2;
-else if (argFormat>1) nArgs=1;
+else if (argFormat>=1) nArgs=1;
 for (int i=0; i<nArgs; i++) {
 int arglen = argFormat&0x0F;
 argFormat>>=4;
@@ -62,8 +63,9 @@ bc+=sizeof(symbol);
 }break;
 case 0xB: {
 auto index = *reinterpret_cast<const uint_global_symbol_t*>(bc);
-auto& name = std::find_if(vm.globalSymbols.begin(), vm.globalSymbols.end(), [&](auto& p){ return p.second.index==index; }) ->first;
-print(out, ", %d (%s)", index, name);
+auto gv = std::find_if(vm.globalSymbols.begin(), vm.globalSymbols.end(), [&](auto& p){ return p.second.index==index; });
+if (gv!=vm.globalSymbols.end()) print(out, ", %d (%s=%s)", index, gv->first, vm.globalVariables[index].toString());
+else print(out, ", %d (%s)", index, vm.globalVariables[index].toString());
 bc+=sizeof(index);
 }break;
 case 0xC: {
@@ -72,7 +74,7 @@ print(out, ", %d (%s)", index, func.constants[index].toString() );
 bc+=sizeof(index);
 }break;
 }}
-println(out, "\t\t[%+d]", offset);
+out << std::endl;
 return bc;
 }
 
@@ -111,5 +113,7 @@ if (cls) return format("Class(%s)@%#0$16llX", cls->name, i);
 else if (str) return ("\"") + asString() + ("\"");
 else return format("%s@%#0$16llX", obj->type->name, i);
 }}
+
+#endif
 
 

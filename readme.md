@@ -56,6 +56,7 @@ print(v3)
 [>> Standard library documentation](docs/stdlib.md)
 
 # Features 
+- Gentle syntax
 - Loosly typed
 - Class object-oriented
 - Allow functional style with closures and higher order functions
@@ -64,6 +65,7 @@ print(v3)
 - Operator overloading
 - Extending or redefining classes at runtime (except built-in types)
 
+
 Core built-in types: Bool, Fiber, Function, List, Map, null, Number, Set, String, Tuple, undefined
 
 Other characteristics of this little programming language include:
@@ -71,7 +73,7 @@ Other characteristics of this little programming language include:
 - Single 64-bit floating point number type (C double), as in JavaScript
 - Stack-based virtual machine
 - Compact primary value representation thank to NaN tagging
-- Mark and sweep garbage collector
+- Mark and sweep stop-the-world garbage collector
 
 # Safe embedding
 

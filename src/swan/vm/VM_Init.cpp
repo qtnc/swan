@@ -220,8 +220,10 @@ f.loadString(string(BUILTIN_CODE, sizeof(BUILTIN_CODE)), "<builtIn>");
 f.call(0);
 f.pop();
 
+#ifdef DEBUG
 println("sizeof(QObject)=%d, sizeof(QFiber)=%d, sizeof(QInstance)=%d, sizeof(QClass)=%d, sizeof(QFunction)=%d, sizeof(QVM)=%d", sizeof(QObject), sizeof(QFiber), sizeof(QInstance), sizeof(QClass), sizeof(QFunction), sizeof(QVM));
 println("OP_END=%d", OP_END);
 println("End of init, mem usage = %d", gcMemUsage);
+#endif
 }
 

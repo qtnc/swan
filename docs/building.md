@@ -29,13 +29,16 @@ Here are possible flags for the *options* variable. By default, none of them are
 
 **Swan VM options**
 
-- NO_BUFFER: disable the Buffer type and related functions. This also disables charset management and JSON encoding/decoding. Boost::iostreams is no longer necessary.
-- NO_GRID: disable the Grid type and related functions. The grid syntax `| value, value, value, ... |` won't be parsed.
-- NO_MUTEX: disable thread locking; scripts shouldn't be run from multiple threads simultaneously if this option is set.
-- NO_OPTIONAL_COLLECTIONS: disable Dictionary and LinkedList types as well as related functions
+- DEBUG: include additional debugging code. Automatically set if mode=debug.
+- DEBUG_GC: add GC-specific debugging code and stresses the GC to be triggered at every memory allocation.
+- NO_GRID: disable the Grid type and all related functions. The grid syntax won't be parsed. Implies NO_GRID_MATRIX and NO_GRID_PATHFIND.
+- NO_GRID_MATRIX: disable all grid methods related to matrices
+- NO_GRID_PATHFIND: disable all grid methods related to pathfinding
+- NO_OPTIONAL_COLLECTIONS: disable Dictionary, LinkedList and SortedSet types as well as related functions
 - NO_RANDOM: disable Random type and the rand() function
 - NO_REFLECT: disable reflection/meta-class global functions: createClass, load/storeGlobal, load/storeField, load/store(Static)Method
 - NO_REGEX: disable regular expression support and String methods using regex. Literal regex syntax `/pattern/options` won't be parsed. This flag is automatically set if regex=none.
+- NO_THREAD_SUPPORT: disable thread locking; scripts shouldn't be run from multiple threads simultaneously if this option is set. May improve performences if Swan is run by only one thread.
 - USE_BOOST_REGEX: use boost::regex instead of std::regex for regular expression support. You will need to link with boost::regex. Automatically set if regex=boost.
 - USE_COMPUTED_GOTO: use computed jump table to switch opcodes; may speed up or slow down the VM depending on the compiler.
 

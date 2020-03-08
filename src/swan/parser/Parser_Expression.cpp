@@ -440,6 +440,7 @@ return map;
 shared_ptr<Expression> QParser::parseLiteralGrid (QToken token, vector<shared_ptr<Expression>>& initialRow) {
 vector<vector<shared_ptr<Expression>>> data;
 if (initialRow.size()>0) data.push_back(initialRow);
+if (!match(T_SEMICOLON)) {
 do {
 data.emplace_back();
 auto& row = data.back();
@@ -453,6 +454,7 @@ if (row.size() != data[0].size()) parseError("All rows must be of the same size 
 } while(match(T_SEMICOLON));
 skipNewlines();
 consume(T_RIGHT_BRACKET, "Expected ']' to close grid literal");
+}
 return make_shared<LiteralGridExpression>(token, data);
 }
 

@@ -133,5 +133,8 @@ classClass->type
 #endif
 
 bindGlobal("dbg", debugPrint);
+
+#ifdef DEBUG
 bindGlobal("disasm", dbgDisasm);
+#endif
 }

@@ -293,12 +293,11 @@ Class of all numbers.
 - Constructor: Num(string, base=10): where base can be between 2 and 36 inclusive
 - Implicit construction when using number literals such as 123, 3.14, -49, 0xFF, 0b111
 - Operators: `+, -, *, /, %, **, \, &, |, ^, <<, >>`
-- Comparison operators: >`<, <=, ==, >=, >, !=`
+- Comparison operators: >`<, <=, ==, >=, >, !=, <=>`
 - Unary operators: ~, +, -
 
 Methods:
 
-- compare(other): compares this with other and return a negative number if this<other, a positive number if this>number, and 0 if this==other. For numbers, this is the same a this-other.
 - format(precision=2, decimalSeparator=".", groupSeparator="", padding=0, groupLength=3): format the number into a string with the specified parameters: precision is the number of digits after the decimal separator. Example: `12345.6789.format(2, ",", "'")` results in `12'345.68`. Giving a precision <0 requests for exponential notation. IF padding!=0, the appropriate number of 0s are prepended to make a string of the given length.
 - frac: return the fractional part of the number, e.g. 1.23 and -67.89 resp. return  0.23 and -0.89
 - hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
@@ -440,13 +439,12 @@ A String holds an immutable sequence of UTF-8 characters.
 - Constructor: String(bufffer, encoding), will convert the data in the given buffer into a string, decoding characters of the specified encoding.
 - Constructor: String(any), any will be converted to string using toString method.
 - Operators: [], +, in
-- Comparison operators: >`<, <=, ==, >=, >, !=` via compare
+- Comparison operators: >`<, <=, ==, >=, >, !=` via `<=>`
 
 Methods: 
 
 - static String.of(...sequences): construct a string by concatenating one or more other strings or objects
 - codePointAt(index): return the code point at given character position 0..0x1FFFFF
-- compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - endsWith(needle): return true if needle is found at the end of the string
 - fill(pattern, length, side=1): return a new string where this string is filled/padded up to the specified length using the given pattern; side tells where to place the padding pattern: 1=left, 2=right, 3=both/center.
 - findAll(regex, group=0): find all matches of the regular expression against this string. For each match, take the group number given as result, or return a list of RegexMatchResult objects if group=true.
@@ -474,7 +472,7 @@ The other big difference with lists is that tuples are immutable and override th
 - Constructor: Tuple(...sequences): construct a tuple out of one or more source sequences
 - Implicitly constructed when using (...,) notation
 - Operators: `[], +, *, in`
-- Comparison operators: `<, <=, ==, >=, >, !=` via compare
+- Comparison operators: `<, <=, ==, >=, >, !=` via `<=>`
 
 Items in a tuple are indexed by their position, 0 being the first, 1 the second, etc. 
 Negative indices count from the end, thus -1 indicates the last item, -2 the one before the last, etc.
@@ -482,7 +480,6 @@ Indexing with a range, i.e. `tuple[2...5]` allow to return a subtuple.
 
 Methods:
 - static of(...items): construct a tuple from one or more individual items
-- compare(other): compares this with other and return a negative number if this<other, a positive number if this>other, and 0 if this==other.
 - hashCode: return an hash value used for indexing unsorted sequences such as Map and Set
 - iterator: return an iterator going through the elements of this tuple in order
 - length: return the number of elements in this tuple

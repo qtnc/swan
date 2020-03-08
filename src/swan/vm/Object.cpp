@@ -12,9 +12,12 @@ void* QObject::gcOrigin () {
 return static_cast<QObject*>(this); 
 }
 
-void QVM::addToGC (QObject* obj) {
+inline void QVM::addToGC (QObject* obj) {
+#ifdef DEBUG_GC
+if (!gcLock) garbageCollect();
+#endif
 if (gcMemUsage >=gcTreshhold && !gcLock) garbageCollect();
-//if (!gcLock) garbageCollect();
 obj->gcNext(firstGCObject);
 firstGCObject  = obj;
 }
+
