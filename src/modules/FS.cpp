@@ -3,16 +3,29 @@
 #include "../include/Swan.hpp"
 #include "../include/SwanBinding.hpp"
 #include<boost/filesystem.hpp>
+#include<utf8.h>
 using namespace std;
 namespace fs = boost::filesystem;
 
 typedef variant<string,fs::path> stringOrPath;
 
-struct FS {};
+static string wtou8 (const wstring& in) {
+string out;
+out.reserve(in.size() * 5 / 4);
+utf8::utf16to8(in.begin(), in.end(), back_inserter(out));
+return out;
+}
+
+static wstring u8tow (const string& in) {
+wstring out;
+out.reserve(in.size());
+utf8::utf8to16(in.begin(), in.end(), back_inserter(out));
+return out;
+}
 
 static fs::path toPath (const stringOrPath& a) {
 struct ToPath {
-fs::path operator() (const string& s) { return fs::path(s).lexically_normal().make_preferred(); }
+fs::path operator() (const string& s) { return fs::path(u8tow(s)).lexically_normal().make_preferred(); }
 fs::path operator() (const fs::path& p) { return p.lexically_normal().make_preferred(); }
 };
 return visit(ToPath(), a);
@@ -46,8 +59,20 @@ static fs::path pathAbsolutize (const fs::path& path, const stringOrPath& base) 
 return fs::absolute(path, toPath(base)).lexically_normal().make_preferred();
 }
 
+static fs::path& pathNormalize  (fs::path& path) {
+return path.lexically_normal().make_preferred();
+}
+
+static int pathCompare (const fs::path& p1, const fs::path& p2) {
+return p1.compare(p2);
+}
+
+static bool pathEquivalent (const fs::path& p1, const fs::path& p2) {
+return fs::equivalent(p1, p2);
+}
+
 static string pathToString (const fs::path& path) {
-return path.string<string>();
+return wtou8(path.string<wstring>());
 }
 
 static long long pathFileSize (const fs::path& path) {
@@ -59,7 +84,7 @@ return fs::exists(path);
 }
 
 static inline bool readpath (Swan::Fiber& f, int idx, fs::path& path) {
-if (f.isString(idx)) path = fs::path(f.getString(idx));
+if (f.isString(idx)) path = fs::path(u8tow(f.getString(idx)));
 else if (f.isUserObject<fs::path>(idx)) path = f.getUserObject<fs::path>(idx);
 else return false;
 return true;
@@ -141,10 +166,18 @@ f.registerMethod("name", METHOD(fs::path, filename));
 f.registerMethod("stem", METHOD(fs::path, stem));
 f.registerMethod("extension", METHOD(fs::path, extension));
 f.registerMethod("/", FUNCTION(pathAppend));
+f.registerMethod("\\", FUNCTION(pathAppend));
 f.registerMethod("+", FUNCTION(pathConcat));
-f.registerMethod("rel", FUNCTION(pathRelativize));
-f.registerMethod("abs", FUNCTION(pathAbsolutize));
-f.registerMethod("length", FUNCTION(pathFileSize));
+f.registerMethod("append", FUNCTION(pathAppend));
+f.registerMethod("concat", FUNCTION(pathConcat));
+f.registerMethod("isAbsolute", METHOD(fs::path, is_absolute));
+f.registerMethod("isRelative", METHOD(fs::path, is_relative));
+f.registerMethod("relativize", FUNCTION(pathRelativize));
+f.registerMethod("absolute", FUNCTION(pathAbsolutize));
+f.registerMethod("normalize", FUNCTION(pathNormalize));
+f.registerMethod("<=>", FUNCTION(pathCompare));
+f.registerMethod("==", FUNCTION(pathEquivalent));
+f.registerMethod("filesize", FUNCTION(pathFileSize));
 f.registerMethod("exists", FUNCTION(pathExists));
 f.registerMethod("copy", pathCopy);
 f.registerMethod("mkdirs", FUNCTION(pathMkdirs));
