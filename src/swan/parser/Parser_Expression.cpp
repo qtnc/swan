@@ -426,7 +426,7 @@ skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close computed map key"));
 }
 else key = parseUnpackOrExpression();
-if (!match(T_COLON)) value = key;
+if (key->isUnpack() || !match(T_COLON)) value = key;
 else value = parseExpression();
 if (!computed) key = nameExprToConstant(key);
 map->items.push_back(make_pair(key, value));

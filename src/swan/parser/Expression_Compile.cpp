@@ -490,8 +490,7 @@ typeHint = th->type;
 }
 auto assignable = dynamic_pointer_cast<Assignable>(item);
 if (!assignable) {
-auto unpackExpr = dynamic_pointer_cast<UnpackExpression>(item);
-if (unpackExpr) {
+if (auto unpackExpr = dynamic_pointer_cast<UnpackExpression>(item)) {
 assignable = dynamic_pointer_cast<Assignable>(unpackExpr->expr);
 unpack = true;
 if (i+1!=items.size()) compiler.compileError(unpackExpr->nearestToken(), "Unpack expression must appear last in assignment expression");
@@ -529,7 +528,7 @@ expr = bop->left;
 th = dynamic_pointer_cast<TypeHintExpression>(expr);
 }
 if (th) expr = th->expr;
-if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<GenericMethodSymbolExpression>(expr)) return false;
+if (!dynamic_pointer_cast<Assignable>(expr) && !dynamic_pointer_cast<GenericMethodSymbolExpression>(expr) && !dynamic_pointer_cast<UnpackExpression>(expr)) return false;
 }
 return true;
 }
@@ -541,6 +540,7 @@ int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->compile(compiler);
 bool first = true;
+vector<shared_ptr<Expression>> allKeys;
 for (auto& item: items) {
 shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
@@ -556,8 +556,8 @@ typeHint = th->type;
 }
 auto assignable = dynamic_pointer_cast<Assignable>(assigned);
 if (!assignable) {
-auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned);
-if (mh) assignable = make_shared<NameExpression>(mh->token);
+if (auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned)) assignable = make_shared<NameExpression>(mh->token);
+else if (auto unp = dynamic_pointer_cast<UnpackExpression>(assigned))  assignable = dynamic_pointer_cast<Assignable>(unp->expr);
 }
 if (!assignable || !assignable->isAssignable()) {
 compiler.compileWarn(item.second->nearestToken(), "Ignoring unassignable target: %s", typeid(*assigned).name() );
@@ -567,6 +567,10 @@ if (!first) compiler.writeOp(OP_POP);
 first=false;
 shared_ptr<Expression> value = nullptr;
 if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+else if (auto unp = dynamic_pointer_cast<UnpackExpression>(item.first)) {
+auto excludeKeys = make_shared<LiteralTupleExpression>(unp->nearestToken(), allKeys);
+value = BinaryOperation::create(tmpVar, T_MINUS, excludeKeys);
+}
 else {
 shared_ptr<Expression> subscript = item.first;
 if (auto field = dynamic_pointer_cast<FieldExpression>(subscript))  {
@@ -577,6 +581,7 @@ else if (auto field = dynamic_pointer_cast<StaticFieldExpression>(subscript))  {
 field->token.value = QV(compiler.vm, field->token.start, field->token.length);
 subscript = make_shared<ConstantExpression>(field->token);
 }
+allKeys.push_back(subscript);
 vector<shared_ptr<Expression>> indices = { subscript };
 value = make_shared<SubscriptExpression>(tmpVar, indices);
 }
@@ -586,7 +591,6 @@ assignable->compileAssignment(compiler, value);
 }
 compiler.popScope();
 }
-
 
 void UnaryOperation::compile (QCompiler& compiler) {
 expr->compile(compiler);

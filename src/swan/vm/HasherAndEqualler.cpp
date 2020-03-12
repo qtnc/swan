@@ -50,7 +50,7 @@ QString& s = *value.asObject<QString>();
 return hashBytes(reinterpret_cast<const uint8_t*>(s.data), reinterpret_cast<const uint8_t*>(s.data+s.length));
 }
 else if (value.isNum()) {
-return value.d;
+return value.i>>32ULL;
 }
 else if (!value.isObject()) {
 const uint32_t* p = reinterpret_cast<const uint32_t*>(&value.i);
