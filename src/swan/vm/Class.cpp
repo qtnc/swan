@@ -48,7 +48,9 @@ return bind(methodName, func);
 
 QClass* QClass::bind (int symbol, const QV& val) {
 insert_n(methods, 1+symbol-methods.size(), QV::UNDEFINED);
-methods[symbol] = val;
+auto& m = methods[symbol];
+if (m.isClosure()) m.asObject<QClosure>()->func.overridden = true;
+m  = val;
 return this;
 }
 

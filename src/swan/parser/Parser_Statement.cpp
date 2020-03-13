@@ -354,8 +354,11 @@ shared_ptr<Statement> QParser::parseImportDecl () {
 auto importSta = make_shared<ImportDeclaration>();
 int flags = 0;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+if (match(T_STAR)) importSta->importAll = true;
+else {
 parseVarList(importSta->imports, flags);
 multiVarExprToSingleLiteralMap(importSta->imports, flags);
+}
 consume(T_IN, "Expected 'in' after import variables");
 importSta->from = parseExpression(P_COMPREHENSION);
 return importSta;

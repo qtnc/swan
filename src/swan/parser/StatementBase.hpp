@@ -84,7 +84,7 @@ name(nm), value(val), flags(flgs), decorations(decos), typeHint(nullptr) {}
 void optimize ();
 };
 
-void doCompileTimeImport (QVM& vm, const std::string& baseFile, std::shared_ptr<Expression> exprRequestedFile);
+QV doCompileTimeImport (QVM& vm, const std::string& baseFile, std::shared_ptr<Expression> exprRequestedFile);
 
 std::shared_ptr<TypeInfo> getFunctionTypeInfo (FunctionInfo& fti, struct QVM& vm, int nArgs = 0, std::shared_ptr<TypeInfo>* ptr = nullptr);
 

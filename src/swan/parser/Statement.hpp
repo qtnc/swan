@@ -149,6 +149,7 @@ void compile (QCompiler& compiler)override ;
 struct ImportDeclaration: Statement {
 std::shared_ptr<Expression> from;
 std::vector<std::shared_ptr<Variable>> imports;
+bool importAll = false;
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return from->nearestToken(); }
 void compile (QCompiler& compiler) override;

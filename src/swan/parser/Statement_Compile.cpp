@@ -3,6 +3,7 @@
 #include "Compiler.hpp"
 #include "ParserRules.hpp"
 #include "../vm/VM.hpp"
+#include "../vm/Map.hpp"
 using namespace std;
 
 vector<shared_ptr<NameExpression>>& decompose (QCompiler& compiler, shared_ptr<Expression> expr, vector<shared_ptr<NameExpression>>& names) {
@@ -238,12 +239,12 @@ make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->compile(co
 compiler.pushLoop();
 compiler.pushScope();
 int loopStart = compiler.writePosition();
-inExpression->compile(compiler);
+if (inExpression) inExpression->compile(compiler);
 compiler.loops.back().jumpsToPatch.push_back({ Loop::END, compiler.writeOpJump(OP_JUMP_IF_FALSY) });
 loopStatement->compile(compiler);
 if (loopStatement->isExpression()) compiler.writeOp(OP_POP);
 compiler.loops.back().condPos = compiler.writePosition();
-incrExpression->compile(compiler);
+if (incrExpression) incrExpression->compile(compiler);
 compiler.writeOp(OP_POP);
 compiler.writeOpJumpBackTo(OP_JUMP_BACK, loopStart);
 compiler.loops.back().endPos = compiler.writePosition();
@@ -336,7 +337,23 @@ compiler.writeOp(OP_POP);
 }//end VariableDeclaration::compile
 
 void ImportDeclaration::compile (QCompiler& compiler) {
-doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
+QV imported = doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
+if (importAll) {
+if (imported.isNullOrUndefined()) { compiler.compileError(nearestToken(), "Can't import * in dynamic import"); return; }
+auto im = make_shared<LiteralMapExpression>(nearestToken());
+for (auto [key, value]: imported.asObject<QMap>()->map) {
+if (key.isString()) {
+QString* qs = key.asObject<QString>();
+QToken ctk = { T_NAME, qs->data, qs->length, key };
+auto cst1 = make_shared<ConstantExpression>(ctk);
+auto cst2 = make_shared<NameExpression>(ctk);
+im->items.push_back(make_pair(cst1, cst2));
+}}
+int flags = VD_NODEFAULT;
+if (compiler.parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+auto vdim = make_shared<Variable>(im, nullptr, flags);
+imports.push_back(vdim);
+}
 QToken importToken = { T_NAME, "import", 6, QV::UNDEFINED }, fnToken = { T_STRING, "", 0, QV(QString::create(compiler.parser.vm, compiler.parser.filename), QV_TAG_STRING) };
 auto importName = make_shared<NameExpression>(importToken);
 auto fnConst = make_shared<ConstantExpression>(fnToken);

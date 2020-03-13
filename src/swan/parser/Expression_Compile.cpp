@@ -537,11 +537,12 @@ void LiteralMapExpression::compileAssignment (QCompiler& compiler, shared_ptr<Ex
 compiler.pushScope();
 QToken tmpToken = compiler.createTempName();
 int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->compile(compiler);
-bool first = true;
 vector<shared_ptr<Expression>> allKeys;
 for (auto& item: items) {
+count++;
 shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
 if (auto bop = dynamic_pointer_cast<BinaryOperation>(assigned)) {
@@ -563,11 +564,11 @@ if (!assignable || !assignable->isAssignable()) {
 compiler.compileWarn(item.second->nearestToken(), "Ignoring unassignable target: %s", typeid(*assigned).name() );
 continue;
 }
-if (!first) compiler.writeOp(OP_POP);
-first=false;
+if (count>0) compiler.writeOp(OP_POP);
 shared_ptr<Expression> value = nullptr;
 if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
 else if (auto unp = dynamic_pointer_cast<UnpackExpression>(item.first)) {
+if (count+1!=items.size()) compiler.compileError(unp->nearestToken(), "Unpack expression must appear last in assignment expression");
 auto excludeKeys = make_shared<LiteralTupleExpression>(unp->nearestToken(), allKeys);
 value = BinaryOperation::create(tmpVar, T_MINUS, excludeKeys);
 }
@@ -931,13 +932,17 @@ for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 return func;
 }
 
-void doCompileTimeImport (QVM& vm, const string& baseFile, shared_ptr<Expression> exprRequestedFile) {
+QV doCompileTimeImport (QVM& vm, const string& baseFile, shared_ptr<Expression> exprRequestedFile) {
+QV re = QV::UNDEFINED;
 auto expr = dynamic_pointer_cast<ConstantExpression>(exprRequestedFile);
 if (expr && expr->token.value.isString()) {
 QFiber& f = vm.getActiveFiber();
 f.import(baseFile, expr->token.value.asString());
+re = f.top();
 f.pop();
-}}
+}
+return re;
+}
 
 
 
