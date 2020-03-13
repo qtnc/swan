@@ -23,6 +23,6 @@ return true;
 
 bool QV::copyInto (QFiber& f, CopyVisitor& cv) const {
 auto obj = asObject<QObject>();
-return obj->type->gcInfo->copyInto(obj, f, cv);
+return obj? obj->type->gcInfo->copyInto(obj, f, cv) :false;
 }
 

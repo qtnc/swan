@@ -701,7 +701,8 @@ A matching export written in file.swan could be èxport something as src`.
 Simplifications used in map destructuring can of course be used in import, too. If the source name is the same as the destination name, `import {sth: sth} in 'file'` can be written `import {sth} in 'file'`. 
 This is the most common case, since usually the name of the imported element is kept unchanged.
 
-Import can also be used as an expression. In this case a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`.
+You can use `import *` to bind all exported map keys into local variables, but you can do it only if the source is a constant string, i.e. no `import *` from a dynamic source.
+Import can also be used as an expression. In this case a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`. IN this case `import *` isn't permitted either.
 
 To be able to import symbols from another source, they have to be explicitly exported first. The export keyword can be used in several ways:
 
@@ -756,14 +757,11 @@ print(c) #[2, 3, 4, 5, 6, 7]
 let m1 = {a: 1, b: 2}, m2 = {c: 3, d: 4}
 let m3 = {...m1, e: 5, ...m2}
 print(m3) #{a: 1, b: 2, c: 3, d: 4, e: 5}
-```
 
-Difference with JavaScript: in Swan, unpack operator is currently not allowed in map assignment. The following is valid JavaScript ES2017, but invalid Swan:
-
-```
-let m = {a: 1, b: 2, c: 3, d: 4}
-let {a, b, ...z} = m
-# in JavaScript, z would contain {c: 3, d: 4}
+let {a, b, ...c} = m3
+print(a) #1
+print(b) #2
+print(c) #{c: 3, d: 4, e: 5}
 ```
 
 ## Comments
