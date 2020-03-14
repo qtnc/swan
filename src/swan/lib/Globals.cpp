@@ -91,12 +91,14 @@ cout << f.ensureString(i)->asString();
 cout << endl;
 }
 
+#ifdef DEBUG
 void dbgDisasm (QFiber& f) {
 QFunction& func = f.getObject<QClosure>(0) .func;
 ostringstream out;
 func.disasm(out);
 f.returnValue(out.str());
 }
+#endif
 
 void QVM::initGlobals () {
 QClass* globalClasses[] = { 

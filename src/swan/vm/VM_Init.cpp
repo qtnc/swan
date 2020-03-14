@@ -227,3 +227,12 @@ println("End of init, mem usage = %d", gcMemUsage);
 #endif
 }
 
+inline void QVM::addToGC (QObject* obj) {
+#ifdef DEBUG_GC
+if (!gcLock) garbageCollect();
+#endif
+if (gcMemUsage >=gcTreshhold && !gcLock) garbageCollect();
+obj->gcNext(firstGCObject);
+firstGCObject  = obj;
+}
+
