@@ -16,6 +16,7 @@ struct DebugItem {
 int32_t offset;
 int16_t line;
 };
+
 struct QFunction: QObject {
 union { Upvariable* upvalues; QV* constantsEnd; };
 union { char *bytecode; Upvariable* upvaluesEnd; };

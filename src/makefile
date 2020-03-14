@@ -83,6 +83,6 @@ swan/lib/builtin-code.h: $(SWANS)
 $(OBJDIR)swan/vm/VM_Init.o: swan/lib/builtin-code.h
 
 $(OBJDIR)%.o: %.cpp $(wildcard %.hpp)
-	@mkdir -p $(dir $@)
+	@mkdir$(EXT_EXE) -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) $(CXXOPTFLAGS) -c -o $@ $<
 

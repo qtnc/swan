@@ -3,17 +3,17 @@
 ##Dependencies
 The following libraries are needed to build the VM:
 
-- [Boost](http://boost.org/): core, string_algo, iostreams (all are header-only)
+- [Boost](http://boost.org/): core, string_algo, heap, container  (all are header-only)
 - [UTF8-CPP](http://utfcpp.sourceforge.net/)
-- [Base64 encoding and decoding for C++](https://renenyffenegger.ch/notes/development/Base64/Encoding-and-decoding-base-64-with-cpp)  (included)
 
 The following are optional. Their use are enabled or disabled depending on compilation options.
 
 - [Boost](http://boost.org/): regex
+- [Base64 encoding and decoding for C++](https://renenyffenegger.ch/notes/development/Base64/Encoding-and-decoding-base-64-with-cpp)  (included)
 
 To build the CLI, you will need additional libraries. They aren't needed if you don't want to build the CLI.
 
-- (currently none)
+- [Boost](http://boost.org/): filesystem
 
 ## Makefile options
 You have the following compilation options to build or not certain parts of Swan.

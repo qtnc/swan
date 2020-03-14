@@ -891,6 +891,7 @@ compileParams(fc);
 body=body->optimizeStatement();
 fc.writeDebugLine(body->nearestToken());
 body->compile(fc);
+fc.writeDebugLine(body->nearestToken());
 if (body->isExpression()) {
 fc.writeOp(OP_POP);
 lastExpr = static_pointer_cast<Expression>(body);
