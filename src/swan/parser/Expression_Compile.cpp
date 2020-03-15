@@ -811,7 +811,6 @@ int fieldInfoPos = compiler.writeOpArg<FieldInfo>(OP_NEW_CLASS, fieldInfo);
 for (auto method: methods) {
 int methodSymbol = compiler.vm.findMethodSymbol(string(method->name.start, method->name.length));
 compiler.parser.curMethodNameToken = method->name;
-//println("Compiling %s: flags=%#0$2X", string(name.start, name.length) + "::" + string(method->name.start, method->name.length), method->flags);
 compiler.curMethod = method.get();
 auto func = method->compileFunction(compiler);
 compiler.curMethod = nullptr;

@@ -109,8 +109,8 @@ if (!m) break;
 return m->returnTypeHint;
 }
 }while(false);
+//println("CDTI::resolve, type found: %s", lv? (lv->value? typeid(*lv->value).name() : "<null value>") : "<null lv>");
 if (lv && lv->value) {
-//println("CDTI::resolve, type found: %s", typeid(*lv->value).name());
 if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
 return make_shared<ClassDeclTypeInfo>(cd);
 }}
@@ -169,6 +169,7 @@ if (!m) m = cdt->cls->findMethod(name, true);
 }
 if (!m) for (auto& parentToken: cdt->cls->parents) {
 auto parentTI = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
+//println("RT=%s,%s, PT=%s,%s,%s", receiverType->toString(), typeid(*receiverType).name(), string(parentToken.start, parentToken.length), parentTI->toString(), typeid(*parentTI).name() );
 if (cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
 m = cdt->cls->findMethod(name, false);
 if (!m) m = cdt->cls->findMethod(name, true);

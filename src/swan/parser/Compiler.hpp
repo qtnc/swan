@@ -72,6 +72,7 @@ write<T>(val);
 out.seekp(curpos);
 }
 void seek (int n) { out.seekp(n, std::ios_base::cur); }
+void seekabs (int n) { out.seekp(n, std::ios_base::beg); }
 void writeOpCallFunction (uint8_t nArgs) ;
 void writeOpCallMethod (uint8_t nArgs, uint_method_symbol_t symbol) ;
 void writeOpCallSuper  (uint8_t nArgs, uint_method_symbol_t symbol) ;

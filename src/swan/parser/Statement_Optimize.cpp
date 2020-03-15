@@ -128,7 +128,8 @@ if (vd  && vd->vars.size()==1
 ) {
 auto name = vd->vars[0]->name;
 auto value = vd->vars[0]->value;
-vd->vars[0]->value = nullptr;
+//vd->vars[0]->value = nullptr;
+vd->vars[0]->flags |= VD_HOISTED;
 statementsToAdd.push_back(vd->optimizeStatement());
 sta = BinaryOperation::create(name, T_EQ, value) ->optimize();
 }}

@@ -16,6 +16,7 @@
 #define VD_EXPORT 8
 #define VD_SINGLE 0x100
 #define VD_NODEFAULT 0x200
+#define VD_HOISTED 0x1000
 
 #define FD_VARARG 1
 #define FD_FIBER 2

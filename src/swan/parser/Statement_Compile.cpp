@@ -309,12 +309,15 @@ if ((var->flags&VD_GLOBAL)) slot = compiler.findGlobalVariable(name->token, LV_N
 else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
-if (var->value) {
+//println("Var name=%s, vv=%s, lv=%p, lvv=%s", string(name->token.start, name->token.length), var->value?typeid(*var->value).name():"<null>", lv, lv&&lv->value?typeid(*lv->value).name():"<null>");
+bool hoisted = var->flags&VD_HOISTED;
+if (var->value && !hoisted) {
 if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
 auto func = fdecl->compileFunction(compiler);
 func->name = string(name->token.start, name->token.length);
 }
-else var->value->compile(compiler);
+else if (!hoisted) var->value->compile(compiler);
+else compiler.writeOp(OP_LOAD_UNDEFINED);
 if (lv) {
 lv->value = var->value;
 lv->type = var->value->getType(compiler);
