@@ -48,8 +48,7 @@ std::shared_ptr<Expression> parseSubscript (std::shared_ptr<Expression> receiver
 std::shared_ptr<Expression> parseGroupOrTuple ();
 std::shared_ptr<Expression> parseLiteral ();
 std::shared_ptr<Expression> parseLiteralList ();
-std::shared_ptr<Expression> parseLiteralSet ();
-std::shared_ptr<Expression> parseLiteralMap ();
+std::shared_ptr<Expression> parseLiteralMapOrSet ();
 std::shared_ptr<Expression> parseLiteralGrid (QToken, std::vector<std::shared_ptr<Expression>>&);
 std::shared_ptr<Expression> parseLiteralRegex ();
 std::shared_ptr<Expression> parseName ();

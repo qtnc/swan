@@ -401,40 +401,42 @@ consume(T_RIGHT_BRACKET, ("Expected ']' to close list literal"));
 return list;
 }
 
-shared_ptr<Expression> QParser::parseLiteralSet () {
-shared_ptr<LiteralSetExpression> list = make_shared<LiteralSetExpression>(cur);
-if (!match(T_GT)) {
-do {
-list->items.push_back(parseUnpackOrExpression(P_COMPARISON));
-} while (match(T_COMMA));
-skipNewlines();
-consume(T_GT, ("Expected '>' to close set literal"));
-}
-return list;
-}
-
-shared_ptr<Expression> QParser::parseLiteralMap () {
-shared_ptr<LiteralMapExpression> map = make_shared<LiteralMapExpression>(cur);
+shared_ptr<Expression> QParser::parseLiteralMapOrSet () {
+auto map = make_shared<LiteralMapExpression>(cur);
+auto set = make_shared<LiteralSetExpression>(cur);
+QTokenType separator = T_COMMA;
+bool literalSet=false, literalMap=false;
 if (!match(T_RIGHT_BRACE)) {
-do {
+if (match(T_SEMICOLON)) literalSet=true;
+else do {
 bool computed = false;
 shared_ptr<Expression> key, value;
-if (match(T_LEFT_BRACKET)) {
+if (literalSet && set->items.size()==1 && match(T_RIGHT_BRACE)) { prevToken(); break; }
+if (!literalSet && match(T_LEFT_BRACKET)) {
+literalMap = true;
 computed=true;
 key =  parseExpression();
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close computed map key"));
 }
 else key = parseUnpackOrExpression();
-if (key->isUnpack() || !match(T_COLON)) value = key;
-else value = parseExpression();
+if (!key) break;
+if (literalSet || key->isUnpack() || !match(T_COLON)) value = key;
+else { value = parseExpression(); literalMap=true; }
+if (!value) break;
 if (!computed) key = nameExprToConstant(key);
-map->items.push_back(make_pair(key, value));
-} while (match(T_COMMA));
-skipNewlines();
-consume(T_RIGHT_BRACE, ("Expected '}' to close map literal"));
+if (!literalSet && !literalMap) {
+if (match(T_SEMICOLON)) { literalSet=true; separator=T_SEMICOLON; prevToken();  }
+else if (match(T_COMMA)) { literalMap=true; prevToken(); }
 }
-return map;
+if (literalSet) set->items.push_back(value);
+else map->items.push_back(make_pair(key, value));
+} while (match(separator));
+skipNewlines();
+consume(T_RIGHT_BRACE, (literalSet? "Expected '}' to close set literal" : "Expected '}' to close map literal"));
+}
+if (literalSet) return set;
+else return map;
 }
 
 shared_ptr<Expression> QParser::parseLiteralGrid (QToken token, vector<shared_ptr<Expression>>& initialRow) {

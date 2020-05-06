@@ -143,9 +143,10 @@ else f.returnValue(*li.iterator++);
 
 static void setToString (QFiber& f) {
 QSet& set = f.getObject<QSet>(0);
-string re = "<";
-set.join(f, ", ", re);
-re += ">";
+string re = "{";
+set.join(f, "; ", re);
+if (set.set.size()<=1) re+=';';
+re += "}";
 f.returnValue(re);
 }
 

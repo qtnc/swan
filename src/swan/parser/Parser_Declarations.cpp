@@ -21,7 +21,7 @@ switch(nextToken().type){
 case T_NAME: var->name = parseName(); break;
 case T_LEFT_PAREN: var->name = parseGroupOrTuple(); var->value=make_shared<LiteralTupleExpression>(cur); break;
 case T_LEFT_BRACKET: var->name = parseLiteralList(); var->value=make_shared<LiteralListExpression>(cur); break;
-case T_LEFT_BRACE:  var->name = parseLiteralMap(); var->value=make_shared<LiteralMapExpression>(cur); break;
+case T_LEFT_BRACE:  var->name = parseLiteralMapOrSet(); var->value=make_shared<LiteralMapExpression>(cur); break;
 case T_UND: var->name = parseField(); break;
 case T_UNDUND: var->name = parseStaticField(); break;
 default: parseError("Expecting identifier, '(', '[' or '{' in variable declaration"); break;

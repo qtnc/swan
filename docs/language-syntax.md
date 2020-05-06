@@ -239,11 +239,10 @@ Lists are better used when all elements are of the same type and where actual po
 As in python, due to syntax ambiguities, an additional comma must be present at the end of a single-item tuple, i.e. `(1,)`.
 
 ### Maps and sets
-Maps key/value pairs are enclosed in braces `{...}`. Keys must be hashable, i.e. implement the method hashCode. This is the case for Num, String and Tuples.   
+Maps key/value pairs are enclosed in braces, each pair is separated by commas, and the pair and the value are separated by a colon `{ key1: value1, key2: value2, key3: value3, ... }`. Keys must be hashable, i.e. implement the method hashCode. This is the case for Num, String and Tuples.   
 Example: `{"one": "un", "two": "deux", "three": "trois", "four": "quatre"}`
 
 As in JavaScript, `{one: 1}` is the same as `{"one": 1}`. In other words, quotes around the key are optional as long as it is a valid name.
-
 IF you don't specify the value explicitely, the key is also used as the value. Thus, `{1}` is equivalent to `{1: 1}` and `{one}` is the same as `{"one": one}`.
 
 Use `{[one]: 1}` if you want the key to be the value of variable `one` (computed key). You may also write `{[1+1]: 2}` for {2: 2}`.
@@ -251,8 +250,10 @@ Use `{[one]: 1}` if you want the key to be the value of variable `one` (computed
 Maps are more or less compatible with JSON.
 However, in contrary to JavaScript, map entries cannot be accessed using dot notation `map.key`. Use `map["key"]` instead. Dot notation is exclusively used to call methods on objects.
 
-Sets are enclosed in angle brackets `<...>`. As with maps, items of a set must be hashable types such as Num, String or Tuple.
-Example: `<1, 2, 3, 4, 5>`
+Sets are enclosed in braces, but are separated by semicolons instead of commas `{...; ...; ...}`. As with maps, items of a set must be hashable types such as Num, String or Tuple.
+Example: `{1; 2; 3; 4; 5}`
+
+To avoid ambiguities, an additional semicolon must be present to denote a set with 0 or 1 elements: `{;}` instead of `{}` and `{12;}` instead of `{12}`.
 
 Elements in a set are guaranteed to be unique. Sets support operators fors `&, |, -, ^`  for resp. intersection, union, difference and symetric difference.
 
@@ -275,6 +276,8 @@ The syntax for writing literal grids is as following:
 
 Which can also be written in a one-line shortened form:  
 `[1, 2, 3; 4, 5, 6; 7, 8, 9]`
+
+Elements in a grid are accessed by their coordinates: `g[0, 0]` is the first celle on the top left and `g[-1, -1]` the last cell on the bottom right.
 
 ## Functions and closures
 Functions can capture variables to form closures.
@@ -386,7 +389,7 @@ print(third.length) # 5
 - A name starting with `__` denotes a static field. They are implicitely declared at their first use.
 - A field cannot be accessed from outside its class. You cannot access a field from another object as well. IN fact, `object._field` is simply invalid. This provides built-in encapsulation.
 - You can declare static methods by preceding its name by the static keyword.
-- Each method take an implicit `this` first parameter.
+- Each method take an implicit `this` as first parameter.
 - The constructor is simply called `constructor`. You can also define a static constructor, which will be called immediately after the class is defined. 
 
 Additionally to arithmetic, bitwise and comparison operators, you can also override prefix operators as well as call and indexing/subscript:
@@ -485,15 +488,15 @@ yield a
 
 print("The first 10 numbers of the fibonacci serie are: ")
 for i in 1...10 {
-print(fibonacci)
+print(fibonacci())
 }
 ```
 
 By following the `def` keyword or the name of the function by `*`, a Fiber is created.
 `def*(x){...}` is a shortcut for `Fiber(def(x){...})`.
 
-## Comprehension syntax
-You can create simple generators using the by comprhension syntax, similarely with what you can do in python.
+## Comprehention syntax
+You can create simple generators using the by comprehention syntax, similarely with what you can do in python.
 The following also works to construct lists, tuples, sets and maps.
 
 ```
