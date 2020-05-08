@@ -21,7 +21,7 @@ auto functionnable = dynamic_pointer_cast<Functionnable>(expr);
 auto sizeBefore = params.size();
 functionnable->makeFunctionParameters(params);
 auto sizeAfter = params.size();
-if (sizeAfter-sizeBefore==1) params.back()->typeHint = type;
+if (sizeAfter-sizeBefore==1) params.back()->type = type;
 }
 
 bool LiteralTupleExpression::isFunctionnable () {
@@ -42,7 +42,7 @@ else {
 var->name = item;
 var->flags |= VD_NODEFAULT;
 }
-if (th) var->typeHint = th->type;
+if (th) var->type = th->type;
 params.push_back(var);
 }}
 

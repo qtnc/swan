@@ -2,6 +2,7 @@
 #include "Statement.hpp"
 #include "Expression.hpp"
 #include "ParserRules.hpp"
+#include "TypeAnalyzer.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -22,10 +23,20 @@ else bs = make_shared<BlockStatement>(vector<shared_ptr<Statement>>({ exvd, sta,
 return bs;
 }
 
+static void analyze (QCompiler& compiler, shared_ptr<Statement>& sta) {
+if (!compiler.globalAnalyzer) compiler.globalAnalyzer = compiler.parent? compiler.parent->globalAnalyzer : make_shared<TypeAnalyzer>(compiler.parser);
+if (!compiler.analyzer) compiler.analyzer = make_shared<TypeAnalyzer>(compiler.parser, compiler.parent? compiler.parent->analyzer.get() : compiler.globalAnalyzer.get());
+int count = 0;
+while (++count<6 && sta->analyze(*compiler.analyzer));
+if (count>=3) println("Analyzer count = %d", count);
+}
+
 void QCompiler::compile () {
 shared_ptr<Statement> sta = parser.parseStatements();
 if (sta && !parser.result) {
 sta = addReturnExports(sta);
+sta=sta->optimizeStatement();
+analyze(*this, sta);
 sta=sta->optimizeStatement();
 sta->compile(*this);
 if (constants.size() >= std::numeric_limits<uint_constant_index_t>::max()) compileError(sta->nearestToken(), "Too many constant values");
@@ -61,4 +72,5 @@ function->file = parser.filename;
 result = result? result : parser.result;
 return function;
 }
+
 

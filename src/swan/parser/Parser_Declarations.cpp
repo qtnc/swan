@@ -30,7 +30,7 @@ if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
 skipNewlines();
 if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
 else var->flags |= VD_NODEFAULT;
-if (match(T_AS)) var->typeHint = parseTypeInfo();
+if (match(T_AS)) var->type = parseTypeInfo();
 vars.push_back(var);
 if (flags&VD_SINGLE) break;
 } while(match(T_COMMA));
@@ -51,7 +51,7 @@ void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func, Cl
 if (func->flags&FD_METHOD) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto var = make_shared<Variable>(make_shared<NameExpression>(thisToken));
-if (cld) var->typeHint = make_shared<ClassDeclTypeInfo>(cld);
+if (cld) var->type = make_shared<ClassDeclTypeInfo>(cld);
 func->params.push_back(var);
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
@@ -62,7 +62,7 @@ else if (match(T_NAME)) {
 prevToken();
 parseVarList(func->params, VD_SINGLE);
 }
-if (match(T_AS)) func->returnTypeHint = parseTypeInfo();
+if (match(T_AS)) func->returnType = parseTypeInfo();
 if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FD_VARARG;
 }
 
@@ -163,12 +163,12 @@ else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
 auto setterParam = make_shared<Variable>(param);
-setterParam->typeHint = typeHint;
+setterParam->type = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
 shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(vm, fieldToken, flags, empty, field);
 shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(vm, setterNameToken, flags, setterParams, assignment);
-getter->returnTypeHint = typeHint;
+getter->returnType = typeHint;
 getter->iField = fieldIndex;
 getter->flags |= FD_GETTER;
 setter->iField = fieldIndex;

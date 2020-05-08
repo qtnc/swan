@@ -5,6 +5,7 @@
 #include "FunctionInfo.hpp"
 #include "ParserRules.hpp"
 #include "Compiler.hpp"
+#include "TypeAnalyzer.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -67,46 +68,42 @@ string ClassDeclTypeInfo::toString () {
 return string(cls->name.start, cls->name.length); 
 }
 
-shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, QCompiler& compiler) { 
-t0 = t0? t0->resolve(compiler) :t0;
+shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) { 
+t0 = t0? t0->resolve(ta) :t0;
 if (!t0 || t0->isEmpty()) return shared_from_this();
 auto t = dynamic_pointer_cast<ClassDeclTypeInfo>(t0);
 if (t && t->cls==cls) return shared_from_this();
 else if (t) for (auto& p1: cls->parents) {
 for (auto& p2: t->cls->parents) {
 auto t3 = make_shared<NamedTypeInfo>(p1), t4 = make_shared<NamedTypeInfo>(p2);
-auto re = t3->merge(t4, compiler);
+auto re = t3->merge(t4, ta);
 if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
 }}
 else for (auto& p1: cls->parents) {
 auto t3 = make_shared<NamedTypeInfo>(p1);
-auto re = t3->merge(t0, compiler);
+auto re = t3->merge(t0, ta);
 if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
 }
 return TypeInfo::MANY;
 }
 
-shared_ptr<TypeInfo> NamedTypeInfo::resolve (QCompiler& compiler) {
-LocalVariable* lv = nullptr;
+shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeAnalyzer& ta) {
+AnalyzedVariable* lv = nullptr;
 do {
-int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
-if (slot>=0) break;
-slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
-if (slot>=0) break;
-slot = compiler.vm.findGlobalSymbol(string(token.start, token.length), LV_EXISTING | LV_FOR_READ);
-if (slot>=0) { 
+lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ);
+if (!lv) break;
+/*if (slot>=0) { 
 auto value = compiler.parser.vm.globalVariables[slot];
 if (!value.isInstanceOf(compiler.parser.vm.classClass)) break;
 QClass* cls = value.asObject<QClass>();
 return make_shared<ClassTypeInfo>(cls);
-}
-int atLevel = 0;
-ClassDeclaration* cls = compiler.getCurClass(&atLevel);
+}*/
+ClassDeclaration* cls = ta.getCurClass();
 if (cls) {
 auto m = cls->findMethod(token, false);
 if (!m) m = cls->findMethod(token, true);
 if (!m) break;
-return m->returnTypeHint;
+return m->returnType;
 }
 }while(false);
 //println("CDTI::resolve, type found: %s", lv? (lv->value? typeid(*lv->value).name() : "<null value>") : "<null lv>");
@@ -117,7 +114,7 @@ return make_shared<ClassDeclTypeInfo>(cd);
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> QCompiler::resolveValueType (QV value) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveValueType (QV value) {
 std::unique_ptr<FunctionInfo> funcInfo;
 if (value.isClosure()) {
 QClosure& closure = *value.asObject<QClosure>();
@@ -132,7 +129,7 @@ if (funcInfo) return funcInfo->getFunctionTypeInfo();
 return make_shared<ClassTypeInfo>(&value.getClass(vm));
 }
 
-std::shared_ptr<TypeInfo> QCompiler::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args, uint64_t* flptr) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args, uint64_t* flptr) {
 std::unique_ptr<FunctionInfo> funcInfo;
 if (func.isClosure()) {
 QClosure& closure = *func.asObject<QClosure>();
@@ -146,14 +143,18 @@ if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>
 }
 if (funcInfo) {
 shared_ptr<TypeInfo> argtypes[nArgs];
-for (int i=0; i<nArgs; i++) argtypes[i] = args[i]->getType(*this);
+for (int i=0; i<nArgs; i++) {
+args[i]->analyze(*this);
+argtypes[i] = args[i]->type;
+}
 return funcInfo->getReturnTypeInfo(nArgs, argtypes);
 }
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> QCompiler::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, uint64_t* flptr) {
-shared_ptr<TypeInfo> receiverType = receiver->getType(*this) ->resolve(*this);
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, uint64_t* flptr) {
+receiver->analyze(*this);
+shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
 if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
 if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
 auto cls = clt->type;
@@ -182,13 +183,14 @@ if (m) break;
 }
 if (m) {
 if (flptr) *flptr = (m->iField<<8L) | ((m->flags&FD_GETTER)?2:0) | ((m->flags&FD_SETTER)?4:0);
-return m->returnTypeHint;
+return m->returnType;
 }}
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> QCompiler::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args) {
-auto funcType = receiver->getType(*this);
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args) {
+receiver->analyze(*this);
+auto funcType = receiver->type;
 if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(funcType)) {
 return cdt;
 }

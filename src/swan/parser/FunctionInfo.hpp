@@ -5,15 +5,16 @@
 #include<string>
 
 struct QCompiler;
+struct TypeAnalyzer;
 
 struct StringFunctionInfo: FunctionInfo {
 struct QVM& vm;
 std::unique_ptr<std::shared_ptr<TypeInfo>[]> types;
 int nArgs, retArg, flags, fieldIndex;
 
-StringFunctionInfo (QCompiler& compiler, const char* typeInfoStr);
-void build (QCompiler& compiler, const char* str);
-std::shared_ptr<TypeInfo> readNextTypeInfo (QCompiler& compiler, const char*& str);
+StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr);
+void build (TypeAnalyzer&  ta, const char* str);
+std::shared_ptr<TypeInfo> readNextTypeInfo (TypeAnalyzer&  ta, const char*& str);
 std::shared_ptr<TypeInfo> getReturnTypeInfo (int nArgs=0, std::shared_ptr<TypeInfo>* ptr = nullptr) override;
 std::shared_ptr<TypeInfo> getArgTypeInfo (int n) override;
 int getArgCount () override { return nArgs; }

@@ -128,8 +128,8 @@ compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_RETURN);
-auto method = compiler.getCurMethod();
-if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
+//auto method = compiler.getCurMethod();
+//if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
 }
 
 void ThrowStatement::compile (QCompiler& compiler) {
@@ -318,10 +318,10 @@ func->name = string(name->token.start, name->token.length);
 }
 else if (!hoisted) var->value->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
-if (lv) {
-lv->value = var->value;
-lv->type = var->value->getType(compiler);
-}
+//if (lv) {
+//lv->value = var->value;
+//lv->type = var->value->getType(compiler);
+//}
 }
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);

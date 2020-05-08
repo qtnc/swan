@@ -393,7 +393,7 @@ shared_ptr<LiteralListExpression> list = make_shared<LiteralListExpression>(cur)
 if (!match(T_RIGHT_BRACKET)) {
 do {
 list->items.push_back(parseUnpackOrExpression());
-if (match(T_SEMICOLON)) return parseLiteralGrid(list->type, list->items);
+if (match(T_SEMICOLON)) return parseLiteralGrid(list->kind, list->items);
 } while (match(T_COMMA));
 skipNewlines();
 consume(T_RIGHT_BRACKET, ("Expected ']' to close list literal"));

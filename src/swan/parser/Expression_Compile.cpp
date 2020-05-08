@@ -137,12 +137,12 @@ compiler.writeOp(OP_POP);
 }}
 
 void LiteralTupleExpression::compile (QCompiler& compiler) {
-bool isVector = type.type==T_SEMICOLON;
+bool isVector = kind.type==T_SEMICOLON;
 int tupleSymbol = compiler.vm.findGlobalSymbol((isVector?"Vector":"Tuple"), LV_EXISTING | LV_FOR_READ);
 compiler.writeDebugLine(nearestToken());
 if (isVector) {
 for (auto item: items) if (item->isUnpack()) compiler.compileError(item->nearestToken(), "Spread expression not permitted here");
-if (items.size()<1 || items.size()>4) compiler.compileError(type, "A vector can't contain more than 4 elements");
+if (items.size()<1 || items.size()>4) compiler.compileError(kind, "A vector can't contain more than 4 elements");
 }
 if (isSingleSequence()) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, tupleSymbol);
@@ -226,7 +226,7 @@ if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_YIELD);
 auto method = compiler.getCurMethod();
-if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
+//if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
 }
 
 void ImportExpression::compile (QCompiler& compiler) {
@@ -258,24 +258,24 @@ LocalVariable* lv = nullptr;
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot==0 && compiler.getCurClass()) {
 compiler.writeOp(OP_LOAD_THIS);
-type = lv->type;
+//type = lv->type;
 return;
 }
 else if (slot>=0) { 
 compiler.writeOpLoadLocal(slot);
-type = lv->type;
+//type = lv->type;
 return;
 }
 slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
 if (slot>=0) { 
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, slot);
-type = lv->type;
+//type = lv->type;
 return;
 }
 slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot>=0) { 
-type = lv->type;
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
+//type = lv->type;
 return;
 }
 int atLevel = 0;
@@ -285,7 +285,7 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
 else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
-type = compiler.resolveCallType(make_shared<NameExpression>(thisToken), token);
+//type = compiler.resolveCallType(make_shared<NameExpression>(thisToken), token);
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -295,11 +295,11 @@ void NameExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expressi
 LocalVariable* lv = nullptr;
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
 assignedValue->compile(compiler);
-type = assignedValue->getType(compiler);
+//type = assignedValue->getType(compiler);
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpStoreLocal(slot);
-type = lv->type = compiler.mergeTypes(lv->type, type);
+//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -309,7 +309,7 @@ return;
 slot = compiler.findUpvalue(token, LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_upvalue_index_t>(OP_STORE_UPVALUE, slot);
-type = lv->type = compiler.mergeTypes(lv->type, type);
+//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -319,7 +319,7 @@ return;
 slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
-type = lv->type = compiler.mergeTypes(lv->type, type);
+//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -383,7 +383,7 @@ return;
 }
 int fieldSlot = cls->findField(token, &fieldType);
 assignedValue->compile(compiler);
-if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
+//if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else  {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
@@ -426,7 +426,7 @@ return;
 bool isStatic = compiler.getCurMethod()->flags&FD_STATIC;
 int fieldSlot = cls->findStaticField(token, &fieldType);
 assignedValue->compile(compiler);
-if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
+//if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_STATIC_FIELD, fieldSlot);
 else if (atLevel<=2) {
 compiler.writeOp(OP_LOAD_THIS);
@@ -595,7 +595,6 @@ compiler.popScope();
 
 void UnaryOperation::compile (QCompiler& compiler) {
 expr->compile(compiler);
-auto type = expr->getType(compiler);
 if (op==T_MINUS && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_NEG);
 else if (op==T_TILDE && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_BINNOT);
 else if (op==T_EXCL) compiler.writeOp(OP_NOT);
@@ -605,7 +604,7 @@ else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.fin
 void BinaryOperation::compile  (QCompiler& compiler) {
 left->compile(compiler);
 right->compile(compiler);
-if (left->getType(compiler)->isNum(compiler.parser.vm) && right->getType(compiler)->isNum(compiler.parser.vm) && BASE_OPTIMIZED_OPS[op]) {
+if (left->type->isNum(compiler.parser.vm) && right->type->isNum(compiler.parser.vm) && BASE_OPTIMIZED_OPS[op]) {
 compiler.writeOp(static_cast<QOpCode>(BASE_OPTIMIZED_OPS[op]));
 }
 else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(rules[op].infixOpName));
@@ -685,7 +684,7 @@ if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToke
 uint64_t fflags = 0;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super, &fflags));
+//type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super, &fflags));
 if (fflags&2) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
 else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
@@ -701,7 +700,7 @@ bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
-type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fflags));
+//type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fflags));
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) compiler.writeOpCallSuper(call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -721,7 +720,7 @@ int symbol = compiler.vm.findMethodSymbol(sName);
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
 assignedValue->compile(compiler);
-type = compiler.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fflags);
+//type = compiler.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fflags);
 if (fflags&4) {
 compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
 compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
@@ -766,7 +765,7 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
-type = compiler.resolveCallType(thisExpr, name->token, args.size(), &args[0]);
+//type = compiler.resolveCallType(thisExpr, name->token, args.size(), &args[0]);
 return;
 }}
 bool vararg = isVararg();
@@ -779,7 +778,7 @@ QToken tmptok = { T_NAME, 0, 0, gval  };
 type = compiler.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
 }
 else */
-type = compiler.resolveCallType(receiver, args.size(), &args[0]);
+//type = compiler.resolveCallType(receiver, args.size(), &args[0]);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else compiler.writeOpCallFunction(args.size());
 }
@@ -844,9 +843,10 @@ int slot;
 if (!name) {
 name = make_shared<NameExpression>(compiler.createTempName());
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
-var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
+if (!(var->flags&VD_OPTIMFLAG)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 destructuring.push_back(var);
-if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
+var->flags |= VD_OPTIMFLAG;
+//if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
 }
 else {
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
@@ -854,7 +854,7 @@ if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
 compiler.writeOp(OP_POP);
-if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
+//if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
 }}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
@@ -863,16 +863,16 @@ for (auto& decoration: var->decorations) compiler.writeOpCallFunction(1);
 compiler.writeOpStoreLocal(slot);
 var->decorations.clear();
 }
-if (var->typeHint) {
-auto typeHint = make_shared<TypeHintExpression>(name, var->typeHint)->optimize();
-if (lv) lv->type = compiler.mergeTypes(typeHint->getType(compiler), lv->type);
+if (var->type) {
+auto typeHint = make_shared<TypeHintExpression>(name, var->type)->optimize();
+//if (lv) lv->type = compiler.mergeTypes(typeHint->getType(compiler), lv->type);
 //todo: use the type hint
 //typeHint->compile(compiler);
 //compiler.writeOp(OP_POP);
 }
 else if (var->value) {
-var->typeHint = var->value->getType(compiler);
-if (lv) lv->type = compiler.mergeTypes(var->typeHint, lv->type);
+//var->typeHint = var->value->getType(compiler);
+//if (lv) lv->type = compiler.mergeTypes(var->typeHint, lv->type);
 }
 }
 if (destructuring.size()) {
@@ -881,9 +881,8 @@ make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(co
 }
 
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
-QCompiler fc(compiler.parser);
+QCompiler fc(compiler.parser, &compiler);
 shared_ptr<Expression> lastExpr = nullptr;
-fc.parent = &compiler;
 fc.curMethod = this;
 compiler.parser.curMethodNameToken = name;
 compileParams(fc);
@@ -901,14 +900,14 @@ iField = compiler.curClass->findField(fe->token);
 else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
 if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
 }
-if (lastExpr) returnTypeHint = compiler.mergeTypes(returnTypeHint, lastExpr->getType(compiler));
+//if (lastExpr) returnType = compiler.mergeTypes(returnTypeHint, lastExpr->getType(compiler));
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->vararg = (flags&FD_VARARG);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
-string sType = getType(compiler)->resolve(compiler)->toBinString(compiler.vm);
+string sType = type->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
 if (flags&FD_GETTER) {
 func->iField = iField;
@@ -948,7 +947,7 @@ return re;
 
 void DebugExpression::compile (QCompiler& compiler) {
 expr->compile(compiler);
-compiler.compileInfo(nearestToken(), "Type = %s", expr->getType(compiler)->toString());
+compiler.compileInfo(nearestToken(), "Type = %s", expr&&expr->type? expr->type->toString() : "<null>");
 compiler.writeOp(OP_DEBUG);
 }
 

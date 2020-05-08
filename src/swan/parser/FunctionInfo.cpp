@@ -1,6 +1,6 @@
 #include "FunctionInfo.hpp"
 #include "TypeInfo.hpp"
-#include "Compiler.hpp"
+#include "TypeAnalyzer.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
 
@@ -17,14 +17,14 @@ subtypes[nArgs] = rt?rt:TypeInfo::MANY;
 return make_shared<ComposedTypeInfo>(funcTI, nArgs+1, std::move(subtypes));
 }
 
-StringFunctionInfo::StringFunctionInfo (QCompiler& compiler, const char* typeInfoStr): 
-vm(compiler.vm), flags(0), fieldIndex(-1), types(nullptr), nArgs(0), retArg(-1)  
-{ build(compiler, typeInfoStr); }
+StringFunctionInfo::StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr): 
+vm(ta.vm), flags(0), fieldIndex(-1), types(nullptr), nArgs(0), retArg(-1)  
+{ build(ta, typeInfoStr); }
 
-void StringFunctionInfo::build (QCompiler& compiler, const char* str) {
+void StringFunctionInfo::build (TypeAnalyzer&  ta, const char* str) {
 vector<shared_ptr<TypeInfo>> argtypes;
 while(str&&*str){
-auto tp = readNextTypeInfo(compiler, str);
+auto tp = readNextTypeInfo(ta, str);
 if (tp) argtypes.push_back(tp);
 }
 types = make_unique<shared_ptr<TypeInfo>[]>(argtypes.size());
@@ -32,7 +32,7 @@ std::copy(argtypes.begin(), argtypes.end(), &types[0]);
 nArgs = argtypes.size() -1;
 }
 
-std::shared_ptr<TypeInfo> StringFunctionInfo::readNextTypeInfo (QCompiler& compiler, const char*& str) {
+std::shared_ptr<TypeInfo> StringFunctionInfo::readNextTypeInfo (TypeAnalyzer& ta, const char*& str) {
 while(str&&*str){
 switch(*str++){
 case ':': case ' ': case ',': case ';': continue;
@@ -42,17 +42,17 @@ case '.': flags |= FD_GETTER; continue;
 case '>': flags |= FD_METHOD; continue;
 case '*': return TypeInfo::ANY;
 case '#': return TypeInfo::MANY;
-case 'B': return make_shared<ClassTypeInfo>(compiler.vm.boolClass);
-case 'N': return make_shared<ClassTypeInfo>(compiler.vm.numClass);
-case 'S': return make_shared<ClassTypeInfo>(compiler.vm.stringClass);
-case 'U': return make_shared<ClassTypeInfo>(compiler.vm.undefinedClass);
-case 'L': return make_shared<ClassTypeInfo>(compiler.vm.listClass);
-case 'E': return make_shared<ClassTypeInfo>(compiler.vm.setClass);
-case 'T': return make_shared<ClassTypeInfo>(compiler.vm.tupleClass);
-case 'M': return make_shared<ClassTypeInfo>(compiler.vm.mapClass);
-case 'F': return make_shared<ClassTypeInfo>(compiler.vm.functionClass);
-case 'I': return make_shared<ClassTypeInfo>(compiler.vm.iteratorClass);
-case 'A': return make_shared<ClassTypeInfo>(compiler.vm.iterableClass);
+case 'B': return make_shared<ClassTypeInfo>(ta.vm.boolClass);
+case 'N': return make_shared<ClassTypeInfo>(ta.vm.numClass);
+case 'S': return make_shared<ClassTypeInfo>(ta.vm.stringClass);
+case 'U': return make_shared<ClassTypeInfo>(ta.vm.undefinedClass);
+case 'L': return make_shared<ClassTypeInfo>(ta.vm.listClass);
+case 'E': return make_shared<ClassTypeInfo>(ta.vm.setClass);
+case 'T': return make_shared<ClassTypeInfo>(ta.vm.tupleClass);
+case 'M': return make_shared<ClassTypeInfo>(ta.vm.mapClass);
+case 'F': return make_shared<ClassTypeInfo>(ta.vm.functionClass);
+case 'I': return make_shared<ClassTypeInfo>(ta.vm.iteratorClass);
+case 'A': return make_shared<ClassTypeInfo>(ta.vm.iterableClass);
 case '@': {
 retArg = strtoul(str, const_cast<char**>(&str), 10);
 return TypeInfo::ANY;
@@ -64,15 +64,15 @@ case 'Q': {
 const char* b = str;
 while(str&&*str&&*str!=';') ++str;
 QToken tok = { T_NAME, b, static_cast<size_t>(str-b), QV::UNDEFINED };
-return make_shared<NamedTypeInfo>(tok)->resolve(compiler);
+return make_shared<NamedTypeInfo>(tok)->resolve(ta);
 }
 case 'C': {
-auto type = readNextTypeInfo(compiler, str);
+auto type = readNextTypeInfo(ta, str);
 vector<shared_ptr<TypeInfo>> subtypes;
 if (*str=='<') {
 str++;
 while(str&&*str&&*str!='>') {
-subtypes.push_back(readNextTypeInfo(compiler, str));
+subtypes.push_back(readNextTypeInfo(ta, str));
 }
 str++;
 }

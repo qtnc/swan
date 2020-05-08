@@ -13,6 +13,9 @@
 
 struct QVM;
 struct QParser;
+struct TypeAnalyzer;
+struct ClassDeclaration;
+struct FunctionDeclaration;
 
 struct LocalVariable {
 QToken name;
@@ -34,9 +37,10 @@ Loop (int sc, int st): scope(sc), startPos(st), condPos(-1), endPos(-1) {}
 struct QCompiler {
 QVM& vm;
 QParser& parser;
-struct ClassDeclaration* curClass = nullptr;
-struct FunctionDeclaration* curMethod = nullptr;
+ClassDeclaration* curClass = nullptr;
+FunctionDeclaration* curMethod = nullptr;
 QCompiler* parent = nullptr;
+std::shared_ptr<TypeAnalyzer> analyzer = nullptr, globalAnalyzer=nullptr;
 std::ostringstream out;
 std::vector<DebugItem> debugItems;
 std::vector<LocalVariable> localVariables, globalVariables;
@@ -96,11 +100,13 @@ int addUpvalue (int slot, bool upperUpvalue);
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
 
+/*
 std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, uint64_t* flptr=nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args, uint64_t* flptr=nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args);
 std::shared_ptr<TypeInfo> resolveValueType (QV value);
+*/
 
 inline QToken createTempName () { return parser.createTempName(); }
 
@@ -108,7 +114,7 @@ template<class... A> inline void compileError (const QToken& token, const char* 
 template<class... A> inline void compileWarn (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }
 template<class... A> inline void compileInfo (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::INFO, format(fmt, args...)); }
 
-QCompiler (QParser& p): vm(p.vm), parser(p), parent(nullptr), curClass(nullptr)  {}
+QCompiler (QParser& p, QCompiler* pa = nullptr): vm(p.vm), parser(p), parent(pa), curClass(nullptr)  {}
 void compile ();
 struct QFunction* getFunction (int nArgs = 0);
 };

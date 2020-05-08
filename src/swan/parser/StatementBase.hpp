@@ -10,16 +10,18 @@ double drshift (double, double);
 double dintdiv (double, double);
 
 struct QCompiler;
+struct TypeAnalyzer;
 
 struct TypeInfo: std::enable_shared_from_this<TypeInfo> {
 static std::shared_ptr<TypeInfo> ANY, MANY;
 virtual bool isEmpty () { return false; }
 virtual bool isNum (QVM& vm) { return false; }
 virtual bool isBool (QVM& vm) { return false; }
-virtual std::shared_ptr<TypeInfo> resolve (QCompiler& compiler) { return shared_from_this(); }
-virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, QCompiler& compiler) = 0;
+virtual std::shared_ptr<TypeInfo> resolve (TypeAnalyzer& ta) { return shared_from_this(); }
+virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, TypeAnalyzer& ta) = 0;
 virtual std::string toString () = 0;
 virtual std::string toBinString (QVM& vm) = 0;
+virtual bool equals (const std::shared_ptr<TypeInfo>& other) = 0;
 virtual ~TypeInfo () = default;
 };
 
@@ -41,21 +43,24 @@ virtual bool isDecorable () { return false; }
 virtual bool isUsingExports () { return false; }
 virtual std::shared_ptr<Statement> optimizeStatement () { return shared_this(); }
 virtual void compile (QCompiler& compiler) = 0;
+virtual int analyze (TypeAnalyzer& ta) = 0;
 virtual ~Statement () = default;
 };
 
 struct Expression: Statement {
+std::shared_ptr<TypeInfo> type = TypeInfo::ANY;
+
 bool isExpression () final override { return true; }
 inline std::shared_ptr<Expression> shared_this () { return std::static_pointer_cast<Expression>(shared_from_this()); }
 virtual std::shared_ptr<Expression> optimize () { return shared_this(); }
 std::shared_ptr<Statement> optimizeStatement () override { return optimize(); }
-virtual std::shared_ptr<TypeInfo> getType (QCompiler& compiler) = 0;
 virtual bool isComprehension () { return false; }
 virtual bool isUnpack () { return false; }
 };
 
 struct Assignable {
 virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) = 0;
+virtual int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) = 0;
 virtual bool isAssignable () { return true; }
 };
 
@@ -75,12 +80,12 @@ virtual bool isFunctionnable () = 0;
 
 struct Variable {
 std::shared_ptr<Expression> name, value;
-std::shared_ptr<TypeInfo> typeHint;
+std::shared_ptr<TypeInfo> type;
 std::vector<std::shared_ptr<Expression>> decorations;
 int flags;
 
 Variable (const std::shared_ptr<Expression>& nm, const std::shared_ptr<Expression>& val = nullptr, int flgs = 0, const std::vector<std::shared_ptr<Expression>>& decos = {}):
-name(nm), value(val), flags(flgs), decorations(decos), typeHint(nullptr) {}
+name(nm), value(val), flags(flgs), decorations(decos), type(TypeInfo::ANY) {}
 void optimize ();
 };
 
