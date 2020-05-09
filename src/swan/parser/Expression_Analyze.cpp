@@ -26,14 +26,13 @@ return vm.setClass;
 int LiteralSequenceExpression::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto seqtype = make_shared<ClassTypeInfo>(getSequenceClass(ta.parser.vm));
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
 shared_ptr<TypeInfo> itemType = TypeInfo::ANY;
 for (auto& item: items) {
 re |= item->analyze(ta);
 itemType = ta.mergeTypes(itemType, item->type);
 }
-subtypes[0] = itemType;
-auto finalType = make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
+vector<shared_ptr<TypeInfo>> subtypes = { itemType };
+auto finalType = make_shared<ComposedTypeInfo>(seqtype, subtypes);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -41,16 +40,14 @@ return re;
 int LiteralMapExpression::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto seqtype = make_shared<ClassTypeInfo>(ta.parser.vm.mapClass);
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(2);
 shared_ptr<TypeInfo> keyType = TypeInfo::ANY, valueType = TypeInfo::ANY;
 for (auto& item: items) {
 re |= item.first->analyze(ta) | item.second->analyze(ta);
 keyType = ta.mergeTypes(keyType, item.first->type);
 valueType = ta.mergeTypes(valueType, item.second->type);
 }
-subtypes[0] = keyType;
-subtypes[1] = valueType;
-auto finalType = make_shared<ComposedTypeInfo>(seqtype, 2, std::move(subtypes));
+vector<shared_ptr<TypeInfo>> subtypes = { keyType, valueType };
+auto finalType = make_shared<ComposedTypeInfo>(seqtype, subtypes);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -58,12 +55,13 @@ return re;
 int LiteralTupleExpression::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto seqtype = make_shared<ClassTypeInfo>(getSequenceClass(ta.parser.vm));
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(items.size());
+vector<shared_ptr<TypeInfo>> subtypes;
+subtypes.resize(items.size());
 for (int i=0, n=items.size(); i<n; i++) {
 re |= items[i]->analyze(ta);
 subtypes[i] = items[i]->type;
 }
-auto finalType = make_shared<ComposedTypeInfo>(seqtype, items.size(), std::move(subtypes));
+auto finalType = make_shared<ComposedTypeInfo>(seqtype, subtypes);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -76,15 +74,14 @@ return ta.assignType(*this, tp);
 int LiteralGridExpression::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto seqtype = make_shared<ClassTypeInfo>(ta.parser.vm.gridClass);
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
 shared_ptr<TypeInfo> itemType = TypeInfo::ANY;
 for (auto& row: data) {
 for (auto& item: row) {
 re |= item->analyze(ta);
 itemType = ta.mergeTypes(itemType, item->type);
 }}
-subtypes[0] = itemType;
-auto finalType = make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
+vector<shared_ptr<TypeInfo>> subtypes = { itemType };
+auto finalType = make_shared<ComposedTypeInfo>(seqtype, subtypes);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -119,9 +116,8 @@ return re;
 int ComprehensionExpression::analyze (TypeAnalyzer& ta) {
 int re = (rootStatement? rootStatement->analyze(ta) :0) | (loopExpression? loopExpression->analyze(ta) :0);
 auto seqtype = make_shared<ClassTypeInfo>(ta.parser.vm.iterableClass);
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
-subtypes[0] = loopExpression->type;
-auto finalType = make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
+vector<shared_ptr<TypeInfo>> subtypes = { loopExpression->type };
+auto finalType = make_shared<ComposedTypeInfo>(seqtype, subtypes);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -133,9 +129,9 @@ auto rectype = receiver->type;
 shared_ptr<TypeInfo> finalType = nullptr;
 if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(rectype)) {
 if (auto ct = dynamic_pointer_cast<ClassTypeInfo>(cti->type)) {
-if (ct->type==ta.vm.listClass && cti->nSubtypes==1) finalType = cti->subtypes[0];
-else if (ct->type==ta.vm.mapClass && cti->nSubtypes==2) finalType = cti->subtypes[1];
-else if (ct->type==ta.vm.tupleClass && args.size()==1) if (auto cxe = dynamic_pointer_cast<ConstantExpression>(args[0])) if (cti->nSubtypes>=cxe->token.value.d) finalType = cti->subtypes[cxe->token.value.d];
+if (ct->type==ta.vm.listClass && cti->countSubtypes()==1) finalType = cti->subtypes[0];
+else if (ct->type==ta.vm.mapClass && cti->countSubtypes()==2) finalType = cti->subtypes[1];
+else if (ct->type==ta.vm.tupleClass && args.size()==1) if (auto cxe = dynamic_pointer_cast<ConstantExpression>(args[0])) if (cti->countSubtypes()>=cxe->token.value.d) finalType = cti->subtypes[cxe->token.value.d];
 }}
 if (!finalType) finalType = ta.resolveCallType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED });
 re |= ta.assignType(*this, finalType);

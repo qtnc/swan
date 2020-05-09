@@ -4,6 +4,7 @@
 #include "Token.hpp"
 #include<memory>
 #include<string>
+#include<vector>
 
 struct QVM;
 struct QClass;
@@ -47,10 +48,10 @@ virtual bool equals (const std::shared_ptr<TypeInfo>& other) override;
 
 struct ComposedTypeInfo: TypeInfo {
 std::shared_ptr<TypeInfo> type;
-std::unique_ptr<std::shared_ptr<TypeInfo>[]> subtypes;
-int nSubtypes;
+std::vector<std::shared_ptr<TypeInfo>> subtypes;
 
-ComposedTypeInfo (std::shared_ptr<TypeInfo> tp, int nst, std::unique_ptr<std::shared_ptr<TypeInfo>[]>&& st);
+ComposedTypeInfo (std::shared_ptr<TypeInfo> tp, const std::vector<std::shared_ptr<TypeInfo>>& st): type(tp), subtypes(st) {}
+inline int countSubtypes () const { return subtypes.size(); }
 std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) override;
 std::shared_ptr<TypeInfo> resolve (TypeAnalyzer& ta) override;
 std::string toString () override;
@@ -59,9 +60,9 @@ bool equals (const std::shared_ptr<TypeInfo>& other) override;
 };
 
 struct ClassDeclTypeInfo: TypeInfo {
-std::shared_ptr<struct ClassDeclaration> cls;
-ClassDeclTypeInfo (std::shared_ptr<ClassDeclaration> c1): cls(c1) {}
-ClassDeclTypeInfo (ClassDeclaration* c1);
+struct ClassDeclaration* cls;
+ClassDeclTypeInfo (std::shared_ptr<ClassDeclaration> c1): cls(c1.get()) {}
+ClassDeclTypeInfo (ClassDeclaration* c1): cls(c1) {}
 std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) override;
 std::string toString () override;
 std::string toBinString (QVM& vm) override;

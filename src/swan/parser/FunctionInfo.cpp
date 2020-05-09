@@ -8,13 +8,14 @@ std::shared_ptr<TypeInfo> getFunctionTypeInfo (FunctionInfo& fti, struct QVM& vm
 int nArgs = fti.getArgCount();
 auto funcTI = make_shared<ClassTypeInfo>(vm.functionClass);
 auto rt = fti.getReturnTypeInfo(nPassedArgs, passedArgs);
-auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(nArgs+1);
+vector<shared_ptr<TypeInfo>> subtypes;
+subtypes.resize(nArgs+1);
 for (int i=0; i<nArgs; i++) {
 auto ati = fti.getArgTypeInfo(i);
 subtypes[i] = ati?ati:TypeInfo::MANY;
 }
 subtypes[nArgs] = rt?rt:TypeInfo::MANY;
-return make_shared<ComposedTypeInfo>(funcTI, nArgs+1, std::move(subtypes));
+return make_shared<ComposedTypeInfo>(funcTI, subtypes);
 }
 
 StringFunctionInfo::StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr): 
@@ -76,9 +77,7 @@ subtypes.push_back(readNextTypeInfo(ta, str));
 }
 str++;
 }
-auto uptr = make_unique<shared_ptr<TypeInfo>[]>(subtypes.size());
-std::copy(subtypes.begin(), subtypes.end(), &uptr[0]);
-return make_shared<ComposedTypeInfo>(type, subtypes.size(), std::move(uptr));
+return make_shared<ComposedTypeInfo>(type, subtypes);
 }
 default: return TypeInfo::MANY;
 }}

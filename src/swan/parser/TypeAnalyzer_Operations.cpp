@@ -1,5 +1,6 @@
 #include "TypeAnalyzer.hpp"
 #include "TypeInfo.hpp"
+#include "FunctionInfo.hpp"
 #include "Expression.hpp"
 #include "../vm/VM.hpp"
 using namespace std;
@@ -91,3 +92,90 @@ var->value = make_shared<ConstantExpression>(tkcst);
 return var;
 }}
 
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveValueType (QV value) {
+std::unique_ptr<FunctionInfo> funcInfo;
+if (value.isClosure()) {
+QClosure& closure = *value.asObject<QClosure>();
+if (!closure.func.typeInfo.empty()) funcInfo = make_unique<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
+}
+else if (value.isNativeFunction()) {
+auto ptr = value.asNativeFunction();
+auto it = vm.nativeFuncTypeInfos.find(ptr);
+if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>(*this, it->second.c_str());
+}
+if (funcInfo) return funcInfo->getFunctionTypeInfo();
+return make_shared<ClassTypeInfo>(&value.getClass(vm));
+}
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args, uint64_t* flptr) {
+std::unique_ptr<FunctionInfo> funcInfo;
+if (func.isClosure()) {
+QClosure& closure = *func.asObject<QClosure>();
+if (!closure.func.typeInfo.empty()) funcInfo = make_unique<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
+if (flptr) *flptr = (closure.func.flags<<0L)  | (closure.func.iField<<8L);
+}
+else if (func.isNativeFunction()) {
+auto ptr = func.asNativeFunction();
+auto it = vm.nativeFuncTypeInfos.find(ptr);
+if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>(*this, it->second.c_str());
+}
+if (funcInfo) {
+shared_ptr<TypeInfo> argtypes[nArgs];
+for (int i=0; i<nArgs; i++) {
+args[i]->analyze(*this);
+argtypes[i] = args[i]->type;
+}
+return funcInfo->getReturnTypeInfo(nArgs, argtypes);
+}
+return TypeInfo::MANY;
+}
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, uint64_t* flptr) {
+receiver->analyze(*this);
+shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
+if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
+if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
+auto cls = clt->type;
+if (super) cls = cls->parent;
+QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+return resolveCallType(receiver, method, nArgs, args, flptr);
+}
+else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
+shared_ptr<FunctionDeclaration> m;
+if (!super) {
+m = cdt->cls->findMethod(name, false);
+if (!m) m = cdt->cls->findMethod(name, true);
+}
+if (!m) for (auto& parentToken: cdt->cls->parents) {
+auto parentTI = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
+//println("RT=%s,%s, PT=%s,%s,%s", receiverType->toString(), typeid(*receiverType).name(), string(parentToken.start, parentToken.length), parentTI->toString(), typeid(*parentTI).name() );
+if (cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
+m = cdt->cls->findMethod(name, false);
+if (!m) m = cdt->cls->findMethod(name, true);
+}
+else if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(parentTI)) {
+QV method = clt->type->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+return resolveCallType(receiver, method, nArgs, args, flptr);
+}
+if (m) break;
+}
+if (m) {
+if (flptr) *flptr = (m->iField<<8L) | ((m->flags&FD_GETTER)?2:0) | ((m->flags&FD_SETTER)?4:0);
+return m->returnType;
+}}
+return TypeInfo::MANY;
+}
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args) {
+receiver->analyze(*this);
+auto funcType = receiver->type;
+if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(funcType)) {
+return cdt;
+}
+else if (auto ct = dynamic_pointer_cast<ComposedTypeInfo>(funcType)) {
+int n = ct->countSubtypes();
+if (n>0) return ct->subtypes[n -1];
+}
+return TypeInfo::MANY;
+}

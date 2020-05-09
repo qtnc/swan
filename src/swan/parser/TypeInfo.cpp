@@ -57,14 +57,9 @@ if (p1==p2) return p1;
 return nullptr;
 }
 
-ComposedTypeInfo::ComposedTypeInfo (shared_ptr<TypeInfo> tp, int nst, unique_ptr<shared_ptr<TypeInfo>[]>&& st): 
-type(tp), nSubtypes(nst), 
-subtypes(std::move(st)) 
-{}
-
 std::shared_ptr<TypeInfo> ComposedTypeInfo::resolve (TypeAnalyzer& ta) {
 type = type? type->resolve(ta) :nullptr;
-for (int i=0; i<nSubtypes; i++) subtypes[i] = subtypes[i]? subtypes[i]->resolve(ta) :nullptr;
+for (int i=0, n=countSubtypes(); i<n; i++) subtypes[i] = subtypes[i]? subtypes[i]->resolve(ta) :nullptr;
 return shared_from_this();
 }
 
@@ -72,17 +67,18 @@ shared_ptr<TypeInfo> ComposedTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnaly
 if (!t0 || t0->isEmpty()) return shared_from_this();
 auto t = dynamic_pointer_cast<ComposedTypeInfo>(t0->resolve(ta));
 if (!t) return t0->merge(type, ta);
-else if (t->nSubtypes!=nSubtypes) return t->type->merge(type, ta);
+else if (t->countSubtypes()!=countSubtypes()) return t->type->merge(type, ta);
 auto newType = type->merge(t->type, ta);
-auto newSubtypes = make_unique<shared_ptr<TypeInfo>[]>(nSubtypes);
-for (int i=0; i<nSubtypes; i++) newSubtypes[i] = ta.mergeTypes(subtypes[i], t->subtypes[i]);
-return make_shared<ComposedTypeInfo>(newType, nSubtypes, std::move(newSubtypes));
+vector<shared_ptr<TypeInfo>> newSubtypes;
+newSubtypes.resize(countSubtypes());
+for (int i=0, n=countSubtypes(); i<n; i++) newSubtypes[i] = ta.mergeTypes(subtypes[i], t->subtypes[i]);
+return make_shared<ComposedTypeInfo>(newType, newSubtypes);
 }
 
 string ComposedTypeInfo::toString () {
 ostringstream out;
 out << type->toString() << '<';
-for (int i=0; i<nSubtypes; i++) {
+for (int i=0, n=countSubtypes(); i<n; i++) {
 if (i>0) out << ',';
 out << subtypes[i]->toString();
 }
@@ -99,6 +95,34 @@ if (auto ni = std::dynamic_pointer_cast<NamedTypeInfo>(other)) return ni->token.
 else return false; 
 }
 
+
+shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeAnalyzer& ta) {
+AnalyzedVariable* lv = nullptr;
+do {
+lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ);
+if (lv) break;
+ClassDeclaration* cls = ta.getCurClass();
+if (cls) {
+auto m = cls->findMethod(token, false);
+if (!m) m = cls->findMethod(token, true);
+if (!m) break;
+return m->returnType;
+}
+}while(false);
+if (lv && lv->value) {
+if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
+return make_shared<ClassDeclTypeInfo>(cd);
+}
+else if (auto cst = dynamic_pointer_cast<ConstantExpression>(lv->value)) {
+auto value = cst->token.value;
+if (value.isInstanceOf(ta.vm.classClass)) {
+QClass* cls = value.asObject<QClass>();
+return make_shared<ClassTypeInfo>(cls);
+}}
+}//if lv->value
+return TypeInfo::MANY;
+}
+
 string ClassDeclTypeInfo::toBinString (QVM& vm) {
 return format("Q%s;", string(cls->name.start, cls->name.length));
 }
@@ -109,7 +133,7 @@ ostringstream out;
 out << 'C';
 out << type->toBinString(vm);
 out << '<';
-for (int i=0; i<nSubtypes; i++) out << subtypes[i]->toBinString(vm);
+for (int i=0, n=countSubtypes(); i<n; i++) out << subtypes[i]->toBinString(vm);
 out << '>';
 return out.str();
 }
@@ -118,9 +142,9 @@ bool ComposedTypeInfo::equals (const std::shared_ptr<TypeInfo>& other) {
 auto ci = dynamic_pointer_cast<ComposedTypeInfo>(other);
 if (!ci) return false;
 if (!type || !ci->type) return false;
-if (nSubtypes!=ci->nSubtypes) return false;
+if (countSubtypes()!=ci->countSubtypes()) return false;
 if (!type->equals(ci->type)) return false;
-for (int i=0; i<nSubtypes; i++) {
+for (int i=0, n=countSubtypes(); i<n; i++) {
 if (!subtypes[i] || !ci->subtypes[i]) return false;
 if (!subtypes[i]->equals(ci->subtypes[i])) return false;
 }
