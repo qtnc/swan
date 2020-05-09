@@ -91,13 +91,7 @@ shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeAnalyzer& ta) {
 AnalyzedVariable* lv = nullptr;
 do {
 lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ);
-if (!lv) break;
-/*if (slot>=0) { 
-auto value = compiler.parser.vm.globalVariables[slot];
-if (!value.isInstanceOf(compiler.parser.vm.classClass)) break;
-QClass* cls = value.asObject<QClass>();
-return make_shared<ClassTypeInfo>(cls);
-}*/
+if (lv) break;
 ClassDeclaration* cls = ta.getCurClass();
 if (cls) {
 auto m = cls->findMethod(token, false);
@@ -106,11 +100,17 @@ if (!m) break;
 return m->returnType;
 }
 }while(false);
-//println("CDTI::resolve, type found: %s", lv? (lv->value? typeid(*lv->value).name() : "<null value>") : "<null lv>");
 if (lv && lv->value) {
 if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
 return make_shared<ClassDeclTypeInfo>(cd);
+}
+else if (auto cst = dynamic_pointer_cast<ConstantExpression>(lv->value)) {
+auto value = cst->token.value;
+if (value.isInstanceOf(ta.vm.classClass)) {
+QClass* cls = value.asObject<QClass>();
+return make_shared<ClassTypeInfo>(cls);
 }}
+}//if lv->value
 return TypeInfo::MANY;
 }
 

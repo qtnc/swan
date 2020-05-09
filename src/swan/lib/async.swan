@@ -1,4 +1,4 @@
-global function `async` (func) {
+/*global function `async` (func) {
 return function(...oargs){
 let f = Fiber(func)
 let next = def(...args){
@@ -7,3 +7,4 @@ return x && Promise.of(x).then(next)
 }
 return next(...oargs)
 }}
+*/

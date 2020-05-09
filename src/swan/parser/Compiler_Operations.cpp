@@ -166,23 +166,3 @@ globalSymbols[name] = { n, flags&LV_CONST };
 globalVariables.push_back(QV::UNDEFINED);
 return n;
 }}
-
-shared_ptr<TypeInfo> TypeAnalyzer::mergeTypes (shared_ptr<TypeInfo> t1, shared_ptr<TypeInfo> t2) {
-if (t1) return t1->merge(t2, *this);
-else if (t2) return t2->merge(t1, *this);
-else return nullptr;
-}
-
-bool TypeAnalyzer::isSameType (const std::shared_ptr<TypeInfo>& t1, const std::shared_ptr<TypeInfo>& t2) {
-if (!t1 || !t2) return false;
-if (t1==t2) return true;
-return t1->equals(t2);
-}
-
-int TypeAnalyzer::assignType (Expression&  e, const std::shared_ptr<TypeInfo>& type) {
-auto oldType = e.type;
-e.type = type;
-if (isSameType(type, oldType)) return false;
-//typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
-return true;
-}

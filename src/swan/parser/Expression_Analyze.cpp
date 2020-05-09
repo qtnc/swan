@@ -120,8 +120,7 @@ int ComprehensionExpression::analyze (TypeAnalyzer& ta) {
 int re = (rootStatement? rootStatement->analyze(ta) :0) | (loopExpression? loopExpression->analyze(ta) :0);
 auto seqtype = make_shared<ClassTypeInfo>(ta.parser.vm.iterableClass);
 auto subtypes = make_unique<shared_ptr<TypeInfo>[]>(1);
-shared_ptr<TypeInfo> itemType = loopExpression->type;
-subtypes[0] = type;
+subtypes[0] = loopExpression->type;
 auto finalType = make_shared<ComposedTypeInfo>(seqtype, 1, std::move(subtypes));
 re |= ta.assignType(*this, finalType);
 return re;
@@ -222,12 +221,14 @@ return re;
 int NameExpression::analyze (TypeAnalyzer& ta) {
 if (token.type==T_END) token = ta.parser.curMethodNameToken;
 if (auto lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ)) {
-return ta.assignType(*this, lv->type);
+auto finalType = ta.mergeTypes(type, lv->type);
+return ta.assignType(*this, finalType);
 }
 ClassDeclaration* cls = ta.getCurClass();
 if (cls) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto finalType = ta.resolveCallType(make_shared<NameExpression>(thisToken), token);
+finalType = ta.mergeTypes(type, finalType);
 return ta.assignType(*this, finalType);
 }
 return 0;
