@@ -123,13 +123,17 @@ else return analyzeForEach(ta);
 int ForStatement::analyzeForEach (TypeAnalyzer& ta) {
 ta.pushScope();
 int re = 0;
-ta.findVariable(ta.createTempName(), LV_NEW | LV_CONST);
+QToken iteratorToken = { T_NAME, "iterator", 8, QV::UNDEFINED };
+QToken nextToken = { T_NAME, "next", 4, QV::UNDEFINED };
+auto inVar = make_shared<NameExpression>(ta.createTempName());
+ta.findVariable(inVar->token, LV_NEW);
+BinaryOperation::create(inVar, T_EQ, BinaryOperation::create(inExpression, T_DOT, make_shared<ConstantExpression>(iteratorToken)))->optimize()->analyze(ta);
+ta.pushScope();
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
 if (destructuring) loopVariable = make_shared<NameExpression>(ta.createTempName());
-re |= inExpression->analyze(ta);
-ta.pushScope();
 ta.findVariable(loopVariable->token, LV_NEW);
+BinaryOperation::create(loopVariable, T_EQ, BinaryOperation::create(inVar, T_DOT, make_shared<ConstantExpression>(nextToken)))->optimize()->analyze(ta);
 if (destructuring) {
 loopVariables[0]->value = loopVariable;
 re |= make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->analyze(ta);
@@ -186,11 +190,11 @@ for (auto& nm: decompose(ta, var->name, names)) {
 ta.findVariable(nm->token, LV_NEW); 
 }
 continue;
-}
+}//if !name
 AnalyzedVariable* lv = ta.findVariable(name->token, LV_NEW);
 for (auto& decoration: decorations) re |= decoration->analyze(ta);
 for (auto& decoration: var->decorations) re |= decoration->analyze(ta);
-bool hoisted = var->flags&VD_HOISTED;
+bool hoisted = false; //var->flags&VD_HOISTED;
 if (var->value && !hoisted) {
 if (!hoisted) re |= var->value->analyze(ta);
 if (lv && var) {

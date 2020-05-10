@@ -17,6 +17,7 @@
 #define VD_SINGLE 0x100
 #define VD_NODEFAULT 0x200
 #define VD_HOISTED 0x1000
+#define VD_FINAL 0x2000
 #define VD_OPTIMFLAG 0x4000000
 
 #define FD_VARARG 1
@@ -27,6 +28,7 @@
 #define FD_CONST 0x200
 #define FD_GETTER 0x400
 #define FD_SETTER 0x800
+#define FD_FINAL 0x2000
 
 #define P_LEFT 0
 #define P_RIGHT 1

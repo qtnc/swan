@@ -61,26 +61,3 @@ ctor->body = inits;
 }}
 
 
-string ClassDeclTypeInfo::toString () { 
-return string(cls->name.start, cls->name.length); 
-}
-
-shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) { 
-t0 = t0? t0->resolve(ta) :t0;
-if (!t0 || t0->isEmpty()) return shared_from_this();
-auto t = dynamic_pointer_cast<ClassDeclTypeInfo>(t0);
-if (t && t->cls==cls) return shared_from_this();
-else if (t) for (auto& p1: cls->parents) {
-for (auto& p2: t->cls->parents) {
-auto t3 = make_shared<NamedTypeInfo>(p1), t4 = make_shared<NamedTypeInfo>(p2);
-auto re = t3->merge(t4, ta);
-if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
-}}
-else for (auto& p1: cls->parents) {
-auto t3 = make_shared<NamedTypeInfo>(p1);
-auto re = t3->merge(t0, ta);
-if (re && re!=TypeInfo::MANY && re!=TypeInfo::ANY) return re;
-}
-return TypeInfo::MANY;
-}
-

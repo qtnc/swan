@@ -94,13 +94,14 @@ auto setMetaClass = QClass::createNonInheritable(*this, classClass, classClass, 
 auto stringMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "StringMetaClass");
 auto tupleMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "TupleMetaClass");
 
+classClass->type = classMetaClass;
+
 functionClass = QClass::createNonInheritable(*this, functionMetaClass, objectClass, "Function");
 closureClass = QClass::createNonInheritable(*this, closureMetaClass, functionClass, "Closure");
 boundFunctionClass = QClass::createNonInheritable(*this, boundFunctionMetaClass, functionClass, "BoundFunction");
 stdFunctionClass = QClass::createNonInheritable(*this, stdFunctionMetaClass, functionClass, "StdFunction");
 
 boolClass = QClass::createNonInheritable(*this, boolMetaClass, objectClass, "Bool");
-classClass->type = classMetaClass;
 iterableClass = QClass::create(*this, iterableMetaClass, objectClass, "Iterable", 0, 0);
 iteratorClass = QClass::create(*this, iteratorMetaClass, objectClass, "Iterator", 0, 0);
 fiberClass = QClass::createNonInheritable(*this, fiberMetaClass, iterableClass, "Fiber");

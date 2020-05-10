@@ -141,8 +141,7 @@ return re;
 int ClassDeclaration::analyze (TypeAnalyzer& ta) { 
 int re = 0;
 for (auto& m: methods) re |= m->analyze(ta);
-auto thisPtr = static_pointer_cast<ClassDeclaration>(shared_from_this());
-auto finalType = make_shared<ClassDeclTypeInfo>(thisPtr); 
+auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -297,13 +296,104 @@ return re;
 }
 
 int LiteralSequenceExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
-//###todo
-return 0;
+ta.pushScope();
+QToken tmpToken = ta.createTempName();
+auto tmpVar = make_shared<NameExpression>(tmpToken);
+ta.findVariable(tmpToken, LV_NEW);
+int re = assignedValue->analyze(ta);
+for (int i=0, n=items.size(); i<n; i++) {
+shared_ptr<Expression> item = items[i], defaultValue = nullptr;
+shared_ptr<TypeInfo> typeHint = nullptr;
+bool unpack = false;
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(item)) {
+if (bop->op==T_EQ) {
+item = bop->left;
+defaultValue = bop->right;
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(defaultValue)) typeHint = th->type;
+}}
+else if (auto th = dynamic_pointer_cast<TypeHintExpression>(item)) {
+item = th->expr;
+typeHint = th->type;
+}
+auto assignable = dynamic_pointer_cast<Assignable>(item);
+if (!assignable) {
+if (auto unpackExpr = dynamic_pointer_cast<UnpackExpression>(item)) {
+assignable = dynamic_pointer_cast<Assignable>(unpackExpr->expr);
+unpack = true;
+}}
+if (!assignable || !assignable->isAssignable()) continue;
+QToken indexToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(i)) };
+shared_ptr<Expression> index = make_shared<ConstantExpression>(indexToken);
+if (unpack) {
+QToken minusOneToken = { T_NUM, item->nearestToken().start, item->nearestToken().length, QV(static_cast<double>(-1)) };
+shared_ptr<Expression> minusOne = make_shared<ConstantExpression>(minusOneToken);
+index = BinaryOperation::create(index, T_DOTDOTDOT, minusOne);
+}
+vector<shared_ptr<Expression>> indices = { index };
+auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
+if (defaultValue) defaultValue = BinaryOperation::create(subscript, T_QUESTQUEST, defaultValue)->optimize();
+else defaultValue = subscript;
+if (typeHint) defaultValue = make_shared<TypeHintExpression>(defaultValue, typeHint)->optimize();
+re |= assignable->analyzeAssignment(ta, defaultValue);
+}
+ta.popScope();
+return re;
 }
 
 int LiteralMapExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
-//###todo
-return 0;
+ta.pushScope();
+QToken tmpToken = ta.createTempName();
+ta.findVariable(tmpToken, LV_NEW);
+int count = -1;
+auto tmpVar = make_shared<NameExpression>(tmpToken);
+int re = assignedValue->analyze(ta);
+vector<shared_ptr<Expression>> allKeys;
+for (auto& item: items) {
+count++;
+shared_ptr<Expression> assigned = item.second, defaultValue = nullptr;
+shared_ptr<TypeInfo> typeHint = nullptr;
+if (auto bop = dynamic_pointer_cast<BinaryOperation>(assigned)) {
+if (bop->op==T_EQ) {
+assigned = bop->left;
+defaultValue = bop->right;
+if (auto th = dynamic_pointer_cast<TypeHintExpression>(defaultValue)) typeHint = th->type;
+}}
+else if (auto th = dynamic_pointer_cast<TypeHintExpression>(assigned)) {
+assigned = th->expr;
+typeHint = th->type;
+}
+auto assignable = dynamic_pointer_cast<Assignable>(assigned);
+if (!assignable) {
+if (auto mh = dynamic_pointer_cast<GenericMethodSymbolExpression>(assigned)) assignable = make_shared<NameExpression>(mh->token);
+else if (auto unp = dynamic_pointer_cast<UnpackExpression>(assigned))  assignable = dynamic_pointer_cast<Assignable>(unp->expr);
+}
+if (!assignable || !assignable->isAssignable()) continue;
+shared_ptr<Expression> value = nullptr;
+if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+else if (auto unp = dynamic_pointer_cast<UnpackExpression>(item.first)) {
+auto excludeKeys = make_shared<LiteralTupleExpression>(unp->nearestToken(), allKeys);
+value = BinaryOperation::create(tmpVar, T_MINUS, excludeKeys);
+}
+else {
+shared_ptr<Expression> subscript = item.first;
+if (auto field = dynamic_pointer_cast<FieldExpression>(subscript))  {
+field->token.value = QV(ta.vm, field->token.start, field->token.length);
+subscript = make_shared<ConstantExpression>(field->token);
+}
+else if (auto field = dynamic_pointer_cast<StaticFieldExpression>(subscript))  {
+field->token.value = QV(ta.vm, field->token.start, field->token.length);
+subscript = make_shared<ConstantExpression>(field->token);
+}
+allKeys.push_back(subscript);
+vector<shared_ptr<Expression>> indices = { subscript };
+value = make_shared<SubscriptExpression>(tmpVar, indices);
+}
+if (defaultValue) value = BinaryOperation::create(value, T_QUESTQUEST, defaultValue)->optimize();
+if (typeHint) value = make_shared<TypeHintExpression>(value, typeHint)->optimize();
+re |= assignable->analyzeAssignment(ta, value);
+}
+ta.popScope();
+return re;
 }
 
 int MethodLookupOperation::analyze (TypeAnalyzer& ta) {

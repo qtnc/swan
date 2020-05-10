@@ -329,10 +329,10 @@ iteratorClass ->type
 ->assoc<QClass>(true);
 
 nullClass->type
-->copyParentMethods()
+//->copyParentMethods()
 ->assoc<QClass>(true);
 
 undefinedClass->type
-->copyParentMethods()
+//->copyParentMethods()
 ->assoc<QClass>(true);
 }

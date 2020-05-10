@@ -17,6 +17,12 @@ static std::shared_ptr<TypeInfo> ANY, MANY;
 virtual bool isEmpty () { return false; }
 virtual bool isNum (QVM& vm) { return false; }
 virtual bool isBool (QVM& vm) { return false; }
+virtual bool isString (QVM& vm) { return false; }
+virtual bool isNull  (QVM& vm) { return false; }
+virtual bool isUndefined (QVM& vm) { return false; }
+virtual bool isNullOrUndefined (QVM& vm) { return isNull(vm) || isUndefined(vm); }
+virtual bool isExact () { return false; }
+virtual bool isOptional () { return false; }
 virtual std::shared_ptr<TypeInfo> resolve (TypeAnalyzer& ta) { return shared_from_this(); }
 virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, TypeAnalyzer& ta) = 0;
 virtual std::string toString () = 0;

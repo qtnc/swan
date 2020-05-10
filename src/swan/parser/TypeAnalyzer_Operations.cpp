@@ -47,8 +47,8 @@ curScope--;
 
 
 shared_ptr<TypeInfo> TypeAnalyzer::mergeTypes (shared_ptr<TypeInfo> t1, shared_ptr<TypeInfo> t2) {
-if (t1) return t1->merge(t2, *this);
-else if (t2) return t2->merge(t1, *this);
+if (t1) return t1->resolve(*this)->merge(t2, *this);
+else if (t2) return t2->resolve(*this)->merge(t1, *this);
 else return nullptr;
 }
 
@@ -62,10 +62,13 @@ int TypeAnalyzer::assignType (Expression&  e, const std::shared_ptr<TypeInfo>& t
 if (type==TypeInfo::ANY && e.type!=TypeInfo::ANY) {
 typeWarn(e.nearestToken(), "Overwrite with any type");
 }
+if (type==TypeInfo::MANY && (e.type!=TypeInfo::ANY && e.type!=TypeInfo::MANY)) {
+typeWarn(e.nearestToken(), "Overwrite with many type");
+}
 auto oldType = e.type;
 e.type = type;
 if (isSameType(type, oldType)) return false;
-//typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
+if (oldType!=TypeInfo::ANY) typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
 return true;
 }
 
