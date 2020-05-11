@@ -12,26 +12,27 @@ shared_ptr<TypeInfo> TypeInfo::MANY = make_shared<ManyTypeInfo>();
 ClassTypeInfo::ClassTypeInfo (QClass* c1, bool ex, bool op):
 type(c1), exact(ex), optional(op) {
 exact = exact || type->nonInheritable;
+optional = optional && type!=type->vm.nullClass && type!=type->vm.undefinedClass;
 }
 
-bool ClassTypeInfo::isNum (QVM& vm) { 
-return type==vm.numClass; 
+bool ClassTypeInfo::isNum () { 
+return type==type->vm.numClass; 
 }
 
-bool ClassTypeInfo::isBool (QVM& vm) { 
-return type==vm.boolClass; 
+bool ClassTypeInfo::isBool () { 
+return type==type->vm.boolClass; 
 }
 
-bool ClassTypeInfo::isString (QVM& vm) { 
-return type==vm.stringClass; 
+bool ClassTypeInfo::isString () { 
+return type==type->vm.stringClass; 
 }
 
-bool ClassTypeInfo::isNull (QVM& vm) { 
-return type==vm.nullClass; 
+bool ClassTypeInfo::isNull () { 
+return type==type->vm.nullClass; 
 }
 
-bool ClassTypeInfo::isUndefined (QVM& vm) { 
-return type==vm.undefinedClass; 
+bool ClassTypeInfo::isUndefined () { 
+return type==type->vm.undefinedClass; 
 }
 
 bool ClassTypeInfo::equals (const std::shared_ptr<TypeInfo>& other) {
@@ -66,12 +67,12 @@ else return format("Q%s;", type->name);
 shared_ptr<TypeInfo> ClassTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) {
 if (!t0 || t0->isEmpty()) return shared_from_this();
 t0 = t0->resolve(ta);
-if (t0->isNullOrUndefined(ta.vm)) {
+if (t0->isNullOrUndefined()) {
 if (optional) return shared_from_this();
 else return make_shared<ClassTypeInfo>(type, exact, true);
 }
 auto t = dynamic_pointer_cast<ClassTypeInfo>(t0);
-if (!t) return TypeInfo::MANY;
+if (!t) return t0->merge(shared_from_this(), ta);
 if (t->type==type) {
 if (exact==t->exact && optional==t->optional) return shared_from_this();
 else return make_shared<ClassTypeInfo>(type, exact && t->exact, optional || t->optional);
@@ -153,7 +154,7 @@ return cls==cdti->cls && exact==cdti->exact && optional==cdti->optional;
 shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) { 
 if (!t0 || t0->isEmpty()) return shared_from_this();
 t0 = t0->resolve(ta);
-if (t0->isNullOrUndefined(ta.vm)) {
+if (t0->isNullOrUndefined()) {
 if (optional) return shared_from_this();
 else return make_shared<ClassDeclTypeInfo>(cls, exact, true);
 }

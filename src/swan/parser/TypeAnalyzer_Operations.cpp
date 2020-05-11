@@ -68,7 +68,7 @@ typeWarn(e.nearestToken(), "Overwrite with many type");
 auto oldType = e.type;
 e.type = type;
 if (isSameType(type, oldType)) return false;
-if (oldType!=TypeInfo::ANY) typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
+//if (oldType!=TypeInfo::ANY) typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
 return true;
 }
 
@@ -124,12 +124,14 @@ auto it = vm.nativeFuncTypeInfos.find(ptr);
 if (it!=vm.nativeFuncTypeInfos.end()) funcInfo = make_unique<StringFunctionInfo>(*this, it->second.c_str());
 }
 if (funcInfo) {
-shared_ptr<TypeInfo> argtypes[nArgs];
+shared_ptr<TypeInfo> argtypes[nArgs+1];
+receiver->analyze(*this);
+argtypes[0] = receiver->type;
 for (int i=0; i<nArgs; i++) {
 args[i]->analyze(*this);
-argtypes[i] = args[i]->type;
+argtypes[i+1] = args[i]->type;
 }
-return funcInfo->getReturnTypeInfo(nArgs, argtypes);
+return funcInfo->getReturnTypeInfo(nArgs+1, argtypes);
 }
 return TypeInfo::MANY;
 }

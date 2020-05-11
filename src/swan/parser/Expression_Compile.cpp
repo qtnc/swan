@@ -595,8 +595,8 @@ compiler.popScope();
 
 void UnaryOperation::compile (QCompiler& compiler) {
 expr->compile(compiler);
-if (op==T_MINUS && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_NEG);
-else if (op==T_TILDE && type->isNum(compiler.parser.vm)) compiler.writeOp(OP_BINNOT);
+if (op==T_MINUS && type->isNum()) compiler.writeOp(OP_NEG);
+else if (op==T_TILDE && type->isNum()) compiler.writeOp(OP_BINNOT);
 else if (op==T_EXCL) compiler.writeOp(OP_NOT);
 else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(rules[op].prefixOpName));
 }
@@ -604,7 +604,7 @@ else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.fin
 void BinaryOperation::compile  (QCompiler& compiler) {
 left->compile(compiler);
 right->compile(compiler);
-if (left->type->isNum(compiler.parser.vm) && right->type->isNum(compiler.parser.vm) && BASE_OPTIMIZED_OPS[op]) {
+if (left->type->isNum() && right->type->isNum() && BASE_OPTIMIZED_OPS[op]) {
 compiler.writeOp(static_cast<QOpCode>(BASE_OPTIMIZED_OPS[op]));
 }
 else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(rules[op].infixOpName));

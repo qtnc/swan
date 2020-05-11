@@ -300,7 +300,7 @@ ta.pushScope();
 QToken tmpToken = ta.createTempName();
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 ta.findVariable(tmpToken, LV_NEW);
-int re = assignedValue->analyze(ta);
+int re = assignedValue? assignedValue->analyze(ta) :0;
 for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
 shared_ptr<TypeInfo> typeHint = nullptr;
@@ -346,7 +346,7 @@ QToken tmpToken = ta.createTempName();
 ta.findVariable(tmpToken, LV_NEW);
 int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
-int re = assignedValue->analyze(ta);
+int re = assignedValue? assignedValue->analyze(ta) :0;
 vector<shared_ptr<Expression>> allKeys;
 for (auto& item: items) {
 count++;

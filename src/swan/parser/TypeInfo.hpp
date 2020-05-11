@@ -29,11 +29,11 @@ QClass* type;
 bool exact, optional;
 
 ClassTypeInfo (QClass* cls, bool exact=false, bool optional=false);
-bool isNum (QVM& vm) override;
-bool isBool (QVM& vm) override;
-bool isString (QVM& vm) override;
-bool isNull (QVM& vm) override;
-bool isUndefined (QVM& vm) override;
+bool isNum () override;
+bool isBool () override;
+bool isString () override;
+bool isNull () override;
+bool isUndefined () override;
 bool isExact () override { return exact; }
 bool isOptional () override { return optional; }
 std::string toString () override;

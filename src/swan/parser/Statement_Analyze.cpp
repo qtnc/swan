@@ -211,11 +211,11 @@ re |= assignable->analyzeAssignment(ta, var->value);
 return re;
 }//end VariableDeclaration::analyze
 
-/*
 int ImportDeclaration::analyze (TypeAnalyzer& ta) {
+auto imp = imports;
 QV imported = doCompileTimeImport(ta.parser.vm, ta.parser.filename, from);
 if (importAll) {
-if (imported.isNullOrUndefined()) { ta.compileError(nearestToken(), "Can't import * in dynamic import"); return; }
+if (imported.isNullOrUndefined()) return 0;
 auto im = make_shared<LiteralMapExpression>(nearestToken());
 for (auto [key, value]: imported.asObject<QMap>()->map) {
 if (key.isString()) {
@@ -226,20 +226,15 @@ auto cst2 = make_shared<NameExpression>(ctk);
 im->items.push_back(make_pair(cst1, cst2));
 }}
 int flags = VD_NODEFAULT;
-if (ta.parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
 auto vdim = make_shared<Variable>(im, nullptr, flags);
-imports.push_back(vdim);
+imp.push_back(vdim);
 }
-QToken importToken = { T_NAME, "import", 6, QV::UNDEFINED }, fnToken = { T_STRING, "", 0, QV(QString::create(ta.parser.vm, ta.parser.filename), QV_TAG_STRING) };
-auto importName = make_shared<NameExpression>(importToken);
-auto fnConst = make_shared<ConstantExpression>(fnToken);
-vector<shared_ptr<Expression>> importArgs = { fnConst, from };
-auto importCall = make_shared<CallExpression>(importName, importArgs);
-imports[0]->value = importCall;
-make_shared<VariableDeclaration>(imports)->optimizeStatement()->analyze(ta);
+make_shared<VariableDeclaration>(imp)->optimizeStatement()->analyze(ta);
+return false;
 }
 
 
+/*
 void ExportDeclaration::analyze (TypeAnalyzer& ta) {
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 int subscriptSetterSymbol = ta.parser.vm.findMethodSymbol(("[]="));

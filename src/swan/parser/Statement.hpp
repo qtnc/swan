@@ -170,7 +170,7 @@ bool importAll = false;
 std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return from->nearestToken(); }
 void compile (QCompiler& compiler) override;
-int analyze (TypeAnalyzer& ta) override { return false; }
+int analyze (TypeAnalyzer& ta) override;
 };
 
 

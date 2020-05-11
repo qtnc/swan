@@ -1,6 +1,7 @@
 #ifndef ___COMPILER_PARSER_FUNCTION_INFO
 #define ___COMPILER_PARSER_FUNCTION_INFO
 #include "StatementBase.hpp"
+#include "TypeInfo.hpp"
 #include<memory>
 #include<string>
 
@@ -9,8 +10,8 @@ struct TypeAnalyzer;
 
 struct StringFunctionInfo: FunctionInfo {
 struct QVM& vm;
-std::unique_ptr<std::shared_ptr<TypeInfo>[]> types;
-int nArgs, retArg, flags, fieldIndex;
+std::vector<std::shared_ptr<TypeInfo>> types;
+int nArgs, retArg, retCompArg, flags, fieldIndex;
 
 StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr);
 void build (TypeAnalyzer&  ta, const char* str);

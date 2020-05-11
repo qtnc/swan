@@ -236,7 +236,7 @@ classClass
 functionClass
 ->copyParentMethods()
 ->bind("bind", functionBind)
-->bind("name", functionName)
+->bind("name", functionName, "FN")
 ->assoc<QFunction>();
 
 closureClass
@@ -253,36 +253,41 @@ stdFunctionClass
 
 boolClass
 ->copyParentMethods()
-->bind("!", boolNot)
-->bind("toString", boolToString)
+->bind("!", boolNot, "BB")
+->bind("toString", boolToString, "BS")
 ;
 
 nullClass
 ->copyParentMethods()
-->bind("!", returnTrue)
-->bind("toString", nullToString)
-->bind("==", nullEquals)
-->bind("!=", nullNotEquals)
+->bind("!", returnTrue, "OB")
+->bind("toString", nullToString, "OS")
+->bind("==", nullEquals, "OOB")
+->bind("!=", nullNotEquals, "OOB")
 ;
 
 undefinedClass
 ->copyParentMethods()
-->bind("!", returnTrue)
-->bind("toString", undefinedToString)
-->bind("==", nullEquals)
-->bind("!=", nullEquals)
+->bind("!", returnTrue, "OB")
+->bind("toString", undefinedToString, "OS")
+->bind("==", nullEquals, "OOB")
+->bind("!=", nullEquals, "OOB")
 ;
 
 iterableClass
 ->copyParentMethods()
-->bind("iterator", doNothing)
+->bind("iterator", doNothing, "JI")
 ->assoc<QObject>();
+
+iteratorClass
+->copyParentMethods()
+->bind("next", doNothing, "I%0")
+;
 
 fiberClass
 ->copyParentMethods()
-->bind("()", fiberNext)
-->bind("next", fiberNext)
-->bind("iterator", doNothing)
+->bind("()", fiberNext, "*+%0")
+->bind("next", fiberNext, "I%0")
+->bind("iterator", doNothing, "JI")
 ->assoc<QFiber>();
 
 classClass->type
@@ -295,7 +300,7 @@ objectClass->type
 
 boolClass ->type
 ->copyParentMethods()
-->bind("()", boolInstantiate)
+->bind("()", boolInstantiate, "OB")
 ->assoc<QClass>(true);
 
 functionClass ->type
