@@ -155,24 +155,24 @@ f.returnValue(re);
 void QVM::initSetType () {
 setClass
 ->copyParentMethods()
-->bind("&", setIntersection)
-->bind("|", setUnion)
-->bind("-", setDifference)
-->bind("^", setSymetricDifference)
-->bind("iterator", setIterator)
-->bind("toString", setToString)
-->bind("length", setLength)
-->bind("clear", setClear)
-->bind("add", setAdd)
-->bind("remove", setRemove)
-->bind("reserve", setReserve)
-->bind("in", setIn)
-->bind("==", setEquals)
+->bind("&", setIntersection, "ECE1%0CE1%0")
+->bind("|", setUnion, "ECE1%0CE1%0")
+->bind("-", setDifference, "ECE1%0CE1%0")
+->bind("^", setSymetricDifference, "ECE1%0CE1%0")
+->bind("iterator", setIterator, "ECI1%0")
+->bind("toString", setToString, "ES")
+->bind("length", setLength, "EN")
+->bind("clear", setClear, "EU")
+->bind("add", setAdd, "E%0+B")
+->bind("remove", setRemove, "E%0%0")
+->bind("reserve", setReserve, "EN@0")
+->bind("in", setIn, "E%0B")
+->bind("==", setEquals, "EOB")
 ->assoc<QSet>();
 
 setIteratorClass
 ->copyParentMethods()
-->bind("next", setIteratorNext)
+->bind("next", setIteratorNext, "O%0")
 ->assoc<QSetIterator>();
 
 setClass ->type

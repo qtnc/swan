@@ -173,8 +173,8 @@ numClass
 ->bind("toString", numToString, "NS")
 ->bind("toJSON", numToJSON)
 ->bind("format", numFormat, "NN?S?S?N?N?S") 
-->bind("..", numToRange)
-->bind("...", numToRangeClosed)
+->bind("..", numToRange, "NNR")
+->bind("...", numToRangeClosed, "NNR")
 ;
 
 numClass ->type

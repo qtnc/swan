@@ -101,13 +101,13 @@ F(sqrt) F(cbrt)
 F(log2) F(log10) F(log1p)
 F(erf) F(tgamma) F(lgamma)
 #undef F
-#define F(X) bindGlobal(#X, numMathFunc2P<X>, "NT<NN>");
+#define F(X) bindGlobal(#X, numMathFunc2P<X>, "NCT2NN");
 F(modf) F(frexp)
 #undef F
 #define F(X) bindGlobal(#X, numRoundingFunc<X>, "NNN");
 F(floor) F(ceil) F(round) F(trunc)
 #undef F
-#define F(X) bindGlobal(#X, num_##X);
+#define F(X) bindGlobal(#X, num_##X, "NNN");
 F(atan2) F(ldexp)
 F(nexttoward) F(nextafter)
 F(phi)

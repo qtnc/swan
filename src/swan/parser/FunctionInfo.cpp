@@ -11,7 +11,7 @@ auto rt = fti.getReturnTypeInfo(nPassedArgs, passedArgs);
 vector<shared_ptr<TypeInfo>> subtypes;
 subtypes.resize(nArgs+1);
 for (int i=0; i<nArgs; i++) {
-auto ati = fti.getArgTypeInfo(i);
+auto ati = fti.getArgTypeInfo(i, nPassedArgs, passedArgs);
 subtypes[i] = ati?ati:TypeInfo::MANY;
 }
 subtypes[nArgs] = rt?rt:TypeInfo::MANY;
@@ -50,34 +50,27 @@ case 'L': case 'l': return make_shared<ClassTypeInfo>(ta.vm.listClass);
 case 'M': case 'm': return make_shared<ClassTypeInfo>(ta.vm.mapClass);
 case 'N': case 'n': return make_shared<ClassTypeInfo>(ta.vm.numClass);
 case 'O': case 'o': return make_shared<ClassTypeInfo>(ta.vm.objectClass);
+case 'R': case 'r': return make_shared<ClassTypeInfo>(ta.vm.rangeClass);
 case 'S': case 's': return make_shared<ClassTypeInfo>(ta.vm.stringClass);
 case 'T': case 't': return make_shared<ClassTypeInfo>(ta.vm.tupleClass);
 case 'U': case 'u': return make_shared<ClassTypeInfo>(ta.vm.undefinedClass);
-case '@':
-retArg = strtoul(str, const_cast<char**>(&str), 10);
-continue;
+case '@': return make_shared<SubindexTypeInfo>(0x100 + strtoul(str, const_cast<char**>(&str), 10));
+case '%': return make_shared<SubindexTypeInfo>(strtoul(str, const_cast<char**>(&str), 10));
 case '_':
 fieldIndex = strtoul(str, const_cast<char**>(&str), 10);
 continue;
-case '%':
-retCompArg = strtoul(str, const_cast<char**>(&str), 10);
-continue;
-case 'Q': case '$': {
+case 'Q': case 'q': case '$': {
 const char* b = str;
 while(str&&*str&&*str!=';') ++str;
 QToken tok = { T_NAME, b, static_cast<size_t>(str-b), QV::UNDEFINED };
 return make_shared<NamedTypeInfo>(tok)->resolve(ta);
 }
-case 'C': {
+case 'C': case 'c': {
 auto type = readNextTypeInfo(ta, str);
+auto count = strtoul(str, const_cast<char**>(&str), 10);
 vector<shared_ptr<TypeInfo>> subtypes;
-if (*str=='<') {
-str++;
-while(str&&*str&&*str!='>') {
-subtypes.push_back(readNextTypeInfo(ta, str));
-}
-str++;
-}
+subtypes.reserve(count);
+for (int i=0; i<count; i++)  subtypes.push_back(readNextTypeInfo(ta, str));
 return make_shared<ComposedTypeInfo>(type, subtypes);
 }
 default: return TypeInfo::MANY;
@@ -85,22 +78,32 @@ default: return TypeInfo::MANY;
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> StringFunctionInfo::getReturnTypeInfo (int na,  std::shared_ptr<TypeInfo>* ptr) {
-if (retCompArg>=0) println("retCompArg=%d, na=%d, ptr=%s(%s)", retCompArg, na, ptr&&na>0?(*ptr)->toString():"", ptr&&na>0?typeid(**ptr).name():"<null>");
-if (retCompArg>=0 && ptr && na>0) {
-auto cti = dynamic_pointer_cast<ComposedTypeInfo>(*ptr);
-if (cti && cti->countSubtypes()>retCompArg) return cti->subtypes[retCompArg];
+shared_ptr<TypeInfo> handleSubindex (shared_ptr<TypeInfo> type, int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
+if (auto itp = dynamic_pointer_cast<SubindexTypeInfo>(type)) {
+if (itp->index >= 0x100 && nPassedArgs>itp->index -0x100) return passedArgs[itp->index -0x100];
+else if (itp->index < 0x100 && nPassedArgs>0) {
+if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(*passedArgs)) {
+if (cti->countSubtypes()>itp->index) return cti->subtypes[itp->index];
+}}
+return TypeInfo::MANY;
 }
-if (retArg>=0 && ptr && na>=retArg) return ptr[retArg];
-else if (types.size()) return types[nArgs];
+else if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(type)) {
+cti->type = handleSubindex(cti->type, nPassedArgs, passedArgs);
+for (auto& subtype: cti->subtypes) subtype = handleSubindex(subtype, nPassedArgs, passedArgs);
+}
+return type;
+}
+
+std::shared_ptr<TypeInfo> StringFunctionInfo::getReturnTypeInfo (int nPassedArgs,  std::shared_ptr<TypeInfo>* passedArgs) {
+if (types.size()) return handleSubindex(types[nArgs], nPassedArgs, passedArgs);
 else return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> StringFunctionInfo::getArgTypeInfo (int n) {
-if (types.size() && n>=0 && n<nArgs) return types[n];
+std::shared_ptr<TypeInfo> StringFunctionInfo::getArgTypeInfo (int n, int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
+if (types.size() && n>=0 && n<nArgs) return handleSubindex(types[n], nPassedArgs, passedArgs);
 else return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> StringFunctionInfo::getFunctionTypeInfo (int na, std::shared_ptr<TypeInfo>* ptr) {
-return ::getFunctionTypeInfo(*this, vm, na, ptr);
+std::shared_ptr<TypeInfo> StringFunctionInfo::getFunctionTypeInfo (int nPassedArgs, std::shared_ptr<TypeInfo>* passedArgs) {
+return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs);
 }

@@ -97,19 +97,19 @@ f.returnValue(re);
 void QVM::initHeapType () {
 heapClass
 ->copyParentMethods()
-->bind("iterator", heapIterator)
-->bind("toString", heapToString)
-->bind("length", heapLength)
-->bind("clear", heapClear)
-->bind("push", heapPush)
-->bind("remove", heapRemove)
-->bind("pop", heapPop)
-->bind("first", heapFirst)
+->bind("iterator", heapIterator, "OCI1%0")
+->bind("toString", heapToString, "OS")
+->bind("length", heapLength, "ON")
+->bind("clear", heapClear, "OU")
+->bind("push", heapPush, "O%0+@0")
+->bind("remove", heapRemove, "O%0%0")
+->bind("pop", heapPop, "O%0")
+->bind("first", heapFirst, "O%0")
 ->assoc<QHeap>();
 
 heapIteratorClass
 ->copyParentMethods()
-->bind("next", heapIteratorNext)
+->bind("next", heapIteratorNext, "O%0")
 ->assoc<QHeapIterator>();
 
 heapClass ->type

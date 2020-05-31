@@ -42,8 +42,8 @@ f.returnValue(re);
 
 void QVM::initIterableType () {
 iterableClass
-->bind("join", iterableJoin)
-->bind("+", iterablePlus)
+->bind("join", iterableJoin, "OSS")
+->bind("+", iterablePlus, "ON@0")
 ->bind("toJSON", iterableToJSON)
 ->assoc<QObject>();
 }

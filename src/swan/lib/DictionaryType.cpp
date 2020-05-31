@@ -162,24 +162,24 @@ dic.map.clear();
 void QVM::initDictionaryType () {
 dictionaryClass
 ->copyParentMethods()
-->bind("[]", dictionarySubscript)
-->bind("[]=", dictionarySubscriptSetter)
-->bind("in", dictionaryIn)
-->bind("length", dictionaryLength)
-->bind("toString", dictionaryToString)
-->bind("iterator", dictionaryIterator)
-->bind("clear", dictionaryClear)
-->bind("remove", dictionaryRemove)
-->bind("lower", dictionaryLowerBound)
-->bind("upper", dictionaryUpperBound)
-->bind("put", dictionaryPut)
+->bind("[]", dictionarySubscript, "O%0%1")
+->bind("[]=", dictionarySubscriptSetter, "O%0%1%1")
+->bind("in", dictionaryIn, "O%0B")
+->bind("length", dictionaryLength, "ON")
+->bind("toString", dictionaryToString, "OS")
+->bind("iterator", dictionaryIterator, "OCI1CT2%0%1")
+->bind("clear", dictionaryClear, "OU")
+->bind("remove", dictionaryRemove, "O%0%1")
+->bind("lower", dictionaryLowerBound, "O%0%0")
+->bind("upper", dictionaryUpperBound, "O%0%0")
+->bind("put", dictionaryPut, "O%0%1%1")
 ->assoc<QDictionary>();
 
 dictionaryIteratorClass
 ->copyParentMethods()
-->bind("next", dictionaryIteratorNext)
-->bind("previous", dictionaryIteratorPrevious)
-->bind("remove", dictionaryIteratorRemove)
+->bind("next", dictionaryIteratorNext, "O%0")
+->bind("previous", dictionaryIteratorPrevious, "O%0")
+->bind("remove", dictionaryIteratorRemove, "O%0")
 ->assoc<QDictionaryIterator>();
 
 dictionaryClass ->type

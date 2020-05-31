@@ -24,6 +24,17 @@ virtual std::string toBinString (QVM& vm) override { return "#"; }
 virtual bool equals (const std::shared_ptr<TypeInfo>& other) { return !!std::dynamic_pointer_cast<ManyTypeInfo>(other); }
 };
 
+struct SubindexTypeInfo: TypeInfo {
+int index;
+SubindexTypeInfo (int i): index(i) {}
+virtual std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t, TypeAnalyzer& ta) override { return shared_from_this(); }
+std::string toString () override;
+std::string toBinString (QVM& vm) override ;
+virtual bool equals (const std::shared_ptr<TypeInfo>& other) { 
+if (auto o = std::dynamic_pointer_cast<SubindexTypeInfo>(other)) return o->index==index;
+else return false;
+}};
+
 struct ClassTypeInfo: TypeInfo {
 QClass* type;
 bool exact, optional;

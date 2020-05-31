@@ -275,7 +275,7 @@ undefinedClass
 
 iterableClass
 ->copyParentMethods()
-->bind("iterator", doNothing, "JI")
+->bind("iterator", doNothing, "J@0")
 ->assoc<QObject>();
 
 iteratorClass
@@ -287,7 +287,7 @@ fiberClass
 ->copyParentMethods()
 ->bind("()", fiberNext, "*+%0")
 ->bind("next", fiberNext, "I%0")
-->bind("iterator", doNothing, "JI")
+->bind("iterator", doNothing, "J@0")
 ->assoc<QFiber>();
 
 classClass->type
@@ -300,7 +300,7 @@ objectClass->type
 
 boolClass ->type
 ->copyParentMethods()
-->bind("()", boolInstantiate, "OB")
+->bind("()", boolInstantiate, "OOB")
 ->assoc<QClass>(true);
 
 functionClass ->type

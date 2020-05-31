@@ -166,7 +166,7 @@ re |= ta.assignType(*this, finalType);
 return re;
 }
 
-std::shared_ptr<TypeInfo> FunctionDeclaration::getArgTypeInfo (int n) {
+std::shared_ptr<TypeInfo> FunctionDeclaration::getArgTypeInfo (int n, int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
 auto& p = params[n];
 if (p->type) return p->type;
 else return TypeInfo::MANY;

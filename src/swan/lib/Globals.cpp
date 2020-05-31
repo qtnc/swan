@@ -119,7 +119,7 @@ boolClass, classClass, fiberClass, functionClass, iterableClass, iteratorClass, 
 for (auto cls: globalClasses) bindGlobal(cls->name.str(), cls);
 
 bindGlobal("import", import_);
-bindGlobal("format", stringFormat);
+bindGlobal("format", stringFormat, "SO+S");
 
 #ifndef NO_REFLECT
 bindGlobal("loadMethod", loadMethod);

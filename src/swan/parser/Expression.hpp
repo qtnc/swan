@@ -323,10 +323,10 @@ std::shared_ptr<Expression> optimize  () override;
 bool isDecorable () override { return true; }
 int analyze (TypeAnalyzer& ta) override;
 int analyzeParams (TypeAnalyzer& ta);
-std::shared_ptr<TypeInfo> getReturnTypeInfo (int nArgs, std::shared_ptr<TypeInfo>* ptr) override { return returnType; }
-std::shared_ptr<TypeInfo> getArgTypeInfo (int n) override;
+std::shared_ptr<TypeInfo> getReturnTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return returnType; }
+std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override;
 int getArgCount () override { return params.size(); }
-std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nArgs = 0, std::shared_ptr<TypeInfo>* ptr = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nArgs, ptr); }
+std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs); }
 int getFlags () override { return flags; }
 int getFieldIndex () override { return iField; }
 };

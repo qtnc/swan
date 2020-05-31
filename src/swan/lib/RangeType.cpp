@@ -99,23 +99,23 @@ else f.returnValue(format("Range(%g, %g, %g, %s)", r.start, r.end, r.step, r.inc
 void QVM::initRangeType () {
 rangeClass
 ->copyParentMethods()
-->bind("iterator", rangeIterator)
-->bind("toString", rangeToString)
-->bind("in", rangeIn)
-->bind("[]", rangeSubscript)
-->bind("start", rangeStart)
-->bind("end", rangeEnd)
-->bind("step", rangeStep)
+->bind("iterator", rangeIterator, "RCI1N")
+->bind("toString", rangeToString, "RS")
+->bind("in", rangeIn, "ROB")
+->bind("[]", rangeSubscript, "RNN")
+->bind("start", rangeStart, "RN")
+->bind("end", rangeEnd, "RN")
+->bind("step", rangeStep, "RN")
 ->assoc<QRange>();
 
 rangeIteratorClass
 ->copyParentMethods()
-->bind("next", rangeIteratorNext)
-->bind("previous", rangeIteratorPrevious)
+->bind("next", rangeIteratorNext, "ON")
+->bind("previous", rangeIteratorPrevious, "ON")
 ->assoc<QRangeIterator>();
 
 rangeClass ->type
 ->copyParentMethods()
-->bind("()", rangeInstantiate)
+->bind("()", rangeInstantiate, "ONN?N?R")
 ->assoc<QClass>();
 }

@@ -127,19 +127,19 @@ void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
 ->bind("[]", tupleSubscript)
-->bind("iterator", tupleIterator)
-->bind("length", tupleLength)
-->bind("toString", tupleToString)
-->bind("hashCode", tupleHashCode)
-->bind("*", tupleTimes)
-->bind("==", tupleEquals)
-->bind("<=>", tupleCompare)
+->bind("iterator", tupleIterator, "TCI1O")
+->bind("length", tupleLength, "TN")
+->bind("toString", tupleToString, "TS")
+->bind("hashCode", tupleHashCode, "TN")
+->bind("*", tupleTimes, "TNT")
+->bind("==", tupleEquals, "TTB")
+->bind("<=>", tupleCompare, "TTN")
 ->assoc<QTuple>();
 
 tupleIteratorClass
 ->copyParentMethods()
-->bind("next", tupleIteratorNext)
-->bind("previous", tupleIteratorPrevious)
+->bind("next", tupleIteratorNext, "OO")
+->bind("previous", tupleIteratorPrevious, "OO")
 ->assoc<QTupleIterator>();
 
 tupleClass ->type

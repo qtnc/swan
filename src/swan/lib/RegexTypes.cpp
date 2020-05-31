@@ -163,33 +163,33 @@ f.returnValue(re);
 void QVM::initRegexTypes () {
 regexClass
 ->copyParentMethods()
-->bind("test", regexTest)
-->bind("length", regexLength)
+->bind("test", regexTest, "OSB")
+->bind("length", regexLength, "ON")
 ->assoc<QRegex>();
 
 regexMatchResultClass
 ->copyParentMethods()
-->bind("[]", regexMatchResultSubscript)
-->bind("start", regexMatchResultStart)
-->bind("end", regexMatchResultEnd)
-->bind("length", regexMatchResultLength)
+->bind("[]", regexMatchResultSubscript, "OOS")
+->bind("start", regexMatchResultStart, "OON")
+->bind("end", regexMatchResultEnd, "OON")
+->bind("length", regexMatchResultLength, "ON")
 ->assoc<QRegexMatchResult>();
 
 regexIteratorClass
 ->copyParentMethods()
-->bind("iterator", doNothing)
-->bind("next", regexIteratorNext)
+->bind("iterator", doNothing, "O@0")
+->bind("next", regexIteratorNext, "OO")
 ->assoc<QRegexIterator>();
 
 regexTokenIteratorClass
 ->copyParentMethods()
-->bind("iterator", doNothing)
-->bind("next", regexTokenIteratorNext)
+->bind("iterator", doNothing, "O@0")
+->bind("next", regexTokenIteratorNext, "OO")
 ->assoc<QRegexTokenIterator>();
 
 regexClass ->type
 ->copyParentMethods()
-->bind("()", regexInstantiate)
+->bind("()", regexInstantiate, "OSS?QRegex;")
 ->assoc<QClass>();
 }
 #endif

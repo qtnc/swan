@@ -129,23 +129,23 @@ f.returnValue(re);
 void QVM::initLinkedListType () {
 linkedListClass
 ->copyParentMethods()
-->bind("push", linkedListPush)
-->bind("pop", linkedListPop)
-->bind("shift", linkedListShift)
-->bind("unshift", linkedListUnshift)
-->bind("remove", linkedListRemove)
-->bind("removeIf", linkedListRemoveIf)
-->bind("toString", linkedListToString)
-->bind("iterator", linkedListIterator)
+->bind("push", linkedListPush, "O%0+@0")
+->bind("pop", linkedListPop, "O%0")
+->bind("shift", linkedListShift, "O%0")
+->bind("unshift", linkedListUnshift, "O%0@0")
+->bind("remove", linkedListRemove, "O%0%0")
+->bind("removeIf", linkedListRemoveIf, "OCF2%0B@0")
+->bind("toString", linkedListToString, "OS")
+->bind("iterator", linkedListIterator, "OCI1%0")
 ->assoc<QLinkedList>();
 
 linkedListIteratorClass
 ->copyParentMethods()
-->bind("next", linkedListIteratorNext)
-->bind("previous", linkedListIteratorPrevious)
-->bind("add", linkedListIteratorInsert)
-->bind("insert", linkedListIteratorInsert)
-->bind("remove", linkedListIteratorRemove)
+->bind("next", linkedListIteratorNext, "O%0")
+->bind("previous", linkedListIteratorPrevious, "O%0")
+->bind("add", linkedListIteratorInsert, "O%0@0")
+->bind("insert", linkedListIteratorInsert, "O%0@0")
+->bind("remove", linkedListIteratorRemove, "O%0")
 ->assoc<QLinkedListIterator>();
 
 linkedListClass ->type

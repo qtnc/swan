@@ -370,12 +370,12 @@ stringClass
 ->copyParentMethods()
 ->bind("toString", doNothing, "SS")
 ->bind("toJSON", stringToJSON)
-->bind("+", stringPlus, "SSS")
+->bind("+", stringPlus, "SOS")
 ->bind("in", stringIn, "SSB")
 ->bind("hashCode", stringHashCode, "SN")
 ->bind("length", stringLength, "SN")
-->bind("[]", stringSubscript)
-->bind("iterator", stringIterator)
+->bind("[]", stringSubscript, "SNS")
+->bind("iterator", stringIterator, "SCI1S")
 ->bind("<=>", stringCmp3Way, "SSN")
 ->bind("==", stringCmpEq, "SSB")
 ->bind("!=", stringCmpNeq, "SSB")
@@ -415,13 +415,13 @@ OP(>=, Gte)
 
 stringIteratorClass
 ->copyParentMethods()
-->bind("next", stringIteratorNext)
-->bind("previous", stringIteratorPrevious)
+->bind("next", stringIteratorNext, "OS")
+->bind("previous", stringIteratorPrevious, "OS")
 ->assoc<QStringIterator>();
 
 stringClass->type
 ->copyParentMethods()
-->bind("()", stringInstantiate)
+->bind("()", stringInstantiate, "OOS")
 ->assoc<QClass>();
 }
 

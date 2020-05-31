@@ -6,8 +6,15 @@
 using namespace std;
 
 shared_ptr<TypeInfo> TypeInfo::ANY = make_shared<AnyTypeInfo>();
-
 shared_ptr<TypeInfo> TypeInfo::MANY = make_shared<ManyTypeInfo>();
+
+string SubindexTypeInfo::toString () {
+return format("%c%d", index>=0x100? '@' : '%', index&0xFF);
+}
+
+string SubindexTypeInfo::toBinString (QVM& vm) {
+return format("%c%d", index>=0x100? '@' : '%', index&0xFF);
+}
 
 ClassTypeInfo::ClassTypeInfo (QClass* c1, bool ex, bool op):
 type(c1), exact(ex), optional(op) {

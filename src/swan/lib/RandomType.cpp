@@ -99,9 +99,9 @@ f.returnValue(re);
 void QVM::initRandomType () {
 randomClass
 ->copyParentMethods()
-->bind("()", randomCall )
-->bind("reset", randomSeed)
-->bind("normal", randomNormal)
+->bind("()", randomCall)
+->bind("reset", randomSeed, "ON@0")
+->bind("normal", randomNormal, "OON?N")
 ->assoc<QRandom>();
 
 randomClass ->type

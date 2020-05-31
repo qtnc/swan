@@ -113,20 +113,20 @@ mappingClass
 
 mapClass
 ->copyParentMethods()
-->bind("[]", mapSubscript)
-->bind("[]=", mapSubscriptSetter)
-->bind("in", mapIn)
-->bind("length", mapLength)
-->bind("toString", mapToString)
-->bind("iterator", mapIterator)
-->bind("clear", mapClear)
-->bind("remove", mapRemove)
-->bind("reserve", mapReserve)
+->bind("[]", mapSubscript, "M%0%1")
+->bind("[]=", mapSubscriptSetter, "M%0%1%1")
+->bind("in", mapIn, "M%0B")
+->bind("length", mapLength, "MN")
+->bind("toString", mapToString, "MS")
+->bind("iterator", mapIterator, "MCI1CT2%0%1")
+->bind("clear", mapClear, "MU")
+->bind("remove", mapRemove, "M%0%1")
+->bind("reserve", mapReserve, "MN@0")
 ->assoc<QMap>();
 
 mapIteratorClass
 ->copyParentMethods()
-->bind("next", mapIteratorNext)
+->bind("next", mapIteratorNext, "O%0")
 ->assoc<QMapIterator>();
 
 mappingClass->type
