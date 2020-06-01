@@ -87,6 +87,8 @@ if (match(T_GT)) func->flags |= FD_METHOD;
 if (match(T_STAR)) func->flags |= FD_FIBER;
 else if (match(T_AMP)) flags |= FD_ASYNC;
 parseFunctionParameters(func);
+if (match(T_CONST)) flags |= FD_PURE;
+if (match(T_FINAL)) flags |= FD_FINAL;
 match(T_COLON);
 func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);

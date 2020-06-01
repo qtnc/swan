@@ -896,7 +896,8 @@ lastExpr = static_pointer_cast<Expression>(body);
 if (auto fe = dynamic_pointer_cast<FieldExpression>(body)) {
 flags|=FD_GETTER;
 iField = compiler.curClass->findField(fe->token);
-}}
+}
+}//is expression
 else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
 if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
 }
@@ -904,6 +905,10 @@ if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr 
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->vararg = (flags&FD_VARARG);
+func->final = flags&FD_FINAL;
+func->pure = flags&FD_PURE;
+func->fieldGetter = flags&FD_GETTER;
+func->fieldSetter = flags&FD_SETTER;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";

@@ -51,6 +51,7 @@ template<class... A> inline void typeWarn (const QToken& token, const char* fmt,
 template<class... A> inline void typeInfo (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::INFO, format(fmt, args...)); }
 
 TypeAnalyzer (QParser& p, TypeAnalyzer* pa = nullptr): vm(p.vm), parser(p), parent(pa), curClass(nullptr)  {}
+void report  (std::shared_ptr<Expression> expr);
 };
 
 #endif

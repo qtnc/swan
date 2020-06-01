@@ -368,7 +368,7 @@ void stringReplaceWithRegex (QFiber& f);
 void QVM::initStringType () {
 stringClass
 ->copyParentMethods()
-->bind("toString", doNothing, "SS")
+->bind("toString", doNothing, "O@0")
 ->bind("toJSON", stringToJSON)
 ->bind("+", stringPlus, "SOS")
 ->bind("in", stringIn, "SSB")
@@ -380,7 +380,7 @@ stringClass
 ->bind("==", stringCmpEq, "SSB")
 ->bind("!=", stringCmpNeq, "SSB")
 
-#define OP(O,N) ->bind(#N, stringCmp##N, "SSB")
+#define OP(O,N) ->bind(#O, stringCmp##N, "SSB")
 OP(<, Lt) 
 OP(>, Gt) 
 OP(<=, Lte) 
@@ -399,14 +399,14 @@ OP(>=, Gte)
 ->bind("codePointAt", stringCodePointAt, "SNN")
 ->bind("*", stringTimes, "SNS")
 #ifndef NO_REGEX
-->bind("search", stringSearch)
-->bind("split", stringSplitWithRegex)
-->bind("replace", stringReplaceWithRegex)
-->bind("findAll", stringFindAll)
+->bind("search", stringSearch, "SQRegex;N?B?O")
+->bind("split", stringSplitWithRegex, "SQRegex;CI1O")
+->bind("replace", stringReplaceWithRegex, "SQRegex;OS")
+->bind("findAll", stringFindAll, "SQRegex;O?CI1O")
 #else
-->bind("search", stringIndexOf)
-->bind("split", stringSplitWithoutRegex)
-->bind("replace", stringReplaceWithoutRegex)
+->bind("search", stringIndexOf, "SSN?N")
+->bind("split", stringSplitWithoutRegex, "SSCL1S")
+->bind("replace", stringReplaceWithoutRegex, "SSSS")
 #endif
 ->bind("fill", stringFill, "SSNN?S")
 ->bind("trim", stringTrim, "SS")

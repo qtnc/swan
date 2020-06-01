@@ -20,6 +20,8 @@ Some people take the number of keywords to grade the complexity of a language.
 * else
 * export
 * false
+* final
+* finally
 * for
 * function
 * global
@@ -44,6 +46,12 @@ Some people take the number of keywords to grade the complexity of a language.
 * with
 * while
 * yield
+
+The following keywords are reserved for potential future use:
+
+* private
+* protected
+* public
 
 ## Literal values and basic types
 ### Numbers

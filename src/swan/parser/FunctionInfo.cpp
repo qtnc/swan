@@ -84,7 +84,8 @@ if (itp->index >= 0x100 && nPassedArgs>itp->index -0x100) return passedArgs[itp-
 else if (itp->index < 0x100 && nPassedArgs>0) {
 if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(*passedArgs)) {
 if (cti->countSubtypes()>itp->index) return cti->subtypes[itp->index];
-}}
+}
+}
 return TypeInfo::MANY;
 }
 else if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(type)) {
@@ -95,6 +96,9 @@ return type;
 }
 
 std::shared_ptr<TypeInfo> StringFunctionInfo::getReturnTypeInfo (int nPassedArgs,  std::shared_ptr<TypeInfo>* passedArgs) {
+print("Return type of: ");
+for (auto& t: types) print("%s, ", t?t->toString():"<null>");
+println("");
 if (types.size()) return handleSubindex(types[nArgs], nPassedArgs, passedArgs);
 else return TypeInfo::MANY;
 }

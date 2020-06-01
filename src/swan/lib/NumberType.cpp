@@ -168,7 +168,7 @@ numClass
 ->bind("^", numBinXor, "NNN")
 ->bind("~", numBinNot, "NNN")
 ->bind("unm", numNeg, "NN")
-->bind("unp", doNothing, "NN")
+->bind("unp", doNothing, "O@0")
 ->bind("<=>", numMinus, "NNN")
 ->bind("toString", numToString, "NS")
 ->bind("toJSON", numToJSON)

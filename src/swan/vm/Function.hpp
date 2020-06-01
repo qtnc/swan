@@ -29,7 +29,7 @@ union {
 uint8_t flags;
 struct {
 bool vararg: 1, fieldGetter: 1, fieldSetter: 1, 
-constant: 1, final: 1, overridden: 1;
+pure: 1, final: 1, overridden: 1;
 }; };
 QV constants[];
 

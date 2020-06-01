@@ -25,7 +25,8 @@
 #define FD_METHOD 4
 #define FD_STATIC 8
 #define FD_ASYNC 16
-#define FD_CONST 0x200
+#define FD_PURE 0x100
+#define FD_READ_ONLY 0x200
 #define FD_GETTER 0x400
 #define FD_SETTER 0x800
 #define FD_FINAL 0x2000
@@ -59,9 +60,5 @@ CR_SUCCESS,
 CR_FAILED,
 CR_INCOMPLETE
 };
-
-#define TP_OTHER 0
-#define TP_NUM 1
-#define TP_BOOL 2
 
 #endif

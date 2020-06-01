@@ -184,3 +184,7 @@ if (n>0) return ct->subtypes[n -1];
 }
 return TypeInfo::MANY;
 }
+
+void TypeAnalyzer::report (shared_ptr<Expression> expr) {
+typeInfo(expr->nearestToken(), "Expr type = %s", expr->type? expr->type->toString() : "<null>");
+}

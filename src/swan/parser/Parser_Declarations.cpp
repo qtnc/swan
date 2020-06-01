@@ -138,8 +138,8 @@ parseMethodDecl(cls, flags | FD_ASYNC);
 }
 
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, int flags) {
-if (cur.type==T_CONST) flags |= FD_CONST;
-if (flags&FD_CONST) match(T_VAR);
+if (cur.type==T_CONST) flags |= FD_READ_ONLY;
+if (flags&FD_READ_ONLY) match(T_VAR);
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
@@ -174,7 +174,7 @@ getter->flags |= FD_GETTER;
 setter->iField = fieldIndex;
 setter->flags |= FD_SETTER;
 cls.methods.push_back(getter);
-if (!(flags&FD_CONST)) cls.methods.push_back(setter);
+if (!(flags&FD_READ_ONLY)) cls.methods.push_back(setter);
 } while (match(T_COMMA));
 }
 

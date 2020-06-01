@@ -149,9 +149,10 @@ return re;
 int BinaryOperation::analyze (TypeAnalyzer& ta) {
 shared_ptr<TypeInfo> finalType = nullptr;
 int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0);
-if (op>=T_EQEQ && op<=T_GTE) finalType = make_shared<ClassTypeInfo>(ta.parser.vm.boolClass);
+if (op>=T_EQEQ && op<=T_GTE) finalType = make_shared<ClassTypeInfo>(ta.vm.boolClass);
 else if (op>=T_EQ && op<=T_BARBAREQ) finalType = right->type;
-else if (op==T_LTEQGT) finalType = make_shared<ClassTypeInfo>(ta.parser.vm.numClass);
+else if (op==T_LTEQGT) finalType = make_shared<ClassTypeInfo>(ta.vm.numClass);
+if ((op==T_DOTDOT || op==T_DOTDOTDOT) && left->type && right->type && left->type->isNum() && right->type->isNum()) finalType = make_shared<ClassTypeInfo>(ta.parser.vm.rangeClass);
 else finalType = left->type;
 re |= ta.assignType(*this, finalType);
 return re;

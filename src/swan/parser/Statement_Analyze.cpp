@@ -127,13 +127,14 @@ QToken iteratorToken = { T_NAME, "iterator", 8, QV::UNDEFINED };
 QToken nextToken = { T_NAME, "next", 4, QV::UNDEFINED };
 auto inVar = make_shared<NameExpression>(ta.createTempName());
 ta.findVariable(inVar->token, LV_NEW);
-BinaryOperation::create(inVar, T_EQ, BinaryOperation::create(inExpression, T_DOT, make_shared<ConstantExpression>(iteratorToken)))->optimize()->analyze(ta);
+BinaryOperation::create(inVar, T_EQ, BinaryOperation::create(inExpression, T_DOT, make_shared<NameExpression>(iteratorToken))) ->optimize() ->analyze(ta);
 ta.pushScope();
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
 if (destructuring) loopVariable = make_shared<NameExpression>(ta.createTempName());
 ta.findVariable(loopVariable->token, LV_NEW);
-BinaryOperation::create(loopVariable, T_EQ, BinaryOperation::create(inVar, T_DOT, make_shared<ConstantExpression>(nextToken)))->optimize()->analyze(ta);
+auto nextCallExpr = BinaryOperation::create(inVar, T_DOT, make_shared<NameExpression>(nextToken));
+BinaryOperation::create(loopVariable, T_EQ, nextCallExpr) ->optimize() ->analyze(ta);
 if (destructuring) {
 loopVariables[0]->value = loopVariable;
 re |= make_shared<VariableDeclaration>(loopVariables)->optimizeStatement()->analyze(ta);
