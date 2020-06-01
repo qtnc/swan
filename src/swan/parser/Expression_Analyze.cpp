@@ -256,10 +256,7 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-uint64_t fflags = 0;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &fflags));
-//if (fflags&2) ta.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
-//else ta.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &funcflags));
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -268,8 +265,7 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-uint64_t fflags = 0;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fflags));
+auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &funcflags));
 re |= ta.assignType(*this, finalType);
 return re;
 }}
@@ -281,15 +277,9 @@ int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0) | (assign
 shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
-uint64_t fflags = 0;
 string sName = string(setter->token.start, setter->token.length) + ("=");
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
-auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fflags);
-//if (fflags&4) {
-//ta.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-//ta.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
-//}
-//else ta.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
+auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &funcflags);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -415,7 +405,7 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 re |= expr->analyze(ta);
-auto finalType = ta.resolveCallType(thisExpr, name->token, args.size(), &args[0]);
+auto finalType = ta.resolveCallType(thisExpr, name->token, args.size(), &args[0], &funcflags);
 re |= ta.assignType(*this, finalType);
 return re;
 }}
@@ -425,7 +415,7 @@ QToken tmptok = { T_NAME, 0, 0, gval  };
 type = ta.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
 }
 else */
-auto finalType = ta.resolveCallType(receiver, args.size(), &args[0]);
+auto finalType = ta.resolveCallType(receiver, args.size(), &args[0], &funcflags);
 re |= ta.assignType(*this, finalType);
 return re;
 }

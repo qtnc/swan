@@ -4,8 +4,7 @@
 
 QFunction::QFunction (QVM& vm): 
 QObject(vm.functionClass), 
-nArgs(0), vararg(false), 
-iField(0), fieldGetter(false), fieldSetter(false),
+nArgs(0), flags(), 
 upvalues(nullptr), bytecode(nullptr), bytecodeEnd(nullptr)
 {}
 

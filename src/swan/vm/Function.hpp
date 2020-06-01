@@ -1,5 +1,6 @@
 #ifndef _____SWAN_FUNCTION_HPP_____
 #define _____SWAN_FUNCTION_HPP_____
+#include "FunctionFlags.hpp"
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
@@ -24,13 +25,7 @@ union { char* bytecodeEnd; DebugItem* debugItems; };
 union { DebugItem* debugItemsEnd; };
 c_string name, file, typeInfo;
 uint_local_index_t nArgs;
-uint_field_index_t iField;
-union {
-uint8_t flags;
-struct {
-bool vararg: 1, fieldGetter: 1, fieldSetter: 1, 
-pure: 1, final: 1, overridden: 1;
-}; };
+FunctionFlags flags;
 QV constants[];
 
 static QFunction* create (QVM& vm, int nArgs, int nConstants, int nUpvalues, int bcSize, int nDebugItems = 0);

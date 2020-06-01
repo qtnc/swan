@@ -681,12 +681,11 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-uint64_t fflags = 0;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-//type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, 0, nullptr, !!super, &fflags));
-if (fflags&2) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
-else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+//if (fflags&2) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
+//else 
+compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
@@ -694,13 +693,11 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-uint64_t fflags = 0;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
 call->compileArgs(compiler);
-//type = compiler.mergeTypes(type, compiler.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fflags));
 if (super&&vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_SUPER_VARARG, symbol);
 else if (super) compiler.writeOpCallSuper(call->args.size(), symbol);
 else if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, symbol);
@@ -714,18 +711,17 @@ void MemberLookupOperation::compileAssignment (QCompiler& compiler, shared_ptr<E
 shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
-uint64_t fflags = 0;
 string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
 assignedValue->compile(compiler);
-//type = compiler.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fflags);
-if (fflags&4) {
-compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
-}
-else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
+//if (fflags&4) {
+//compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
+//compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
+//}
+//else 
+compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
 compiler.compileError(right->nearestToken(), "Bad operand for '.' operator in assignment");
@@ -904,23 +900,23 @@ if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr 
 //if (lastExpr) returnType = compiler.mergeTypes(returnTypeHint, lastExpr->getType(compiler));
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
-func->vararg = (flags&FD_VARARG);
-func->final = flags&FD_FINAL;
-func->pure = flags&FD_PURE;
-func->fieldGetter = flags&FD_GETTER;
-func->fieldSetter = flags&FD_SETTER;
+func->flags.vararg = (flags&FD_VARARG);
+func->flags.final = flags&FD_FINAL;
+func->flags.pure = flags&FD_PURE;
+func->flags.fieldGetter = flags&FD_GETTER;
+func->flags.fieldSetter = flags&FD_SETTER;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = type->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
 if (flags&FD_GETTER) {
-func->iField = iField;
-func->fieldGetter = true;
+func->flags.iField = iField;
+func->flags.fieldGetter = true;
 }
 else if (flags&FD_SETTER) {
-func->iField = iField;
-func->fieldSetter = true;
+func->flags.iField = iField;
+func->flags.fieldSetter = true;
 }
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };

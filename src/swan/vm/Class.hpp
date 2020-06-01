@@ -49,6 +49,16 @@ static ClassGCInfo info = { baseGCVisit<T>, baseGCMemSize<T>, baseGCOrigin<T>, b
 return &info;
 }
 
+union ClassFlags {
+uint8_t value;
+struct {
+bool foreign :1,
+final :1, 
+subclassed :1;
+}; 
+ClassFlags (): value(0) {}
+};
+
 struct QClass: QObject {
 QVM& vm;
 QClass* parent;
