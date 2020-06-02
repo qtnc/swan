@@ -166,7 +166,13 @@ return resolveCallType(receiver, method, nArgs, args, ff);
 if (m) break;
 }
 if (m) {
-//if (flptr) *flptr = (m->iField<<8L) | ((m->flags&FD_GETTER)?2:0) | ((m->flags&FD_SETTER)?4:0);
+if (ff) {
+ff->iField = m->iField;
+ff->fieldGetter = m->flags&FD_GETTER;
+ff->fieldSetter = m->flags&FD_SETTER;
+ff->pure = m->flags&FD_PURE;
+ff->final = m->flags&FD_FINAL;
+}
 return m->returnType;
 }}
 return TypeInfo::MANY;

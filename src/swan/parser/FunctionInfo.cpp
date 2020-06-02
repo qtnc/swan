@@ -96,9 +96,9 @@ return type;
 }
 
 std::shared_ptr<TypeInfo> StringFunctionInfo::getReturnTypeInfo (int nPassedArgs,  std::shared_ptr<TypeInfo>* passedArgs) {
-print("Return type of: ");
-for (auto& t: types) print("%s, ", t?t->toString():"<null>");
-println("");
+//print("Return type of: ");
+//for (auto& t: types) print("%s, ", t?t->toString():"<null>");
+//println("");
 if (types.size()) return handleSubindex(types[nArgs], nPassedArgs, passedArgs);
 else return TypeInfo::MANY;
 }

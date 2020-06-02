@@ -683,8 +683,8 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-//if (fflags&2) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (fflags>>8) );
-//else 
+//if (funcflags.fieldGetter && type && (type->isExact() || funcflags.final)) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (funcflags.iField) );
+//else  
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -716,11 +716,11 @@ int symbol = compiler.vm.findMethodSymbol(sName);
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
 assignedValue->compile(compiler);
-//if (fflags&4) {
+//if (funcflags.fieldSetter && type && (type->isExact() || funcflags.final)) {
 //compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-//compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD,  (fflags>>8) );
+//compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD, funcflags.iField);
 //}
-//else 
+//else  
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
