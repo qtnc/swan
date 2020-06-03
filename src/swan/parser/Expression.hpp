@@ -2,7 +2,12 @@
 #define ___PARSER_COMPILER_EXPRESSION1
 #include "StatementBase.hpp"
 #include<unordered_map>
-#include "../vm/FunctionFlags.hpp"
+
+struct FuncOrDecl {
+struct QFunction* func = nullptr;
+struct FunctionDeclaration* method = nullptr;
+QFunction* getFunc ();
+};
 
 struct ConstantExpression: Expression {
 QToken token;
@@ -233,7 +238,7 @@ struct AbstractCallExpression: Expression {
 std::shared_ptr<Expression> receiver;
 std::vector<std::shared_ptr<Expression>> args;
 QTokenType callType;
-FunctionFlags funcflags;
+FuncOrDecl fd;
 
 AbstractCallExpression (std::shared_ptr<Expression> recv0, QTokenType tp, const std::vector<std::shared_ptr<Expression>>& args0): receiver(recv0), callType(tp), args(args0) {}
 const QToken& nearestToken () override { return receiver->nearestToken(); }
@@ -257,8 +262,8 @@ int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedVal
 };
 
 struct MemberLookupOperation: BinaryOperation, Assignable  {
-FunctionFlags funcflags;
-MemberLookupOperation (std::shared_ptr<Expression> l, std::shared_ptr<Expression> r): BinaryOperation(l, T_DOT, r), funcflags()  {}
+FuncOrDecl fd;
+MemberLookupOperation (std::shared_ptr<Expression> l, std::shared_ptr<Expression> r): BinaryOperation(l, T_DOT, r), fd()  {}
 void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
 int analyze (TypeAnalyzer& ta) override;
@@ -310,6 +315,7 @@ int analyze (TypeAnalyzer& ta) override { return expr->analyze(ta); }
 
 struct FunctionDeclaration: Expression, Decorable, FunctionInfo {
 QVM& vm;
+struct QFunction* func;
 QToken name;
 std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
@@ -317,7 +323,7 @@ std::shared_ptr<TypeInfo> returnType;
 int flags;
 int iField;
 
-FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl)     {}
+FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), func(nullptr) {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);

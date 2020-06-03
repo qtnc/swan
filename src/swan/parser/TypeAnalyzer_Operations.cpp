@@ -111,12 +111,12 @@ if (funcInfo) return funcInfo->getFunctionTypeInfo();
 return make_shared<ClassTypeInfo>(&value.getClass(vm));
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args, FunctionFlags* ff) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV func, int nArgs, shared_ptr<Expression>* args, FuncOrDecl* fd) {
 std::unique_ptr<FunctionInfo> funcInfo;
 if (func.isClosure()) {
 QClosure& closure = *func.asObject<QClosure>();
 if (!closure.func.typeInfo.empty()) funcInfo = make_unique<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
-if (ff) *ff = closure.func.flags;
+if (fd) fd->func = &closure.func;
 }
 else if (func.isNativeFunction()) {
 auto ptr = func.asNativeFunction();
@@ -136,7 +136,7 @@ return funcInfo->getReturnTypeInfo(nArgs+1, argtypes);
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FunctionFlags* ff) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
 receiver->analyze(*this);
 shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
 if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
@@ -144,7 +144,7 @@ if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
 auto cls = clt->type;
 if (super) cls = cls->parent;
 QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
-return resolveCallType(receiver, method, nArgs, args, ff);
+return resolveCallType(receiver, method, nArgs, args, fd);
 }
 else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
 shared_ptr<FunctionDeclaration> m;
@@ -161,24 +161,18 @@ if (!m) m = cdt->cls->findMethod(name, true);
 }
 else if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(parentTI)) {
 QV method = clt->type->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
-return resolveCallType(receiver, method, nArgs, args, ff);
+return resolveCallType(receiver, method, nArgs, args, fd);
 }
 if (m) break;
 }
 if (m) {
-if (ff) {
-ff->iField = m->iField;
-ff->fieldGetter = m->flags&FD_GETTER;
-ff->fieldSetter = m->flags&FD_SETTER;
-ff->pure = m->flags&FD_PURE;
-ff->final = m->flags&FD_FINAL;
-}
+if (fd) fd->method = m.get();
 return m->returnType;
 }}
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args, FunctionFlags* ff) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args, FuncOrDecl* fd) {
 receiver->analyze(*this);
 auto funcType = receiver->type;
 if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(funcType)) {

@@ -6,6 +6,8 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
+QToken THIS_TOKEN = { T_NAME, THIS, 4, QV::UNDEFINED };
+
 int ConstantExpression::analyze (TypeAnalyzer& ta) { 
 auto tp = ta.resolveValueType(token.value);
 return ta.assignType(*this, tp);
@@ -140,9 +142,12 @@ return re;
 
 int ClassDeclaration::analyze (TypeAnalyzer& ta) { 
 int re = 0;
+auto oldCls = ta.curClass;
+ta.curClass = this;
 for (auto& m: methods) re |= m->analyze(ta);
 auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
 re |= ta.assignType(*this, finalType);
+ta.curClass = oldCls;
 return re;
 }
 
@@ -174,10 +179,12 @@ else return TypeInfo::MANY;
 }
 
 int FieldExpression::analyze (TypeAnalyzer& ta) {
+int re = 0;
 ClassDeclaration* cls = ta.getCurClass();
 shared_ptr<TypeInfo>* fieldType = nullptr;
 if (cls) cls->findField(token, &fieldType);
-return fieldType? ta.assignType(*this, *fieldType) :0;
+if (fieldType) re |= ta.assignType(*this, *fieldType);
+return re;
 }
 
 int FieldExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
@@ -220,13 +227,15 @@ if (auto lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ)) {
 auto finalType = ta.mergeTypes(type, lv->type);
 return ta.assignType(*this, finalType);
 }
-ClassDeclaration* cls = ta.getCurClass();
+auto cls = ta.getCurClass();
 if (cls) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto finalType = ta.resolveCallType(make_shared<NameExpression>(thisToken), token);
-finalType = ta.mergeTypes(type, finalType);
+auto m = cls->findMethod(token, false);
+if (!m) m = cls->findMethod(token, true);
+//todo: look at superclass methods
+if (m) {
+auto finalType = ta.mergeTypes(type, m->returnType);
 return ta.assignType(*this, finalType);
-}
+}}
 return 0;
 }
 
@@ -238,14 +247,15 @@ lv->type = ta.mergeTypes(lv->type, assignedValue->type);
 re |= ta.assignType(*this, lv->type);
 }
 else if (auto cls = ta.getCurClass()) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 char setterName[token.length+2];
 memcpy(&setterName[0], token.start, token.length);
 setterName[token.length+1] = 0;
 setterName[token.length] = '=';
 QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
-auto finalType = ta.resolveCallType(make_shared<NameExpression>(thisToken), setterNameToken, 1, &assignedValue);
-re |= ta.assignType(*this, finalType);
+auto m = cls->findMethod(setterNameToken, false);
+if (!m) m = cls->findMethod(setterNameToken, true);
+//todo: look at superclass methods
+if (m) re |= ta.assignType(*this, m->returnType);
 }
 return re;
 }
@@ -256,7 +266,7 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &funcflags));
+auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &fd));
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -265,7 +275,7 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &funcflags));
+auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fd));
 re |= ta.assignType(*this, finalType);
 return re;
 }}
@@ -279,7 +289,7 @@ shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
 string sName = string(setter->token.start, setter->token.length) + ("=");
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
-auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &funcflags);
+auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fd);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -400,13 +410,12 @@ for (auto& arg: args) re |= arg->analyze(ta);
 QV func = QV::UNDEFINED;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 auto lv = ta.findVariable(name->token, LV_EXISTING | LV_FOR_READ);
-if (!lv && ta.getCurClass()) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto thisExpr = make_shared<NameExpression>(thisToken);
-auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
-re |= expr->analyze(ta);
-auto finalType = ta.resolveCallType(thisExpr, name->token, args.size(), &args[0], &funcflags);
-re |= ta.assignType(*this, finalType);
+auto cls = ta.getCurClass();
+if (!lv && cls) {
+auto m = cls->findMethod(name->token, false);
+if (!m) m = cls->findMethod(name->token, true);
+//todo: look at superclass methods
+if (m) re |= ta.assignType(*this, m->returnType);
 return re;
 }}
 /*if (globalIndex>=0) {
@@ -415,7 +424,7 @@ QToken tmptok = { T_NAME, 0, 0, gval  };
 type = ta.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
 }
 else */
-auto finalType = ta.resolveCallType(receiver, args.size(), &args[0], &funcflags);
+auto finalType = ta.resolveCallType(receiver, args.size(), &args[0], &fd);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -543,4 +552,10 @@ int ImportExpression::analyze (TypeAnalyzer& ta) {
 int re = from? from->analyze(ta) :0;
 re |= ta.assignType(*this, TypeInfo::MANY);
 return re;
+}
+
+QFunction* FuncOrDecl::getFunc () {
+if (func) return func;
+else if (method) return method->func;
+else return nullptr;
 }

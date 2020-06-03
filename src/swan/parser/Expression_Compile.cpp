@@ -4,6 +4,7 @@
 #include "ParserRules.hpp"
 #include "Compiler.hpp"
 #include "../vm/VM.hpp"
+#include "../vm/Function.hpp"
 using namespace std;
 
 unordered_map<int,int> BASE_OPTIMIZED_OPS = {
@@ -683,6 +684,8 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
+//auto f = fd.getFunc();
+//println("funcptr=%s, %d, %p", f?f->name.c_str():"<null>", f?static_cast<size_t>(f->bytecodeEnd-f->bytecode):0, f);
 //if (funcflags.fieldGetter && type && (type->isExact() || funcflags.final)) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (funcflags.iField) );
 //else  
 compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
@@ -929,6 +932,7 @@ decorations.insert(decorations.begin(), make_shared<NameExpression>(asyncToken))
 for (auto decoration: decorations) decoration->compile(compiler);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 for (auto decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
+this->func = func;
 return func;
 }
 
