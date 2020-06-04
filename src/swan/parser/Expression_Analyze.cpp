@@ -229,13 +229,10 @@ return ta.assignType(*this, finalType);
 }
 auto cls = ta.getCurClass();
 if (cls) {
-auto m = cls->findMethod(token, false);
-if (!m) m = cls->findMethod(token, true);
-//todo: look at superclass methods
-if (m) {
-auto finalType = ta.mergeTypes(type, m->returnType);
+auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, token);
+auto finalType = ta.mergeTypes(type, resolvedType);
 return ta.assignType(*this, finalType);
-}}
+}
 return 0;
 }
 
@@ -252,10 +249,8 @@ memcpy(&setterName[0], token.start, token.length);
 setterName[token.length+1] = 0;
 setterName[token.length] = '=';
 QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
-auto m = cls->findMethod(setterNameToken, false);
-if (!m) m = cls->findMethod(setterNameToken, true);
-//todo: look at superclass methods
-if (m) re |= ta.assignType(*this, m->returnType);
+auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, setterNameToken, 1, &assignedValue);
+re |= ta.assignType(*this, resolvedType);
 }
 return re;
 }
@@ -412,10 +407,8 @@ if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 auto lv = ta.findVariable(name->token, LV_EXISTING | LV_FOR_READ);
 auto cls = ta.getCurClass();
 if (!lv && cls) {
-auto m = cls->findMethod(name->token, false);
-if (!m) m = cls->findMethod(name->token, true);
-//todo: look at superclass methods
-if (m) re |= ta.assignType(*this, m->returnType);
+auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], false, &fd);
+re |= ta.assignType(*this, resolvedType);
 return re;
 }}
 /*if (globalIndex>=0) {
@@ -465,11 +458,7 @@ body=body->optimizeStatement();
 body->analyze(fta);
 if (body->isExpression()) {
 lastExpr = static_pointer_cast<Expression>(body);
-if (auto fe = dynamic_pointer_cast<FieldExpression>(body)) {
-flags|=FD_GETTER;
-auto cls = ta.getCurClass();
-if (cls) iField = cls->findField(fe->token);
-}}
+}
 else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
 if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
 }

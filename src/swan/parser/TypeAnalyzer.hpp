@@ -39,6 +39,7 @@ struct FunctionDeclaration* getCurMethod ();
 
 std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, FuncOrDecl* fd = nullptr);
+std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, struct ClassDeclaration&  cls, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, FuncOrDecl* fd = nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args, FuncOrDecl* fd =nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args, FuncOrDecl* fd = nullptr);
 std::shared_ptr<TypeInfo> resolveValueType (QV value);

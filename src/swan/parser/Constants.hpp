@@ -18,8 +18,8 @@
 #define VD_EXPORT 8
 #define VD_SINGLE 0x100
 #define VD_NODEFAULT 0x200
+#define VD_FINAL 0x400
 #define VD_HOISTED 0x1000
-#define VD_FINAL 0x2000
 #define VD_OPTIMFLAG 0x4000000
 
 // Function declaration flags
@@ -30,9 +30,7 @@
 #define FD_ASYNC 0x10
 #define FD_PURE 0x100
 #define FD_READ_ONLY 0x200
-#define FD_GETTER 0x400
-#define FD_SETTER 0x800
-#define FD_FINAL 0x2000
+#define FD_FINAL 0x400
 
 // Call resolution flags
 #define CR_GETTER 1

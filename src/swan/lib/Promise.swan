@@ -15,17 +15,17 @@ r.resolve(p)
 return r
 }}
 
-resolve (_value) {
+resolve (_value as Object) {
 _state = true
 if _next: _next(_value)
 }
 
-reject (_value) {
+reject (_value as Object) {
 _state = false
 if _error: _error(_value)
 }
 
-then (onResolve, onReject) {
+then (onResolve as Function, onReject as Function) {
 if _state is true { 
 if onResolve is Promise: return onResolve
 onResolve(_value)

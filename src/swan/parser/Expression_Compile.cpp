@@ -678,17 +678,16 @@ else compiler.writeOpCallMethod(args.size() +1, subscriptSetterSymbol);
 }
 
 void MemberLookupOperation::compile (QCompiler& compiler) {
-shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
-shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
+auto func = fd.getFunc();
+auto super = dynamic_pointer_cast<SuperExpression>(left);
+auto getter = dynamic_pointer_cast<NameExpression>(right);
+bool inlinable = func && compiler.isCallInlinable(type, *func);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
-left->compile(compiler);
-//auto f = fd.getFunc();
-//println("funcptr=%s, %d, %p", f?f->name.c_str():"<null>", f?static_cast<size_t>(f->bytecodeEnd-f->bytecode):0, f);
-//if (funcflags.fieldGetter && type && (type->isExact() || funcflags.final)) compiler.writeOpArg<uint_local_index_t>(OP_LOAD_FIELD, (funcflags.iField) );
-//else  
-compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+if (!inlinable || !super) left->compile(compiler);
+if (!inlinable) compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+else compiler.writeInlineCall(*func);
 return;
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
@@ -756,7 +755,8 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in 
 
 void CallExpression::compile (QCompiler& compiler) {
 LocalVariable* lv = nullptr;
-QV func = QV::UNDEFINED;
+auto func = fd.getFunc();
+bool inlinable = func && compiler.isCallInlinable(type, *func);
 int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ, &lv))<0 && compiler.getCurClass()) {
@@ -764,21 +764,14 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
-//type = compiler.resolveCallType(thisExpr, name->token, args.size(), &args[0]);
 return;
 }}
 bool vararg = isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 compileArgs(compiler);
-/*if (globalIndex>=0) {
-auto gval = compiler.parser.vm.globalVariables[globalIndex];
-QToken tmptok = { T_NAME, 0, 0, gval  };
-type = compiler.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
-}
-else */
-//type = compiler.resolveCallType(receiver, args.size(), &args[0]);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
+else if (inlinable) compiler.writeInlineCall(*func);
 else compiler.writeOpCallFunction(args.size());
 }
 
@@ -892,10 +885,6 @@ fc.writeDebugLine(body->nearestToken());
 if (body->isExpression()) {
 fc.writeOp(OP_POP);
 lastExpr = static_pointer_cast<Expression>(body);
-if (auto fe = dynamic_pointer_cast<FieldExpression>(body)) {
-flags|=FD_GETTER;
-iField = compiler.curClass->findField(fe->token);
-}
 }//is expression
 else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
 if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
@@ -906,21 +895,11 @@ compiler.result = fc.result;
 func->flags.vararg = (flags&FD_VARARG);
 func->flags.final = flags&FD_FINAL;
 func->flags.pure = flags&FD_PURE;
-func->flags.fieldGetter = flags&FD_GETTER;
-func->flags.fieldSetter = flags&FD_SETTER;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = type->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
-if (flags&FD_GETTER) {
-func->flags.iField = iField;
-func->flags.fieldGetter = true;
-}
-else if (flags&FD_SETTER) {
-func->flags.iField = iField;
-func->flags.fieldSetter = true;
-}
 if (flags&FD_FIBER) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));

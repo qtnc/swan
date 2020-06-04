@@ -321,7 +321,6 @@ std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
 std::shared_ptr<TypeInfo> returnType;
 int flags;
-int iField;
 
 FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), func(nullptr) {}
 const QToken& nearestToken () override { return name; }
@@ -337,7 +336,7 @@ std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::share
 int getArgCount () override { return params.size(); }
 std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs); }
 int getFlags () override { return flags; }
-int getFieldIndex () override { return iField; }
+int getFieldIndex () override { return 0; }
 };
 
 struct Field {

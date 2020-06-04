@@ -36,8 +36,6 @@ while(str&&*str){
 switch(*str++){
 case ':': case ' ': case ',': case ';': continue;
 case '+': flags |= FD_VARARG; continue;
-case '=': flags |= FD_SETTER; continue;
-case '.': flags |= FD_GETTER; continue;
 case '>': flags |= FD_METHOD; continue;
 case '*': return TypeInfo::ANY;
 case '#': return TypeInfo::MANY;

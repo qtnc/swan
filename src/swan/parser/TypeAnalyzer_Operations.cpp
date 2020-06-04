@@ -136,26 +136,15 @@ return funcInfo->getReturnTypeInfo(nArgs+1, argtypes);
 return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
-receiver->analyze(*this);
-shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
-if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
-if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
-auto cls = clt->type;
-if (super) cls = cls->parent;
-QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
-return resolveCallType(receiver, method, nArgs, args, fd);
-}
-else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (shared_ptr<Expression> receiver, ClassDeclaration& cls, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
 shared_ptr<FunctionDeclaration> m;
 if (!super) {
-m = cdt->cls->findMethod(name, false);
-if (!m) m = cdt->cls->findMethod(name, true);
+m = cls.findMethod(name, false);
+if (!m) m = cls.findMethod(name, true);
 }
-if (!m) for (auto& parentToken: cdt->cls->parents) {
+if (!m) for (auto& parentToken: cls.parents) {
 auto parentTI = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
-//println("RT=%s,%s, PT=%s,%s,%s", receiverType->toString(), typeid(*receiverType).name(), string(parentToken.start, parentToken.length), parentTI->toString(), typeid(*parentTI).name() );
-if (cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
+if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
 m = cdt->cls->findMethod(name, false);
 if (!m) m = cdt->cls->findMethod(name, true);
 }
@@ -168,7 +157,23 @@ if (m) break;
 if (m) {
 if (fd) fd->method = m.get();
 return m->returnType;
-}}
+}
+return TypeInfo::MANY;
+}
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
+receiver->analyze(*this);
+shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
+if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
+if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
+auto cls = clt->type;
+if (super) cls = cls->parent;
+QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+return resolveCallType(receiver, method, nArgs, args, fd);
+}
+else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
+return resolveCallType(receiver, *cdt->cls, name, nArgs, args, super, fd);
+}
 return TypeInfo::MANY;
 }
 

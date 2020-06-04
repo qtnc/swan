@@ -52,6 +52,7 @@ CompilationResult result = CR_SUCCESS;
 int curScope = 0;
 
 template<class T> void write (const T& x) { out.write(reinterpret_cast<const char*>(&x), sizeof(x)); }
+template<class T> void write (const T* x, size_t sz) { out.write(reinterpret_cast<const char*>(x), sz); }
 void writeOp (QOpCode op) { write<uint8_t>(op); lastOp=op; }
 
 template<class T> int writeOpArg (QOpCode op, const T& arg) { 
@@ -85,6 +86,10 @@ void writeOpStoreLocal (uint_local_index_t slot);
 
 void writeDebugLine (const QToken& tk);
 
+bool isCallInlinable (struct QFunction& func);
+bool isCallInlinable (std::shared_ptr<TypeInfo> type, struct QFunction& func);
+void writeInlineCall (struct QFunction& func, bool sameThis = false);
+
 void pushLoop ();
 void popLoop ();
 void pushScope ();
@@ -99,14 +104,6 @@ int addUpvalue (int slot, bool upperUpvalue);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
-
-/*
-std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, uint64_t* flptr=nullptr);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args, uint64_t* flptr=nullptr);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args);
-std::shared_ptr<TypeInfo> resolveValueType (QV value);
-*/
 
 inline QToken createTempName () { return parser.createTempName(); }
 

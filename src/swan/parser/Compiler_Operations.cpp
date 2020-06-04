@@ -2,6 +2,7 @@
 #include "TypeAnalyzer.hpp"
 #include "TypeInfo.hpp"
 #include "../vm/VM.hpp"
+#include "../vm/Function.hpp"
 using namespace std;
 
 
@@ -166,3 +167,14 @@ globalSymbols[name] = { n, flags&LV_CONST };
 globalVariables.push_back(QV::UNDEFINED);
 return n;
 }}
+
+bool QCompiler::isCallInlinable (QFunction& func) {
+return func.bytecodeEnd - func.bytecode <= 12
+&& !func.flags.vararg
+&& func.upvaluesEnd - func.upvalues == 0;
+}
+
+bool QCompiler::isCallInlinable (std::shared_ptr<TypeInfo> type, struct QFunction& func) {
+return type && (type->isExact() || !func.flags.overridden) && isCallInlinable(func);
+}
+
