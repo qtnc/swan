@@ -5,7 +5,7 @@ I took the scripts that have been used to measure wren's performance with a few 
 
 Script/Language | Swan | Wren | Python 3.6 |  php 7.2.9 | node 7.5.0 | LuaJIT -joff | LuaJIT
 -----|-----|-----|-----|-----|----------|-----|
-method_call | 0.676 | 0.503 | 3.622 | 1.447 | 0.124 | 0.833 | 0.030
+method_call | 0.575 | 0.503 | 3.622 | 1.447 | 0.124 | 0.833 | 0.030
 binary_trees | 0.869 | 0.543 | 0.770 | - | 0.154  | 0.224 | 0.216
 Fib | 0.480 |  0.563 | 1.591 | 0.533 | 0.077 | 0.234 |  0.049
 for | 0.449 |  0.465 |  0.998 | 0.389 | 0.139 | 0.094 | 0.083

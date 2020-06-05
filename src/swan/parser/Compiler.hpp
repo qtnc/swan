@@ -47,13 +47,13 @@ std::vector<LocalVariable> localVariables, globalVariables;
 std::vector<Upvariable> upvalues;
 std::vector<Loop> loops;
 std::vector<QV> constants;
-QOpCode lastOp = OP_LOAD_NULL;
+QOpCode lastOp = OP_NOP, beforeLastOp = OP_NOP;
 CompilationResult result = CR_SUCCESS;
 int curScope = 0;
 
 template<class T> void write (const T& x) { out.write(reinterpret_cast<const char*>(&x), sizeof(x)); }
 template<class T> void write (const T* x, size_t sz) { out.write(reinterpret_cast<const char*>(x), sz); }
-void writeOp (QOpCode op) { write<uint8_t>(op); lastOp=op; }
+void writeOp (QOpCode op) { write<uint8_t>(op); beforeLastOp=lastOp; lastOp=op; }
 
 template<class T> int writeOpArg (QOpCode op, const T& arg) { 
 writeOp(op);
@@ -110,6 +110,7 @@ template<class... A> inline void compileInfo (const QToken& token, const char* f
 QCompiler (QParser& p, QCompiler* pa = nullptr): vm(p.vm), parser(p), parent(pa), curClass(nullptr)  {}
 void compile ();
 struct QFunction* getFunction (int nArgs = 0);
+bool bcIsAccessor (const std::string& bc, uint_field_index_t* fieldIndex = 0);
 };
 
 #endif

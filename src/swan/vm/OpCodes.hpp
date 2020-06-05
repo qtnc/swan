@@ -1,3 +1,4 @@
+OP(NOP, 0, 0, 0),
 OP(LOAD_UNDEFINED, 1, 0, 0),
 OP(LOAD_NULL, 1, 0, 0),
 OP(LOAD_TRUE, 1, 0, 0),

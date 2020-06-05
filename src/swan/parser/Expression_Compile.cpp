@@ -259,24 +259,20 @@ LocalVariable* lv = nullptr;
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot==0 && compiler.getCurClass()) {
 compiler.writeOp(OP_LOAD_THIS);
-//type = lv->type;
 return;
 }
 else if (slot>=0) { 
 compiler.writeOpLoadLocal(slot);
-//type = lv->type;
 return;
 }
 slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
 if (slot>=0) { 
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, slot);
-//type = lv->type;
 return;
 }
 slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
 if (slot>=0) { 
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
-//type = lv->type;
 return;
 }
 int atLevel = 0;
@@ -286,7 +282,6 @@ QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
 else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
-//type = compiler.resolveCallType(make_shared<NameExpression>(thisToken), token);
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -296,11 +291,9 @@ void NameExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expressi
 LocalVariable* lv = nullptr;
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
 assignedValue->compile(compiler);
-//type = assignedValue->getType(compiler);
 int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpStoreLocal(slot);
-//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -310,7 +303,6 @@ return;
 slot = compiler.findUpvalue(token, LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_upvalue_index_t>(OP_STORE_UPVALUE, slot);
-//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -320,7 +312,6 @@ return;
 slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
 if (slot>=0) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
-//type = lv->type = compiler.mergeTypes(lv->type, type);
 return;
 }
 else if (slot==LV_ERR_CONST) {
@@ -684,6 +675,11 @@ if (vararg) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_VARARG, sub
 else compiler.writeOpCallMethod(args.size() +1, subscriptSetterSymbol);
 }
 
+inline bool isInlinableAccessor (shared_ptr<TypeInfo> type, QFunction* func) {
+return type && func && func->flags.accessor
+&& (type->isExact() || !func->flags.overridden);
+}
+
 void MemberLookupOperation::compile (QCompiler& compiler) {
 auto func = fd.getFunc();
 auto super = dynamic_pointer_cast<SuperExpression>(left);
@@ -692,7 +688,8 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
+if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, func->flags.fieldIndex);
+else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
@@ -715,20 +712,20 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '.' operator"));
 }
 
 void MemberLookupOperation::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
-shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
-shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
+auto super = dynamic_pointer_cast<SuperExpression>(left);
+auto setter = dynamic_pointer_cast<NameExpression>(right);
+auto func = fd.getFunc();
 if (setter) {
 string sName = string(setter->token.start, setter->token.length) + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
 assignedValue->compile(compiler);
-//if (funcflags.fieldSetter && type && (type->isExact() || funcflags.final)) {
-//compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-//compiler.writeOpArg<uint_local_index_t>(OP_STORE_FIELD, funcflags.iField);
-//}
-//else  
-compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
+if (isInlinableAccessor(type, func)) {
+compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
+compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, func->flags.fieldIndex);
+}
+else   compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
 }
 compiler.compileError(right->nearestToken(), "Bad operand for '.' operator in assignment");
@@ -875,7 +872,6 @@ make_shared<VariableDeclaration>(destructuring)->optimizeStatement()->compile(co
 
 QFunction* FunctionDeclaration::compileFunction (QCompiler& compiler) {
 QCompiler fc(compiler.parser, &compiler);
-shared_ptr<Expression> lastExpr = nullptr;
 fc.curMethod = this;
 compiler.parser.curMethodNameToken = name;
 compileParams(fc);
@@ -883,20 +879,21 @@ body=body->optimizeStatement();
 fc.writeDebugLine(body->nearestToken());
 body->compile(fc);
 fc.writeDebugLine(body->nearestToken());
-if (body->isExpression()) {
-fc.writeOp(OP_POP);
-lastExpr = static_pointer_cast<Expression>(body);
-}//is expression
-else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
-if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
-}
-//if (lastExpr) returnType = compiler.mergeTypes(returnTypeHint, lastExpr->getType(compiler));
+if (body->isExpression()) fc.writeOp(OP_POP);
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->flags.vararg = (flags&FD_VARARG);
 func->flags.final = flags&FD_FINAL;
 func->flags.pure = flags&FD_PURE;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
+if (flags&FD_ACCESSOR) {
+func->flags.accessor = true;
+func->flags.fieldIndex = fieldIndex;
+}
+else if (func->flags.accessor) {
+flags |= FD_ACCESSOR;
+fieldIndex = func->flags.fieldIndex;
+}
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = type->toBinString(compiler.vm);

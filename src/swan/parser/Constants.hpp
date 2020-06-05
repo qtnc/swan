@@ -31,6 +31,7 @@
 #define FD_PURE 0x100
 #define FD_READ_ONLY 0x200
 #define FD_FINAL 0x400
+#define FD_ACCESSOR 0x800
 
 // Call resolution flags
 #define CR_GETTER 1

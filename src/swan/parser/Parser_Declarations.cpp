@@ -138,6 +138,7 @@ parseMethodDecl(cls, flags | FD_ASYNC);
 }
 
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, int flags) {
+flags |= FD_ACCESSOR;
 if (cur.type==T_CONST) flags |= FD_READ_ONLY;
 if (flags&FD_READ_ONLY) match(T_VAR);
 do {
@@ -168,7 +169,9 @@ vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, 
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
 shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(vm, fieldToken, flags, empty, field);
 shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(vm, setterNameToken, flags, setterParams, assignment);
+getter->fieldIndex = fieldIndex;
 getter->returnType = typeHint;
+setter->fieldIndex = fieldIndex;
 setter->returnType = typeHint;
 cls.methods.push_back(getter);
 if (!(flags&FD_READ_ONLY)) cls.methods.push_back(setter);

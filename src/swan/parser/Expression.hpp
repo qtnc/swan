@@ -231,7 +231,7 @@ const QToken& nearestToken () override { return expr->nearestToken(); }
 void makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) override;
 bool isFunctionnable () override;
 void compile (QCompiler& compiler)  override;
-int analyze (TypeAnalyzer& ta) override { return 0; }
+int analyze (TypeAnalyzer& ta) override;
 };
 
 struct AbstractCallExpression: Expression {
@@ -310,7 +310,7 @@ std::shared_ptr<Expression> expr;
 DebugExpression (std::shared_ptr<Expression> e): expr(e) {}
 const QToken& nearestToken () { return expr->nearestToken(); }
 void compile (QCompiler& compiler) override;
-int analyze (TypeAnalyzer& ta) override { return expr->analyze(ta); }
+int analyze (TypeAnalyzer& ta) override;
 };
 
 struct FunctionDeclaration: Expression, Decorable, FunctionInfo {
@@ -321,8 +321,9 @@ std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
 std::shared_ptr<TypeInfo> returnType;
 int flags;
+int fieldIndex;
 
-FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), func(nullptr) {}
+FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), fieldIndex(0), func(nullptr) {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
@@ -336,7 +337,7 @@ std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::share
 int getArgCount () override { return params.size(); }
 std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs); }
 int getFlags () override { return flags; }
-int getFieldIndex () override { return 0; }
+int getFieldIndex () override { return fieldIndex; }
 };
 
 struct Field {

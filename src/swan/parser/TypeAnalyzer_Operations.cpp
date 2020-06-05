@@ -66,7 +66,7 @@ if (type==TypeInfo::MANY && (e.type!=TypeInfo::ANY && e.type!=TypeInfo::MANY)) {
 typeWarn(e.nearestToken(), "Overwrite with many type");
 }
 auto oldType = e.type;
-e.type = type;
+e.type = type? type ->resolve(*this) : nullptr;
 if (isSameType(type, oldType)) return false;
 //if (oldType!=TypeInfo::ANY) typeInfo(e.nearestToken(), "Type changed from %s to %s in %s", oldType?oldType->toString():"<null>", type?type->toString():"<null>", typeid(e).name());
 return true;
@@ -133,7 +133,7 @@ argtypes[i+1] = args[i]->type;
 }
 return funcInfo->getReturnTypeInfo(nArgs+1, argtypes);
 }
-return TypeInfo::MANY;
+return TypeInfo::ANY;
 }
 
 std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (shared_ptr<Expression> receiver, ClassDeclaration& cls, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
@@ -158,7 +158,7 @@ if (m) {
 if (fd) fd->method = m.get();
 return m->returnType;
 }
-return TypeInfo::MANY;
+return TypeInfo::ANY;
 }
 
 std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bool super, FuncOrDecl* fd) {
@@ -174,7 +174,7 @@ return resolveCallType(receiver, method, nArgs, args, fd);
 else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
 return resolveCallType(receiver, *cdt->cls, name, nArgs, args, super, fd);
 }
-return TypeInfo::MANY;
+return TypeInfo::ANY;
 }
 
 std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args, FuncOrDecl* fd) {
@@ -187,7 +187,7 @@ else if (auto ct = dynamic_pointer_cast<ComposedTypeInfo>(funcType)) {
 int n = ct->countSubtypes();
 if (n>0) return ct->subtypes[n -1];
 }
-return TypeInfo::MANY;
+return TypeInfo::ANY;
 }
 
 void TypeAnalyzer::report (shared_ptr<Expression> expr) {

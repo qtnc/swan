@@ -145,7 +145,11 @@ int ClassDeclaration::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto oldCls = ta.curClass;
 ta.curClass = this;
-for (auto& m: methods) re |= m->analyze(ta);
+for (auto& m: methods) {
+ta.curMethod = m.get();
+re |= m->analyze(ta);
+ta.curMethod = nullptr;
+}
 auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
 re |= ta.assignType(*this, finalType);
 ta.curClass = oldCls;
@@ -176,7 +180,7 @@ return re;
 std::shared_ptr<TypeInfo> FunctionDeclaration::getArgTypeInfo (int n, int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
 auto& p = params[n];
 if (p->type) return p->type;
-else return TypeInfo::MANY;
+else return TypeInfo::ANY;
 }
 
 int FieldExpression::analyze (TypeAnalyzer& ta) {
@@ -400,25 +404,16 @@ return re;
 }
 
 int CallExpression::analyze (TypeAnalyzer& ta) {
+shared_ptr<TypeInfo> finalType = nullptr;
 int re = 0;
 if (receiver) re |= receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
-QV func = QV::UNDEFINED;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 auto lv = ta.findVariable(name->token, LV_EXISTING | LV_FOR_READ);
 auto cls = ta.getCurClass();
-if (!lv && cls) {
-auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], false, &fd);
-re |= ta.assignType(*this, resolvedType);
-return re;
-}}
-/*if (globalIndex>=0) {
-auto gval = ta.parser.vm.globalVariables[globalIndex];
-QToken tmptok = { T_NAME, 0, 0, gval  };
-type = ta.resolveCallType(make_shared<ConstantExpression>(tmptok), gval, args.size(), &args[0]);
+if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], false, &fd);
 }
-else */
-auto finalType = ta.resolveCallType(receiver, args.size(), &args[0], &fd);
+if (!finalType) finalType = ta.resolveCallType(receiver, args.size(), &args[0], &fd);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -457,14 +452,12 @@ fta.parser.curMethodNameToken = name;
 re |= analyzeParams(fta);
 body=body->optimizeStatement();
 body->analyze(fta);
-if (body->isExpression()) {
-lastExpr = static_pointer_cast<Expression>(body);
-}
+if (body->isExpression()) lastExpr = static_pointer_cast<Expression>(body);
 else if (auto bs = dynamic_pointer_cast<BlockStatement>(body)) {
 if (bs->statements.size()>=1 && bs->statements.back()->isExpression()) lastExpr = static_pointer_cast<Expression>(bs->statements.back());
 }
 if (lastExpr) returnType = ta.mergeTypes(returnType, lastExpr->type);
-return re | ta.assignType(*this, getFunctionTypeInfo()->resolve(ta));
+return re | ta.assignType(*this, getFunctionTypeInfo());
 }
 
 int FunctionDeclaration::analyzeParams (TypeAnalyzer& ta) {
@@ -543,6 +536,14 @@ int ImportExpression::analyze (TypeAnalyzer& ta) {
 int re = from? from->analyze(ta) :0;
 re |= ta.assignType(*this, TypeInfo::MANY);
 return re;
+}
+
+int DebugExpression::analyze (TypeAnalyzer& ta) {
+return expr->analyze(ta) | ta.assignType(*this, expr->type);
+}
+
+int TypeHintExpression::analyze (TypeAnalyzer& ta) {
+return expr->analyze(ta) | ta.assignType(*expr, type);
 }
 
 QFunction* FuncOrDecl::getFunc () {

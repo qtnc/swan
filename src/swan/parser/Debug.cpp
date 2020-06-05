@@ -82,7 +82,7 @@ void QFunction::disasm (std::ostream& out)  const {
 auto bc = reinterpret_cast<const uint8_t*>( bytecode ), bcBeg=bc;
 auto bcEnd = reinterpret_cast<const uint8_t*>( bytecodeEnd );
 println(out, "Bytecode for %s defined in %s (%d bytes):", name, file, static_cast<size_t>(bcEnd-bcBeg) );
-println(out, "flags=%0#$2X (vararg=%s, pure=%s, final=%s, overridden=%s); typeInfo=%s", flags.value, flags.vararg, flags.pure, flags.final, flags.overridden, typeInfo);
+println(out, "flags=%#0$2X (vararg=%s, pure=%s, final=%s, overridden=%s, accessor=%s); typeInfo=%s", flags.value, flags.vararg, flags.pure, flags.final, flags.overridden, flags.accessor, typeInfo);
 for (; bc<bcEnd; )  bc = printOpCode(bc, bc-bcBeg, *this, out);
 }
 

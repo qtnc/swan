@@ -128,8 +128,6 @@ compiler.writeDebugLine(nearestToken());
 if (expr) expr->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 compiler.writeOp(OP_RETURN);
-//auto method = compiler.getCurMethod();
-//if (method && expr) method->returnTypeHint = compiler.mergeTypes(method->returnTypeHint, expr->getType(compiler));
 }
 
 void ThrowStatement::compile (QCompiler& compiler) {
