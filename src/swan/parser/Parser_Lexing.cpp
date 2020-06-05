@@ -355,13 +355,6 @@ void QParser::skipNewlines () {
 while(matchOneOf(T_LINE, T_SEMICOLON));
 }
 
-QToken QParser::createTempName () {
-static int count = 0;
-string name = format("$%d", count++);
-QString* s = QString::create(vm,name);
-return { T_NAME, s->data, s->length, QV(s) };
-}
-
 void QParser::printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const string& msg) {
 auto p = getPositionOf(tok.start);
 int line = p.first, column = p.second;

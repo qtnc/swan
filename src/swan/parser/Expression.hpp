@@ -18,9 +18,9 @@ int analyze (TypeAnalyzer& ta) override;
 };
 
 struct DupExpression: Expression  {
-QToken token;
-DupExpression(QToken x): token(x) {}
-const QToken& nearestToken () override { return token; }
+std::shared_ptr<Expression> expr;
+DupExpression(std::shared_ptr<Expression> e): expr(e) {}
+const QToken& nearestToken () override { return expr->nearestToken(); }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
 };

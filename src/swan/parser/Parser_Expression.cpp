@@ -220,7 +220,7 @@ expr = ifSta;
 consume(T_WHILE, "Expected 'if' or 'while' after 'continue' in comprehension expression");
 auto cond = parseExpression(P_COMPREHENSION);
 QToken trueToken = { T_TRUE, nullptr, 0, true }, falseToken = { T_FALSE, nullptr, 0, false };
-auto var = make_shared<NameExpression>(createTempName());
+auto var = make_shared<NameExpression>(createTempName(*cond));
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>(var, make_shared<ConstantExpression>(trueToken) ) };
 vector<shared_ptr<Statement>> rootBlock = { make_shared<VariableDeclaration>(vars), rootStatement }, leafBlock = {
 make_shared<IfStatement>(var, 
@@ -297,16 +297,18 @@ auto sw = make_shared<SwitchExpression>();
 pair<vector<shared_ptr<Expression>>, shared_ptr<Expression>>* activeCase = nullptr;
 shared_ptr<Expression>* activeExpr = nullptr;
 bool defaultDefined = false;
-sw->var = make_shared<DupExpression>(cur);
 sw->expr = parseExpression(P_COMPREHENSION);
+sw->var = make_shared<DupExpression>(sw->expr);
 skipNewlines();
 consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
 skipNewlines();
 if (match(T_CASE)) {
 if (defaultDefined) parseError("Default case must appear last");
+if (!activeCase || (activeExpr && *activeExpr)) {
 sw->cases.emplace_back();
 activeCase = &sw->cases.back();
+}
 activeExpr = &activeCase->second;
 activeCase->first.push_back(parseSwitchCase(sw->var));
 while(match(T_COMMA)) activeCase->first.push_back(parseSwitchCase(sw->var));
@@ -322,8 +324,9 @@ match(T_COLON);
 else if (match(T_RIGHT_BRACE)) break;
 else if (match(T_END)) { result=CR_INCOMPLETE; break; }
 else {
-if (!activeCase) { parseError("Expected 'case' after beginnig of switch expression"); return nullptr; }
-if (!activeExpr || !*activeExpr) { result=CR_INCOMPLETE; return nullptr; }
+if (!activeCase && !defaultDefined) { parseError("Expected 'case' after beginnig of switch expression"); return nullptr; }
+else if (!activeExpr) { result=CR_INCOMPLETE; return nullptr; }
+else if (*activeExpr) { parseError("Expected 'case' or 'default' after case value"); return nullptr; }
 *activeExpr = parseExpression();
 }}
 return sw;
@@ -506,8 +509,9 @@ return expr;
 }}
 
 shared_ptr<Expression> QParser::parseExpression (int priority) {
+auto last = cur;
 skipNewlines();
-if (priority == P_MEMBER)  nextNameToken(false); 
+if (priority == P_MEMBER)  nextNameToken(last.type==T_COLONCOLON); 
 else nextToken();
 const ParserRule* rule = &rules[cur.type];
 if (!rule->prefix) {
@@ -524,3 +528,14 @@ return left;
 }
 else left = right;
 }}
+
+QToken QParser::createTempName (Expression& e) {
+static int count = 0;
+auto pos = e.nearestToken() .start;
+int n;
+if (pos>=start && pos<end) n = pos-start;
+else n = count++;
+string name = format("$%d", n);
+QString* s = QString::create(vm,name);
+return { T_NAME, s->data, s->length, QV(s) };
+}

@@ -86,10 +86,6 @@ void writeOpStoreLocal (uint_local_index_t slot);
 
 void writeDebugLine (const QToken& tk);
 
-bool isCallInlinable (struct QFunction& func);
-bool isCallInlinable (std::shared_ptr<TypeInfo> type, struct QFunction& func);
-void writeInlineCall (struct QFunction& func, bool sameThis = false);
-
 void pushLoop ();
 void popLoop ();
 void pushScope ();
@@ -105,7 +101,7 @@ int addUpvalue (int slot, bool upperUpvalue);
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
 
-inline QToken createTempName () { return parser.createTempName(); }
+inline QToken createTempName (Expression& expr) { return parser.createTempName(expr); }
 
 template<class... A> inline void compileError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = CR_FAILED; }
 template<class... A> inline void compileWarn (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }

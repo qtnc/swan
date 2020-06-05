@@ -46,7 +46,7 @@ std::shared_ptr<TypeInfo> resolveValueType (QV value);
 bool isSameType (const std::shared_ptr<TypeInfo>& t1, const std::shared_ptr<TypeInfo>& t2);
 int assignType (Expression& e, const std::shared_ptr<TypeInfo>& type);
 
-inline QToken createTempName () { return parser.createTempName(); }
+inline QToken createTempName (Expression& expr) { return parser.createTempName(expr); }
 
 template<class... A> inline void typeError (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); }
 template<class... A> inline void typeWarn (const QToken& token, const char* fmt, const A&... args) { parser.printMessage( token, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }

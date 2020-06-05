@@ -56,7 +56,7 @@ if (var) var = var->optimize();
 if (defaultCase) defaultCase=defaultCase->optimize();
 for (auto& c: cases) {
 for (auto& i: c.first) i=i->optimize();
-c.second=c.second->optimize();
+if (c.second) c.second=c.second->optimize();
 }
 return shared_this();
 }

@@ -471,7 +471,7 @@ return true;
 
 void LiteralSequenceExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 compiler.pushScope();
-QToken tmpToken = compiler.createTempName();
+QToken tmpToken = compiler.createTempName(*this);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 int slot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 assignedValue->compile(compiler);
@@ -536,7 +536,7 @@ return true;
 
 void LiteralMapExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 compiler.pushScope();
-QToken tmpToken = compiler.createTempName();
+QToken tmpToken = compiler.createTempName(*this);
 int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
 int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
@@ -603,8 +603,15 @@ else compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.fin
 }
 
 void BinaryOperation::compile  (QCompiler& compiler) {
+if ((rules[op].flags&P_SWAP_OPERANDS) && !!dynamic_pointer_cast<DupExpression>(right)) {
+right->compile(compiler);
+left->compile(compiler);
+compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
+}
+else {
 left->compile(compiler);
 right->compile(compiler);
+}
 if (left->type->isNum() && right->type->isNum() && BASE_OPTIMIZED_OPS[op]) {
 compiler.writeOp(static_cast<QOpCode>(BASE_OPTIMIZED_OPS[op]));
 }
@@ -644,7 +651,7 @@ item->compile(compiler);
 for (auto pos: condJumps) compiler.patchJump(pos);
 int ifJump = compiler.writeOpJump(OP_JUMP_IF_FALSY);
 compiler.writeOp(OP_POP);
-c.second->compile(compiler);
+if (c.second) c.second->compile(compiler);
 endJumps.push_back(compiler.writeOpJump(OP_JUMP));
 compiler.patchJump(ifJump);
 }
@@ -681,13 +688,11 @@ void MemberLookupOperation::compile (QCompiler& compiler) {
 auto func = fd.getFunc();
 auto super = dynamic_pointer_cast<SuperExpression>(left);
 auto getter = dynamic_pointer_cast<NameExpression>(right);
-bool inlinable = func && compiler.isCallInlinable(type, *func);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
-if (!inlinable || !super) left->compile(compiler);
-if (!inlinable) compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
-else compiler.writeInlineCall(*func);
+left->compile(compiler);
+compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
 shared_ptr<CallExpression> call = dynamic_pointer_cast<CallExpression>(right);
@@ -756,7 +761,6 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in 
 void CallExpression::compile (QCompiler& compiler) {
 LocalVariable* lv = nullptr;
 auto func = fd.getFunc();
-bool inlinable = func && compiler.isCallInlinable(type, *func);
 int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ, &lv))<0 && compiler.getCurClass()) {
@@ -771,7 +775,6 @@ if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 receiver->compile(compiler);
 compileArgs(compiler);
 if (vararg) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
-else if (inlinable) compiler.writeInlineCall(*func);
 else compiler.writeOpCallFunction(args.size());
 }
 
@@ -829,25 +832,23 @@ void FunctionDeclaration::compileParams (QCompiler& compiler) {
 vector<shared_ptr<Variable>> destructuring;
 compiler.writeDebugLine(nearestToken());
 for (auto& var: params) {
-auto name = dynamic_pointer_cast<NameExpression>(var->name);
+shared_ptr<NameExpression> name = nullptr; 
 LocalVariable* lv = nullptr;
 int slot;
-if (!name) {
-name = make_shared<NameExpression>(compiler.createTempName());
-slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
-if (!(var->flags&VD_OPTIMFLAG)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
-destructuring.push_back(var);
-var->flags |= VD_OPTIMFLAG;
-//if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
-}
-else {
+if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
 slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
 compiler.writeOp(OP_POP);
-//if (lv) lv->type = compiler.mergeTypes(var->value->getType(compiler), lv->type);
 }}
+else {
+name = make_shared<NameExpression>(compiler.createTempName(*var->name));
+slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
+if (!(var->flags&VD_OPTIMFLAG)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
+destructuring.push_back(var);
+var->flags |= VD_OPTIMFLAG;
+}
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 compiler.writeOpLoadLocal(slot);

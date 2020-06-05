@@ -199,13 +199,13 @@ else compileForEach(compiler);
 
 void ForStatement::compileForEach (QCompiler& compiler) {
 compiler.pushScope();
-int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(), LV_NEW | LV_CONST);
+int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(*inExpression), LV_NEW | LV_CONST);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
-if (destructuring) loopVariable = make_shared<NameExpression>(compiler.createTempName());
+if (destructuring) loopVariable = make_shared<NameExpression>(compiler.createTempName(*loopVariables[0]->name));
 compiler.writeDebugLine(inExpression->nearestToken());
 inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);

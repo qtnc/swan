@@ -66,7 +66,7 @@ else sw->defaultCase = statements;
 statements.clear();
 };
 sw->expr = parseExpression();
-sw->var = make_shared<NameExpression>(createTempName());
+sw->var = make_shared<NameExpression>(createTempName(*sw->expr));
 skipNewlines();
 consume(T_LEFT_BRACE, "Expected '{' to begin switch");
 while(true){
@@ -211,7 +211,7 @@ varExpr = expr;
 openExpr = parser.parseExpression(P_COMPREHENSION);
 }
 else {
-varExpr = make_shared<NameExpression>(parser.createTempName());
+varExpr = make_shared<NameExpression>(parser.createTempName(*expr));
 openExpr = expr;
 }
 if (!dynamic_pointer_cast<NameExpression>(varExpr)) {

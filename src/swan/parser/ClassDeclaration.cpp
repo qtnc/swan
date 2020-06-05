@@ -48,7 +48,7 @@ ctor->flags = (isStatic? FD_STATIC : 0);
 ctor->params.push_back(make_shared<Variable>(thisExpr));
 if (isStatic) ctor->body = make_shared<SimpleStatement>(ctorToken);
 else {
-auto arg = make_shared<NameExpression>(compiler.parser.createTempName()); 
+auto arg = make_shared<NameExpression>(compiler.createTempName(*this)); 
 ctor->params.push_back(make_shared<Variable>(arg, nullptr, VD_VARARG)); 
 ctor->flags |= FD_VARARG;
 ctor->body = BinaryOperation::create(make_shared<SuperExpression>(ctorToken), T_DOT, make_shared<CallExpression>(make_shared<NameExpression>(ctorToken), vector<shared_ptr<Expression>>({ make_shared<UnpackExpression>(arg) }) ));

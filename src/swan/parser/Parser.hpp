@@ -24,10 +24,12 @@ QParser (QVM& vm0, const std::string& source, const std::string& filename0, cons
 const QToken& nextToken ();
 const QToken& nextNameToken (bool);
 const QToken& prevToken();
-QToken createTempName ();
+QToken createTempName (Expression& expr);
 std::pair<int,int> getPositionOf (const char*);
 
 void printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const std::string& msg);
+template<class... A> inline void parseInfo (const char* fmt, const A&... args) { printMessage(cur, Swan::CompilationMessage::Kind::INFO, format(fmt, args...)); }
+template<class... A> inline void parseWarn (const char* fmt, const A&... args) { printMessage(cur, Swan::CompilationMessage::Kind::WARNING, format(fmt, args...)); }
 template<class... A> inline void parseError (const char* fmt, const A&... args) { printMessage(cur, Swan::CompilationMessage::Kind::ERROR, format(fmt, args...)); result = cur.type==T_END? CR_INCOMPLETE : CR_FAILED; }
 
 void skipNewlines ();

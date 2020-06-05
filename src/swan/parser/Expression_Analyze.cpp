@@ -101,14 +101,15 @@ return re;
 }
 
 int SwitchExpression::analyze (TypeAnalyzer& ta) { 
-int re = 0;
+int re = expr->analyze(ta) | var->analyze(ta);
 shared_ptr<TypeInfo> finalType = TypeInfo::ANY;
 if (defaultCase) {
 re |= defaultCase->analyze(ta);
 finalType = ta.mergeTypes(finalType, defaultCase->type);
 }
 for (auto& p: cases) {
-re |= p.second->analyze(ta);
+for (auto e: p.first) re |= e->analyze(ta);
+if (p.second) re |= p.second->analyze(ta);
 finalType = ta.mergeTypes(finalType, p.second->type);
 }
 re |= ta.assignType(*this, finalType);
@@ -293,7 +294,7 @@ return re;
 
 int LiteralSequenceExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 ta.pushScope();
-QToken tmpToken = ta.createTempName();
+QToken tmpToken = ta.createTempName(*this);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 ta.findVariable(tmpToken, LV_NEW);
 int re = assignedValue? assignedValue->analyze(ta) :0;
@@ -338,7 +339,7 @@ return re;
 
 int LiteralMapExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 ta.pushScope();
-QToken tmpToken = ta.createTempName();
+QToken tmpToken = ta.createTempName(*this);
 ta.findVariable(tmpToken, LV_NEW);
 int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
@@ -471,10 +472,14 @@ int re = 0;
 vector<shared_ptr<Variable>> destructuring;
 for (auto& var: params) {
 if (var->value) re |= var->value->analyze(ta);
-auto name = dynamic_pointer_cast<NameExpression>(var->name);
+shared_ptr<NameExpression> name = nullptr; 
 AnalyzedVariable* lv = nullptr;
-if (!name) {
-name = make_shared<NameExpression>(ta.createTempName());
+if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
+lv = ta.findVariable(name->token, LV_NEW);
+if (var->value) lv->type = var->value->type;
+}
+else {
+name = make_shared<NameExpression>(ta.createTempName(*var->name));
 lv = ta.findVariable(name->token, LV_NEW);
 if (!(var->flags&VD_OPTIMFLAG)) {
 var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
@@ -483,10 +488,6 @@ re |= var->value->analyze(ta);
 destructuring.push_back(var);
 var->flags |= VD_OPTIMFLAG;
 lv->type = var->value->type;
-}
-else {
-lv = ta.findVariable(name->token, LV_NEW);
-if (var->value) lv->type = var->value->type;
 }
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) re |= decoration->analyze(ta);
@@ -518,7 +519,8 @@ return assignedValue->analyze(ta) | ta.assignType(*this, assignedValue->type);
 }
 
 int DupExpression::analyze (TypeAnalyzer& ta) {
-return ta.assignType(*this, TypeInfo::MANY);
+int re = expr->analyze(ta);
+return re | ta.assignType(*this, expr->type);
 }
 
 int SuperExpression::analyze (TypeAnalyzer& ta) {
