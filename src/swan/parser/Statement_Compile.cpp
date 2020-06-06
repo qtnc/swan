@@ -296,19 +296,19 @@ if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(compiler, var->name, names)) {
-if (var->flags&VD_GLOBAL) compiler.findGlobalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_UNDEFINED); }
+if (var->flags &VarFlag::Global) compiler.findGlobalVariable(nm->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0));
+else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_UNDEFINED); }
 }
 continue;
 }
 int slot = -1;
 LocalVariable* lv = nullptr;
-if ((var->flags&VD_GLOBAL)) slot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0));
-else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
+if ((var->flags & VarFlag::Global)) slot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const )? LV_CONST : 0));
+else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 //println("Var name=%s, vv=%s, lv=%p, lvv=%s", string(name->token.start, name->token.length), var->value?typeid(*var->value).name():"<null>", lv, lv&&lv->value?typeid(*lv->value).name():"<null>");
-bool hoisted = var->flags&VD_HOISTED;
+bool hoisted = static_cast<bool>(var->flags & VarFlag::Hoisted);
 if (var->value && !hoisted) {
 if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
 auto func = fdecl->compileFunction(compiler);
@@ -316,15 +316,11 @@ func->name = string(name->token.start, name->token.length);
 }
 else if (!hoisted) var->value->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);
-//if (lv) {
-//lv->value = var->value;
-//lv->type = var->value->getType(compiler);
-//}
 }
 else compiler.writeOp(OP_LOAD_UNDEFINED);
 for (auto& decoration: var->decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
 for (auto& decoration: decorations) compiler.writeOp(OP_CALL_FUNCTION_1);
-if (var->flags&VD_GLOBAL) {
+if (var->flags & VarFlag::Global) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
 compiler.writeOp(OP_POP);
 }
@@ -350,8 +346,8 @@ auto cst1 = make_shared<ConstantExpression>(ctk);
 auto cst2 = make_shared<NameExpression>(ctk);
 im->items.push_back(make_pair(cst1, cst2));
 }}
-int flags = VD_NODEFAULT;
-if (compiler.parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+bitmask<VarFlag> flags = VarFlag::NoDefault;
+if (compiler.parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 auto vdim = make_shared<Variable>(im, nullptr, flags);
 imports.push_back(vdim);
 }

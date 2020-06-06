@@ -474,12 +474,12 @@ if (var->value) lv->type = var->value->type;
 else {
 name = make_shared<NameExpression>(ta.createTempName(*var->name));
 lv = ta.findVariable(name->token, LV_NEW);
-if (!(var->flags&VD_OPTIMFLAG)) {
+if (!(var->flags & VarFlag::Optimized)) {
 var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 re |= var->value->analyze(ta);
 }
 destructuring.push_back(var);
-var->flags |= VD_OPTIMFLAG;
+var->flags |= VarFlag::Optimized;
 lv->type = var->value->type;
 }
 if (var->decorations.size()) {

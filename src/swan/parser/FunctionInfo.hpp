@@ -23,7 +23,7 @@ std::shared_ptr<TypeInfo> getReturnTypeInfo (int nPassedArgs=0, std::shared_ptr<
 std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override;
 int getArgCount () override { return nArgs; }
 std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override;
-int getFlags () override { return static_cast<int>(flags); }
+int getFlags () override { return flags.value; }
 int getFieldIndex () override { return fieldIndex; }
 virtual ~StringFunctionInfo () = default;
 };

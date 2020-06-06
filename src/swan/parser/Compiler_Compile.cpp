@@ -13,7 +13,7 @@ QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 QToken exportMTToken = { T_LEFT_BRACE, EXPORTS, 7, QV::UNDEFINED};
 auto exn = make_shared<NameExpression>(exportsToken);
 auto exs = make_shared<ReturnStatement>(exportsToken, exn);
-vector<shared_ptr<Variable>> exv = { make_shared<Variable>(exn, make_shared<LiteralMapExpression>(exportMTToken), VD_CONST) }; 
+vector<shared_ptr<Variable>> exv = { make_shared<Variable>(exn, make_shared<LiteralMapExpression>(exportMTToken), VarFlag::Const) }; 
 auto exvd = make_shared<VariableDeclaration>(exv);
 auto bs = dynamic_pointer_cast<BlockStatement>(sta);
 if (bs) {

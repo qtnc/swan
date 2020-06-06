@@ -5,7 +5,7 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-void QParser::multiVarExprToSingleLiteralMap (vector<shared_ptr<Variable>>& vars, int flags) {
+void QParser::multiVarExprToSingleLiteralMap (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
 if (vars.size()==1 && dynamic_pointer_cast<LiteralMapExpression>(vars[0]->name)) return;
 auto map = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken()), defmap = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken());
 for (auto& var: vars) {
@@ -100,8 +100,8 @@ return sw;
 
 void ForStatement::parseHead (QParser& parser) {
 bool paren = parser.match(T_LEFT_PAREN);
-parser.parseVarList(loopVariables);
-if (loopVariables.size()==1 && (loopVariables[0]->flags&VD_NODEFAULT) && parser.match(T_IN)) {
+parser.parseVarList(loopVariables, VarFlag::None);
+if (loopVariables.size()==1 && (loopVariables[0]->flags &VarFlag::NoDefault) && parser.match(T_IN)) {
 parser.skipNewlines();
 inExpression = parser.parseExpression(P_COMPREHENSION);
 } else {
@@ -245,33 +245,33 @@ return expr;
 
 
 shared_ptr<Statement> QParser::parseAsync () {
-return parseAsyncFunctionDecl(VD_CONST);
+return parseAsyncFunctionDecl(VarFlag::Const);
 }
 
-shared_ptr<Statement> QParser::parseAsyncFunctionDecl (int varFlags) {
+shared_ptr<Statement> QParser::parseAsyncFunctionDecl (bitmask<VarFlag> flags) {
 consume(T_FUNCTION, "Expected 'function' after 'async'");
-return parseFunctionDecl(varFlags, FuncDeclFlag::Async);
+return parseFunctionDecl(flags, FuncDeclFlag::Async);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
-return parseFunctionDecl(0, FuncDeclFlag::None);
+return parseFunctionDecl(VarFlag::None, FuncDeclFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, bitmask<FuncDeclFlag> funcFlags) {
+shared_ptr<Statement> QParser::parseFunctionDecl (bitmask<VarFlag> varFlags, bitmask<FuncDeclFlag> funcFlags) {
 bool hasName = matchOneOf(T_NAME, T_STRING);
 QToken name = cur;
 auto fnDecl = parseLambda(funcFlags);
 if (!hasName) return fnDecl;
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) varFlags |= VD_GLOBAL;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) varFlags |= VarFlag::Global;
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, varFlags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl () {
-return parseClassDecl(0);
+return parseClassDecl(VarFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseClassDecl (int classFlags) {
+shared_ptr<Statement> QParser::parseClassDecl (bitmask<VarFlag> classFlags) {
 if (!consume(T_NAME, ("Expected class name after 'class'"))) return nullptr;
 shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, classFlags);
 skipNewlines();
@@ -296,23 +296,23 @@ else { prevToken(); break; }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 }
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classFlags |= VD_GLOBAL;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classFlags |= VarFlag::Global;
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, classFlags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
 shared_ptr<Statement> QParser::parseGlobalDecl () {
 if (matchOneOf(T_VAR, T_CONST)) {
-return parseVarDecl(VD_GLOBAL);
+return parseVarDecl(VarFlag::Global);
 }
 else if (match(T_CLASS)) {
-return parseClassDecl(VD_CONST | VD_GLOBAL);
+return parseClassDecl(VarFlag::Const | VarFlag::Global);
 }
 else if (match(T_FUNCTION)) {
-return parseFunctionDecl(VD_CONST | VD_GLOBAL, FuncDeclFlag::None);
+return parseFunctionDecl(VarFlag::Const | VarFlag::Global, FuncDeclFlag::None);
 }
 else if (match(T_ASYNC)) {
-return parseAsyncFunctionDecl(VD_CONST | VD_GLOBAL);
+return parseAsyncFunctionDecl(VarFlag::Const | VarFlag::Global);
 }
 parseError(("Expected 'function', 'var' or 'class' after 'global'"));
 return nullptr;
@@ -321,10 +321,10 @@ return nullptr;
 shared_ptr<Statement> QParser::parseExportDecl () {
 auto exportDecl = make_shared<ExportDeclaration>();
 shared_ptr<VariableDeclaration> varDecl;
-if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VD_CONST));
-else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VD_CONST));
-else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST, FuncDeclFlag::None));
-else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VD_CONST));
+if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VarFlag::Const));
+else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VarFlag::Const));
+else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const, FuncDeclFlag::None));
+else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VarFlag::Const));
 if (varDecl) {
 auto name = varDecl->vars[0]->name;
 exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
@@ -352,8 +352,8 @@ return exportDecl;
 
 shared_ptr<Statement> QParser::parseImportDecl () {
 auto importSta = make_shared<ImportDeclaration>();
-int flags = 0;
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+bitmask<VarFlag> flags;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 if (match(T_STAR)) importSta->importAll = true;
 else {
 parseVarList(importSta->imports, flags);
@@ -366,8 +366,8 @@ return importSta;
 
 shared_ptr<Statement> QParser::parseImportDecl2 () {
 auto importSta = make_shared<ImportDeclaration>();
-int flags = 0;
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+bitmask<VarFlag> flags;
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 importSta->from = parseExpression(P_COMPREHENSION);
 consume(T_IMPORT, "Expected 'import' after import source");
 parseVarList(importSta->imports, flags);

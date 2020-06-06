@@ -122,14 +122,14 @@ vector<shared_ptr<Statement>> statementsToAdd;
 for (auto& sta: statements) {
 auto vd = dynamic_pointer_cast<VariableDeclaration>(sta);
 if (vd  && vd->vars.size()==1
-&& !(vd->vars[0]->flags&VD_CONST)
+&& !(vd->vars[0]->flags &VarFlag::Const)
 && dynamic_pointer_cast<NameExpression>(vd->vars[0]->name) 
 && (dynamic_pointer_cast<FunctionDeclaration>(vd->vars[0]->value) || dynamic_pointer_cast<ClassDeclaration>(vd->vars[0]->value))
 ) {
 auto name = vd->vars[0]->name;
 auto value = vd->vars[0]->value;
 //vd->vars[0]->value = nullptr;
-vd->vars[0]->flags |= VD_HOISTED;
+vd->vars[0]->flags |= VarFlag::Hoisted;
 statementsToAdd.push_back(vd->optimizeStatement());
 sta = BinaryOperation::create(name, T_EQ, value) ->optimize();
 }}

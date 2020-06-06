@@ -195,7 +195,7 @@ continue;
 AnalyzedVariable* lv = ta.findVariable(name->token, LV_NEW);
 for (auto& decoration: decorations) re |= decoration->analyze(ta);
 for (auto& decoration: var->decorations) re |= decoration->analyze(ta);
-bool hoisted = false; //var->flags&VD_HOISTED;
+bool hoisted = false; //static_cast<bool>(var->flags & VarFlag::Hoisted);
 if (var->value && !hoisted) {
 if (!hoisted) re |= var->value->analyze(ta);
 if (lv && var) {
@@ -226,7 +226,7 @@ auto cst1 = make_shared<ConstantExpression>(ctk);
 auto cst2 = make_shared<NameExpression>(ctk);
 im->items.push_back(make_pair(cst1, cst2));
 }}
-int flags = VD_NODEFAULT;
+bitmask<VarFlag> flags = VarFlag::NoDefault;
 auto vdim = make_shared<Variable>(im, nullptr, flags);
 imp.push_back(vdim);
 }

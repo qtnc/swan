@@ -1,6 +1,7 @@
 #ifndef ___PARSER_COMPILER_STATEMENT_BASE1
 #define ___PARSER_COMPILER_STATEMENT_BASE1
 #include "Token.hpp"
+#include "../../include/bitfield.hpp"
 #include<memory>
 #include<vector>
 
@@ -84,13 +85,27 @@ virtual void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable
 virtual bool isFunctionnable () = 0;
 };
 
+bitfield(VarFlag, uint16_t){
+None = 0,
+Vararg = 1,
+Pure = 2,
+Final = 4,
+Const = 0x100,
+Global = 0x200,
+Export = 0x400,
+Single = 0x800,
+NoDefault = 0x1000,
+Hoisted = 0x2000,
+Optimized = 0x4000,
+};
+
 struct Variable {
 std::shared_ptr<Expression> name, value;
 std::shared_ptr<TypeInfo> type;
 std::vector<std::shared_ptr<Expression>> decorations;
-int flags;
+bitmask<VarFlag> flags;
 
-Variable (const std::shared_ptr<Expression>& nm, const std::shared_ptr<Expression>& val = nullptr, int flgs = 0, const std::vector<std::shared_ptr<Expression>>& decos = {}):
+Variable (const std::shared_ptr<Expression>& nm, const std::shared_ptr<Expression>& val = nullptr, bitmask<VarFlag> flgs = VarFlag::None, const std::vector<std::shared_ptr<Expression>>& decos = {}):
 name(nm), value(val), flags(flgs), decorations(decos), type(TypeInfo::ANY) {}
 void optimize ();
 };

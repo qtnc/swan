@@ -8,6 +8,7 @@
 #include<memory>
 
 enum class FuncDeclFlag: uint16_t;
+enum class VarFlag: uint16_t;
 struct Expression;
 struct Statement;
 struct Variable;
@@ -88,19 +89,19 @@ std::shared_ptr<Statement> parseThrow ();
 std::shared_ptr<Statement> parseWith ();
 std::shared_ptr<Expression> parseYield ();
 std::shared_ptr<Statement> parseVarDecl ();
-std::shared_ptr<Statement> parseVarDecl (int flags);
-void parseVarList (std::vector<std::shared_ptr<Variable>>& vars, int flags = 0);
+std::shared_ptr<Statement> parseVarDecl (bitmask<VarFlag> flags);
+void parseVarList (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags);
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();
 std::shared_ptr<Statement> parseImportDecl2 ();
 std::shared_ptr<Expression> parseImportExpression ();
 std::shared_ptr<Statement> parseGlobalDecl ();
-std::shared_ptr<Statement> parseClassDecl (int flags);
+std::shared_ptr<Statement> parseClassDecl (bitmask<VarFlag> flags);
 std::shared_ptr<Statement> parseClassDecl ();
-std::shared_ptr<Statement> parseFunctionDecl (int varFlags, bitmask<FuncDeclFlag> funcFlags);
+std::shared_ptr<Statement> parseFunctionDecl (bitmask<VarFlag> varFlags, bitmask<FuncDeclFlag> funcFlags);
 std::shared_ptr<Statement> parseFunctionDecl ();
-std::shared_ptr<Statement> parseAsyncFunctionDecl (int varFlags);
+std::shared_ptr<Statement> parseAsyncFunctionDecl (bitmask<VarFlag> flags);
 std::shared_ptr<Statement> parseAsync ();
 
 void parseMethodDecl (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
@@ -110,7 +111,7 @@ void parseAsyncMethodDecl (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
 void parseMethodDecl2 (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
 
 std::shared_ptr<Expression> nameExprToConstant (std::shared_ptr<Expression> key);
-void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, int flags);
+void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags);
 
 std::shared_ptr<struct TypeInfo> parseTypeInfo ();
 };

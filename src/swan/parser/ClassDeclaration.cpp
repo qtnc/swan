@@ -25,7 +25,7 @@ return index;
 }
 
 void ClassDeclaration::handleAutoConstructor (QCompiler& compiler, unordered_map<string,Field>& memberFields, bool isStatic) {
-if (all_of(methods.begin(), methods.end(), [&](auto& m){ return isStatic!=!!(m->flags&FD_STATIC); })) return;
+if (all_of(methods.begin(), methods.end(), [&](auto& m){ return isStatic!=!!(m->flags &FuncDeclFlag::Static); })) return;
 auto inits = make_shared<BlockStatement>();
 vector<pair<string,Field>> initFields;
 for (auto& field: memberFields) if (field.second.defaultValue) initFields.emplace_back(field.first, field.second);
@@ -44,13 +44,13 @@ if (!ctor && (!isStatic || inits->statements.size() )) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 auto thisExpr = make_shared<NameExpression>(thisToken);
 ctor = make_shared<FunctionDeclaration>(compiler.vm, ctorToken);
-ctor->flags = (isStatic? FD_STATIC : 0);
+ctor->flags.set(FuncDeclFlag::Static, isStatic);
 ctor->params.push_back(make_shared<Variable>(thisExpr));
 if (isStatic) ctor->body = make_shared<SimpleStatement>(ctorToken);
 else {
 auto arg = make_shared<NameExpression>(compiler.createTempName(*this)); 
-ctor->params.push_back(make_shared<Variable>(arg, nullptr, VD_VARARG)); 
-ctor->flags |= FD_VARARG;
+ctor->params.push_back(make_shared<Variable>(arg, nullptr, VarFlag::Vararg )); 
+ctor->flags |= FuncDeclFlag::Vararg;
 ctor->body = BinaryOperation::create(make_shared<SuperExpression>(ctorToken), T_DOT, make_shared<CallExpression>(make_shared<NameExpression>(ctorToken), vector<shared_ptr<Expression>>({ make_shared<UnpackExpression>(arg) }) ));
 }
 methods.push_back(ctor);

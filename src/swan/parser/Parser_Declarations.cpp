@@ -6,7 +6,7 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, int flags) {
+void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
 do {
 auto var = make_shared<Variable>(nullptr, nullptr, flags);
 skipNewlines();
@@ -14,9 +14,9 @@ while (match(T_AT)) {
 var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
 skipNewlines();
 }
-if (!(var->flags&VD_CONST) && match(T_CONST)) var->flags |= VD_CONST;
-if (!(var->flags&VD_CONST)) match(T_VAR);
-if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
+if (!(var->flags &VarFlag::Const) && match(T_CONST)) var->flags |= VarFlag::Const;
+if (!(var->flags & VarFlag::Const)) match(T_VAR);
+if (!(var->flags & VarFlag::Vararg) && match(T_DOTDOTDOT)) var->flags |= VarFlag::Vararg;
 switch(nextToken().type){
 case T_NAME: var->name = parseName(); break;
 case T_LEFT_PAREN: var->name = parseGroupOrTuple(); var->value=make_shared<LiteralTupleExpression>(cur); break;
@@ -26,22 +26,22 @@ case T_UND: var->name = parseField(); break;
 case T_UNDUND: var->name = parseStaticField(); break;
 default: parseError("Expecting identifier, '(', '[' or '{' in variable declaration"); break;
 }
-if (!(var->flags&VD_VARARG) && match(T_DOTDOTDOT)) var->flags |= VD_VARARG;
+if (!(var->flags & VarFlag::Vararg) && match(T_DOTDOTDOT)) var->flags |= VarFlag::Vararg;
 skipNewlines();
-if (!(flags&VD_NODEFAULT) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
-else var->flags |= VD_NODEFAULT;
+if (!(flags & VarFlag::NoDefault) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
+else var->flags |= VarFlag::NoDefault;
 if (match(T_AS)) var->type = parseTypeInfo();
 vars.push_back(var);
-if (flags&VD_SINGLE) break;
+if (flags & VarFlag::Single) break;
 } while(match(T_COMMA));
 }
 
 shared_ptr<Statement> QParser::parseVarDecl () {
-return parseVarDecl(cur.type==T_CONST? VD_CONST : 0);
+return parseVarDecl(cur.type==T_CONST? VarFlag::Const : VarFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseVarDecl (int flags) {
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VD_GLOBAL;
+shared_ptr<Statement> QParser::parseVarDecl (bitmask<VarFlag> flags) {
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 auto decl = make_shared<VariableDeclaration>();
 parseVarList(decl->vars, flags);
 return decl;
@@ -55,15 +55,15 @@ if (cld) var->type = make_shared<ClassDeclTypeInfo>(cld);
 func->params.push_back(var);
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
-parseVarList(func->params);
+parseVarList(func->params, VarFlag::None);
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
 else if (match(T_NAME)) {
 prevToken();
-parseVarList(func->params, VD_SINGLE);
+parseVarList(func->params, VarFlag::Single);
 }
 if (match(T_AS)) func->returnType = parseTypeInfo();
-if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags&VD_VARARG)) func->flags |= FuncDeclFlag::Vararg;
+if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags & VarFlag::Vararg)) func->flags |= FuncDeclFlag::Vararg;
 }
 
 void QParser::parseDecoratedDecl (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {

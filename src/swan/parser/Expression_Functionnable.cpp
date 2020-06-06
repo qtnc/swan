@@ -40,7 +40,7 @@ th = dynamic_pointer_cast<TypeHintExpression>(bx->right);
 }
 else {
 var->name = item;
-var->flags |= VD_NODEFAULT;
+var->flags |= VarFlag::NoDefault;
 }
 if (th) var->type = th->type;
 params.push_back(var);
@@ -65,7 +65,7 @@ params.push_back(var);
 }
 
 void NameExpression::makeFunctionParameters (vector<shared_ptr<Variable>>& params) {
-params.push_back(make_shared<Variable>(shared_this(), nullptr, VD_NODEFAULT));
+params.push_back(make_shared<Variable>(shared_this(), nullptr, VarFlag::NoDefault));
 }
 
 bool LiteralSequenceExpression::isSingleSequence () {

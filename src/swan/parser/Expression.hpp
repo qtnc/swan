@@ -364,12 +364,12 @@ std::shared_ptr<TypeInfo> type;
 
 struct ClassDeclaration: Expression, Decorable  {
 QToken name;
-int flags;
+bitmask<VarFlag> flags;
 std::vector<QToken> parents;
 std::vector<std::shared_ptr<FunctionDeclaration>> methods;
 std::unordered_map<std::string, Field> fields, staticFields;
 
-ClassDeclaration (const QToken& name0, int flgs): name(name0), flags(flgs)  {}
+ClassDeclaration (const QToken& name0, bitmask<VarFlag> flgs): name(name0), flags(flgs)  {}
 bool isDecorable () override { return true; }
 int findField (std::unordered_map<std::string,Field>& flds, const QToken& name, std::shared_ptr<TypeInfo>** type = nullptr);
 inline int findField (const QToken& name, std::shared_ptr<TypeInfo>** type = nullptr) {  return findField(fields, name, type); }

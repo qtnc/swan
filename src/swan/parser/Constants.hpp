@@ -11,6 +11,7 @@
 #define LV_ERR_ALREADY_EXIST -126
 
 // Variable declaration flags
+/*
 #define VD_LOCAL 0
 #define VD_VARARG 1
 #define VD_CONST 2
@@ -21,6 +22,7 @@
 #define VD_FINAL 0x400
 #define VD_HOISTED 0x1000
 #define VD_OPTIMFLAG 0x4000000
+*/
 
 // Function declaration flags
 /*

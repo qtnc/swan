@@ -833,7 +833,7 @@ shared_ptr<NameExpression> name = nullptr;
 LocalVariable* lv = nullptr;
 int slot;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
-slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
+slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
@@ -841,10 +841,10 @@ compiler.writeOp(OP_POP);
 }}
 else {
 name = make_shared<NameExpression>(compiler.createTempName(*var->name));
-slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags&VD_CONST)? LV_CONST : 0), &lv);
-if (!(var->flags&VD_OPTIMFLAG)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
+slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
+if (!(var->flags & VarFlag::Optimized)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 destructuring.push_back(var);
-var->flags |= VD_OPTIMFLAG;
+var->flags |= VarFlag::Optimized;
 }
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) decoration->compile(compiler);
