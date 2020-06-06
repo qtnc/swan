@@ -59,11 +59,11 @@ return t1->equals(t2);
 }
 
 int TypeAnalyzer::assignType (Expression&  e, const std::shared_ptr<TypeInfo>& type) {
-if (type==TypeInfo::ANY && e.type!=TypeInfo::ANY) {
-typeWarn(e.nearestToken(), "Overwrite with any type");
+if (type==TypeInfo::ANY && e.type && e.type!=TypeInfo::ANY) {
+typeWarn(e.nearestToken(), "Overwrite with any type, was %s", e.type?e.type->toString():"<null>");
 }
-if (type==TypeInfo::MANY && (e.type!=TypeInfo::ANY && e.type!=TypeInfo::MANY)) {
-typeWarn(e.nearestToken(), "Overwrite with many type");
+if (type==TypeInfo::MANY && e.type && e.type!=TypeInfo::ANY && e.type!=TypeInfo::MANY) {
+typeWarn(e.nearestToken(), "Overwrite with many type, was %s", e.type?e.type->toString():"<null>");
 }
 auto oldType = e.type;
 e.type = type? type ->resolve(*this) : nullptr;

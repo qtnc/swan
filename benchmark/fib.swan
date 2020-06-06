@@ -1,6 +1,6 @@
 function fib (n as Num) as Num {
     if (n < 2) return n
-    return (fib(n - 1) as Num) + (fib(n - 2) as Num)
+    return fib(n - 1) + fib(n - 2)
   }
 
 

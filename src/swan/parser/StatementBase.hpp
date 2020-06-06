@@ -97,6 +97,7 @@ Single = 0x800,
 NoDefault = 0x1000,
 Hoisted = 0x2000,
 Optimized = 0x4000,
+Inherited = 0x8000,
 };
 
 struct Variable {

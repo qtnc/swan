@@ -361,3 +361,17 @@ int line = p.first, column = p.second;
 Swan::CompilationMessage z = { msgtype, msg, std::string(tok.start, tok.length), displayName, line, column };
 vm.messageReceiver(z);
 }
+
+
+QToken QParser::createTempName (const QToken& token) {
+static int count = 0;
+auto pos = token.start;
+string name;
+if (pos>=start && pos<end) {
+auto lc = getPositionOf(pos);
+name = format("$%d_%d", lc.first, lc.second);
+}
+else name = format("$%d", count++);
+QString* s = QString::create(vm,name);
+return { T_NAME, s->data, s->length, QV(s) };
+}

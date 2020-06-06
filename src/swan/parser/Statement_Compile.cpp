@@ -203,7 +203,7 @@ int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
-if (destructuring) loopVariable = make_shared<NameExpression>(compiler.createTempName(*loopVariables[0]->name));
+if (destructuring) loopVariable = make_shared<NameExpression>(compiler.createTempName(this->token));
 compiler.writeDebugLine(inExpression->nearestToken());
 inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);

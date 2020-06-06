@@ -6,6 +6,8 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
+extern const QToken THIS_TOKEN;
+
 void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
 do {
 auto var = make_shared<Variable>(nullptr, nullptr, flags);
@@ -49,10 +51,10 @@ return decl;
 
 void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func, ClassDeclaration* cld) {
 if (func->flags &FuncDeclFlag::Method) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto var = make_shared<Variable>(make_shared<NameExpression>(thisToken));
-if (cld) var->type = make_shared<ClassDeclTypeInfo>(cld);
-func->params.push_back(var);
+auto thisExpr = make_shared<NameExpression>(THIS_TOKEN);
+auto thisVar = make_shared<Variable>(thisExpr);
+if (cld) thisExpr->type = thisVar->type = make_shared<ClassDeclTypeInfo>(cld);
+func->params.push_back(thisVar);
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
 parseVarList(func->params, VarFlag::None);
@@ -155,8 +157,7 @@ f.defaultValue = parseExpression(P_COMPREHENSION);
 if (match(T_AS)) typeHint = parseTypeInfo();
 QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED};
-shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(thisToken);
+shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 shared_ptr<Expression> field;
 flags |= FuncDeclFlag::Method;
 if (flags & FuncDeclFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
@@ -164,6 +165,7 @@ else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
 auto setterParam = make_shared<Variable>(param);
+thisExpr->type = thisParam->type = make_shared<ClassDeclTypeInfo>(&cls);
 setterParam->type = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);

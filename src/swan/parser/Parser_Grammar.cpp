@@ -181,3 +181,6 @@ const char
 *FIBER = "Fiber",
 *ASYNC = "async",
 *CONSTRUCTOR = "constructor";
+
+extern const QToken THIS_TOKEN;
+const QToken THIS_TOKEN = { T_NAME, THIS, 4, QV::UNDEFINED };

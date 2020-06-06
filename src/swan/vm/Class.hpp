@@ -54,7 +54,7 @@ bitfield(ClassFlag, uint8_t){
 None = 0,
 Foreign = 1,
 Final = 4,
-Subclassed = 8,
+Inherited = 8,
 };
 
 struct QClass: QObject {

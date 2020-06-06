@@ -131,7 +131,7 @@ BinaryOperation::create(inVar, T_EQ, BinaryOperation::create(inExpression, T_DOT
 ta.pushScope();
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
-if (destructuring) loopVariable = make_shared<NameExpression>(ta.createTempName(*loopVariables[0]->name));
+if (destructuring) loopVariable = make_shared<NameExpression>(ta.createTempName(this->token));
 ta.findVariable(loopVariable->token, LV_NEW);
 auto nextCallExpr = BinaryOperation::create(inVar, T_DOT, make_shared<NameExpression>(nextToken));
 BinaryOperation::create(loopVariable, T_EQ, nextCallExpr) ->optimize() ->analyze(ta);

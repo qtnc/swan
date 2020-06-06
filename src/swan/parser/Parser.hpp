@@ -28,6 +28,7 @@ const QToken& nextToken ();
 const QToken& nextNameToken (bool);
 const QToken& prevToken();
 QToken createTempName (Expression& expr);
+QToken createTempName (const QToken& token);
 std::pair<int,int> getPositionOf (const char*);
 
 void printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const std::string& msg);

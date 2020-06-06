@@ -18,7 +18,7 @@ return format("%c%d", index>=0x100? '@' : '%', index&0xFF);
 
 ClassTypeInfo::ClassTypeInfo (QClass* c1, bool ex, bool op):
 type(c1), exact(ex), optional(op) {
-exact = exact || type->nonInheritable;
+exact = exact || !(type->flags & ClassFlag::Inherited);
 optional = optional && type!=type->vm.nullClass && type!=type->vm.undefinedClass;
 }
 
@@ -142,11 +142,11 @@ return make_shared<ClassTypeInfo>(cls, exact, optional);
 }}
 }//if lv->value
 println("CAn't resolve '%s', lv=%s, value=%s", string(token.start, token.length), !!lv, lv&&lv->value?typeid(*lv->value).name() : "<null>");
-return TypeInfo::MANY;
+return TypeInfo::ANY;
 }
 
 ClassDeclTypeInfo::ClassDeclTypeInfo (ClassDeclaration* c1, bool ex, bool op):
-cls(c1), exact(ex), optional(op) {
+cls(c1), exact(ex || !(c1->flags & VarFlag::Inherited)), optional(op) {
 }
 
 ClassDeclTypeInfo::ClassDeclTypeInfo (shared_ptr<ClassDeclaration> c1, bool ex, bool op):

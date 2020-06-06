@@ -6,7 +6,7 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-QToken THIS_TOKEN = { T_NAME, THIS, 4, QV::UNDEFINED };
+extern const QToken THIS_TOKEN;
 
 int ConstantExpression::analyze (TypeAnalyzer& ta) { 
 auto tp = ta.resolveValueType(token.value);
@@ -137,6 +137,7 @@ else if (ct->type==ta.vm.mapClass && cti->countSubtypes()==2) finalType = cti->s
 else if (ct->type==ta.vm.tupleClass && args.size()==1) if (auto cxe = dynamic_pointer_cast<ConstantExpression>(args[0])) if (cti->countSubtypes()>=cxe->token.value.d) finalType = cti->subtypes[cxe->token.value.d];
 }}
 if (!finalType) finalType = ta.resolveCallType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED });
+finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -145,13 +146,23 @@ int ClassDeclaration::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto oldCls = ta.curClass;
 ta.curClass = this;
+auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
+re |= ta.assignType(*this, finalType);
+if (auto lv = ta.findVariable(name, LV_EXISTING | LV_FOR_READ)) {
+lv->value = shared_this();
+lv->type = type;
+}
+for (auto& p: parents) {
+auto parent = make_shared<NameExpression>(p);
+parent->analyze(ta);
+parent->type = parent->type->resolve(ta);
+if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parent->type))  cdt->cls->flags |= VarFlag::Inherited;
+}
 for (auto& m: methods) {
 ta.curMethod = m.get();
 re |= m->analyze(ta);
 ta.curMethod = nullptr;
 }
-auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
-re |= ta.assignType(*this, finalType);
 ta.curClass = oldCls;
 return re;
 }
@@ -255,6 +266,7 @@ setterName[token.length+1] = 0;
 setterName[token.length] = '=';
 QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
 auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, setterNameToken, 1, &assignedValue);
+resolvedType = ta.mergeTypes(type, resolvedType);
 re |= ta.assignType(*this, resolvedType);
 }
 return re;
@@ -266,7 +278,8 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &fd));
+auto finalType = ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &fd);
+finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -275,7 +288,8 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.mergeTypes(type, ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fd));
+auto finalType = ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fd);
+finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
 }}
@@ -290,6 +304,7 @@ if (setter) {
 string sName = string(setter->token.start, setter->token.length) + ("=");
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fd);
+finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -414,6 +429,7 @@ auto cls = ta.getCurClass();
 if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], false, &fd);
 }
 if (!finalType) finalType = ta.resolveCallType(receiver, args.size(), &args[0], &fd);
+finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
 }
@@ -469,7 +485,7 @@ shared_ptr<NameExpression> name = nullptr;
 AnalyzedVariable* lv = nullptr;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
 lv = ta.findVariable(name->token, LV_NEW);
-if (var->value) lv->type = var->value->type;
+if (var->value) lv->type = ta.mergeTypes(lv->type, var->value->type);
 }
 else {
 name = make_shared<NameExpression>(ta.createTempName(*var->name));
@@ -480,17 +496,18 @@ re |= var->value->analyze(ta);
 }
 destructuring.push_back(var);
 var->flags |= VarFlag::Optimized;
-lv->type = var->value->type;
+lv->type = ta.mergeTypes(lv->type, var->value->type);
 }
 if (var->decorations.size()) {
 for (auto& decoration: var->decorations) re |= decoration->analyze(ta);
 }
 if (var->type) {
-if (lv) lv->type = var->type; //ta.mergeTypes(var->type, lv->type);
+if (lv) lv->type = ta.mergeTypes(lv->type, var->type);
 }
 else if (var->value) {
-var->type  = var->value->type;
-if (lv) lv->type = var->value->type; //ta.mergeTypes(var->type, lv->type);
+var->value->analyze(ta);
+var->type  = ta.mergeTypes(var->type, var->value->type);
+if (lv) lv->type = ta.mergeTypes(lv->type, var->value->type); 
 }
 }
 if (destructuring.size()) {
@@ -543,7 +560,10 @@ return expr->analyze(ta) | ta.assignType(*this, expr->type);
 }
 
 int TypeHintExpression::analyze (TypeAnalyzer& ta) {
-return expr->analyze(ta) | ta.assignType(*expr, type);
+return 
+ta.assignType(*this, ta.mergeTypes(type, type->resolve(ta)))
+| expr->analyze(ta) 
+| ta.assignType(*expr, type);
 }
 
 QFunction* FuncOrDecl::getFunc () {

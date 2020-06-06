@@ -7,6 +7,8 @@
 #include "../vm/Function.hpp"
 using namespace std;
 
+extern const QToken THIS_TOKEN;
+
 unordered_map<int,int> BASE_OPTIMIZED_OPS = {
 #define OP(N,M) { T_##N, OP_##M }
 OP(PLUS, ADD),
@@ -278,9 +280,8 @@ return;
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN, LV_EXISTING | LV_FOR_READ));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
 return;
 }
@@ -325,9 +326,8 @@ return;
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(thisToken, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN, LV_EXISTING | LV_FOR_READ));
 char setterName[token.length+2];
 memcpy(&setterName[0], token.start, token.length);
 setterName[token.length+1] = 0;
@@ -355,8 +355,7 @@ return;
 int fieldSlot = cls->findField(token);
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_FIELD, fieldSlot);
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, fieldSlot);
 }}
@@ -378,8 +377,7 @@ assignedValue->compile(compiler);
 //if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else  {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, fieldSlot);
 }
@@ -400,8 +398,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
 }
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
@@ -425,8 +422,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
 }
 else {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-int thisSlot = compiler.findUpvalue(thisToken, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
@@ -761,8 +757,7 @@ auto func = fd.getFunc();
 int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ, &lv))<0 && compiler.getCurClass()) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto thisExpr = make_shared<NameExpression>(thisToken);
+auto thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
 return;

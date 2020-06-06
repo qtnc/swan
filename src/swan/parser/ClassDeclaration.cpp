@@ -9,6 +9,8 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
+extern const QToken THIS_TOKEN;
+
 int ClassDeclaration::findField (unordered_map<string,Field>& flds, const QToken& name, shared_ptr<TypeInfo>** type) {
 auto it = flds.find(string(name.start, name.length));
 int index = -1;
@@ -41,8 +43,7 @@ inits->statements.push_back(assignment);
 QToken ctorToken = { T_NAME, CONSTRUCTOR, 11, QV::UNDEFINED };
 auto ctor = findMethod(ctorToken, isStatic);
 if (!ctor && (!isStatic || inits->statements.size() )) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-auto thisExpr = make_shared<NameExpression>(thisToken);
+auto thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 ctor = make_shared<FunctionDeclaration>(compiler.vm, ctorToken);
 ctor->flags.set(FuncDeclFlag::Static, isStatic);
 ctor->params.push_back(make_shared<Variable>(thisExpr));

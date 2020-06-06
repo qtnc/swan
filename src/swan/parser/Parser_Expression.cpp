@@ -5,6 +5,8 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
+extern const QToken THIS_TOKEN;
+
 shared_ptr<Expression> QParser::nameExprToConstant (shared_ptr<Expression> key) {
 if (auto bop = dynamic_pointer_cast<BinaryOperation>(key)) {
 if (bop->op==T_EQ) key = bop->left;
@@ -106,8 +108,8 @@ if (match(T_GT)) func->flags |= FuncDeclFlag::Method;
 if (match(T_STAR)) func->flags |= FuncDeclFlag::Fiber;
 else if (match(T_AMP)) func->flags |= FuncDeclFlag::Async;
 if (func->flags & FuncDeclFlag::Method) {
-QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
-func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
+auto thisVar = make_shared<Variable>(make_shared<NameExpression>(THIS_TOKEN));
+func->params.push_back(thisVar);
 }
 functionnable->makeFunctionParameters(func->params);
 func->body = parseStatement();
@@ -530,12 +532,5 @@ else left = right;
 }}
 
 QToken QParser::createTempName (Expression& e) {
-static int count = 0;
-auto pos = e.nearestToken() .start;
-int n;
-if (pos>=start && pos<end) n = pos-start;
-else n = count++;
-string name = format("$%d", n);
-QString* s = QString::create(vm,name);
-return { T_NAME, s->data, s->length, QV(s) };
+return createTempName(e.nearestToken());
 }

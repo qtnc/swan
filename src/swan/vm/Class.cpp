@@ -13,7 +13,10 @@ flags(cf),
 name(name0),
 gcInfo(nullptr),
 methods(trace_allocator<QV>(vm))
-{ copyParentMethods(); }
+{ 
+if (parent) parent->flags |= ClassFlag::Inherited;
+copyParentMethods(); 
+}
 
 QClass* QClass::create (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nStaticFields, uint16_t nFields) { 
 return vm.constructVLS<QClass, QV>(nStaticFields, vm, type, parent, name, nFields, ClassFlag::None); 
