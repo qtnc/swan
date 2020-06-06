@@ -70,92 +70,92 @@ importHook(defaultImportHook)
 {
 GCLocker gcLocker(*this);
 objectClass = QClass::create(*this, nullptr, nullptr, "Object", 0, 0);
-classClass = QClass::createNonInheritable(*this, nullptr, objectClass, "Class");
+classClass = QClass::createFinal(*this, nullptr, objectClass, "Class");
 addToGC(classClass);
 addToGC(objectClass);
 
-auto functionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "FunctionMetaClass");
-auto closureMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ClosureMetaClass");
-auto stdFunctionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "StdFunctionMetaClass");
-auto boundFunctionMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "BoundFunctionMetaClass");
+auto functionMetaClass = QClass::createFinal(*this, classClass, classClass, "FunctionMetaClass");
+auto closureMetaClass = QClass::createFinal(*this, classClass, classClass, "ClosureMetaClass");
+auto stdFunctionMetaClass = QClass::createFinal(*this, classClass, classClass, "StdFunctionMetaClass");
+auto boundFunctionMetaClass = QClass::createFinal(*this, classClass, classClass, "BoundFunctionMetaClass");
 
-auto boolMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "BoolMetaClass");
-auto classMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ClassMetaClass");
-auto fiberMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "FiberMetaClass");
-auto iterableMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "IterableMetaClass");
-auto iteratorMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "IteratorMetaClass");
-auto listMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ListMetaClass");
-auto mapMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "MapMetaClass");
-auto mappingMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "MappingMetaClass");
-auto numMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "NumMetaClass");
-auto objectMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "ObjectMetaClass");
-auto rangeMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "RangeMetaClass");
-auto setMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "SetMetaClass");
-auto stringMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "StringMetaClass");
-auto tupleMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "TupleMetaClass");
+auto boolMetaClass = QClass::createFinal(*this, classClass, classClass, "BoolMetaClass");
+auto classMetaClass = QClass::createFinal(*this, classClass, classClass, "ClassMetaClass");
+auto fiberMetaClass = QClass::createFinal(*this, classClass, classClass, "FiberMetaClass");
+auto iterableMetaClass = QClass::createFinal(*this, classClass, classClass, "IterableMetaClass");
+auto iteratorMetaClass = QClass::createFinal(*this, classClass, classClass, "IteratorMetaClass");
+auto listMetaClass = QClass::createFinal(*this, classClass, classClass, "ListMetaClass");
+auto mapMetaClass = QClass::createFinal(*this, classClass, classClass, "MapMetaClass");
+auto mappingMetaClass = QClass::createFinal(*this, classClass, classClass, "MappingMetaClass");
+auto numMetaClass = QClass::createFinal(*this, classClass, classClass, "NumMetaClass");
+auto objectMetaClass = QClass::createFinal(*this, classClass, classClass, "ObjectMetaClass");
+auto rangeMetaClass = QClass::createFinal(*this, classClass, classClass, "RangeMetaClass");
+auto setMetaClass = QClass::createFinal(*this, classClass, classClass, "SetMetaClass");
+auto stringMetaClass = QClass::createFinal(*this, classClass, classClass, "StringMetaClass");
+auto tupleMetaClass = QClass::createFinal(*this, classClass, classClass, "TupleMetaClass");
 
 classClass->type = classMetaClass;
 
-functionClass = QClass::createNonInheritable(*this, functionMetaClass, objectClass, "Function");
-closureClass = QClass::createNonInheritable(*this, closureMetaClass, functionClass, "Closure");
-boundFunctionClass = QClass::createNonInheritable(*this, boundFunctionMetaClass, functionClass, "BoundFunction");
-stdFunctionClass = QClass::createNonInheritable(*this, stdFunctionMetaClass, functionClass, "StdFunction");
+functionClass = QClass::createFinal(*this, functionMetaClass, objectClass, "Function");
+closureClass = QClass::createFinal(*this, closureMetaClass, functionClass, "Closure");
+boundFunctionClass = QClass::createFinal(*this, boundFunctionMetaClass, functionClass, "BoundFunction");
+stdFunctionClass = QClass::createFinal(*this, stdFunctionMetaClass, functionClass, "StdFunction");
 
-boolClass = QClass::createNonInheritable(*this, boolMetaClass, objectClass, "Bool");
+boolClass = QClass::createFinal(*this, boolMetaClass, objectClass, "Bool");
 iterableClass = QClass::create(*this, iterableMetaClass, objectClass, "Iterable", 0, 0);
 iteratorClass = QClass::create(*this, iteratorMetaClass, objectClass, "Iterator", 0, 0);
-fiberClass = QClass::createNonInheritable(*this, fiberMetaClass, iterableClass, "Fiber");
-listClass = QClass::createNonInheritable(*this, listMetaClass, iterableClass, "List");
+fiberClass = QClass::createFinal(*this, fiberMetaClass, iterableClass, "Fiber");
+listClass = QClass::createFinal(*this, listMetaClass, iterableClass, "List");
 mappingClass = QClass::create(*this, mappingMetaClass, iterableClass, "Mapping", 0, 0);
-mapClass = QClass::createNonInheritable(*this, mapMetaClass, mappingClass, "Map");
-nullClass = QClass::createNonInheritable(*this, classClass, objectClass, "null");
-numClass = QClass::createNonInheritable(*this, numMetaClass, objectClass, "Num");
+mapClass = QClass::createFinal(*this, mapMetaClass, mappingClass, "Map");
+nullClass = QClass::createFinal(*this, classClass, objectClass, "null");
+numClass = QClass::createFinal(*this, numMetaClass, objectClass, "Num");
 objectClass->type = objectMetaClass;
-rangeClass = QClass::createNonInheritable(*this, rangeMetaClass, iterableClass, "Range");
-setClass = QClass::createNonInheritable(*this, setMetaClass, iterableClass, "Set");
-stringClass = QClass::createNonInheritable(*this, stringMetaClass, iterableClass, "String");
-tupleClass = QClass::createNonInheritable(*this, tupleMetaClass, iterableClass, "Tuple");
-undefinedClass = QClass::createNonInheritable(*this, classClass, objectClass, "undefined");
+rangeClass = QClass::createFinal(*this, rangeMetaClass, iterableClass, "Range");
+setClass = QClass::createFinal(*this, setMetaClass, iterableClass, "Set");
+stringClass = QClass::createFinal(*this, stringMetaClass, iterableClass, "String");
+tupleClass = QClass::createFinal(*this, tupleMetaClass, iterableClass, "Tuple");
+undefinedClass = QClass::createFinal(*this, classClass, objectClass, "undefined");
 
-listIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "ListIterator");
-mapIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "MapIterator");
-rangeIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "RangeIterator");
-setIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "SetIterator");
-stringIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "StringIterator");
-tupleIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "TupleIterator");
+listIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "ListIterator");
+mapIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "MapIterator");
+rangeIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "RangeIterator");
+setIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "SetIterator");
+stringIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "StringIterator");
+tupleIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "TupleIterator");
 
 #ifndef NO_REGEX
-auto regexMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "RegexMetaClass");
-regexClass = QClass::createNonInheritable(*this, regexMetaClass, objectClass, "Regex");
-regexMatchResultClass = QClass::createNonInheritable(*this, classClass, objectClass, "RegexMatchResult");
-regexIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "RegexIterator");
-regexTokenIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "RegexTokenIterator");
+auto regexMetaClass = QClass::createFinal(*this, classClass, classClass, "RegexMetaClass");
+regexClass = QClass::createFinal(*this, regexMetaClass, objectClass, "Regex");
+regexMatchResultClass = QClass::createFinal(*this, classClass, objectClass, "RegexMatchResult");
+regexIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "RegexIterator");
+regexTokenIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "RegexTokenIterator");
 #endif
 #ifndef NO_OPTIONAL_COLLECTIONS
-auto dequeMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "DequeMetaClass");
-dequeClass = QClass::createNonInheritable(*this, dequeMetaClass, iterableClass, "Deque");
-dequeIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "DequeIterator");
-auto dictionaryMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "DictionaryMetaClass");
-dictionaryClass = QClass::createNonInheritable(*this, dictionaryMetaClass, mappingClass, "Dictionary");
-dictionaryIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "DictionaryIterator");
-auto linkedListMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "LinkedListMetaClass");
-linkedListClass = QClass::createNonInheritable(*this, linkedListMetaClass, iterableClass, "LinkedList");
-linkedListIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "LinkedListIterator");
-auto heapMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "HeapMetaClass");
-heapClass = QClass::createNonInheritable(*this, heapMetaClass, iterableClass, "Heap");
-heapIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "HeapIterator");
-auto sortedSetMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "SortedSetMetaClass");
-sortedSetClass = QClass::createNonInheritable(*this, sortedSetMetaClass, iterableClass, "SortedSet");
-sortedSetIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "SortedSetIterator");
+auto dequeMetaClass = QClass::createFinal(*this, classClass, classClass, "DequeMetaClass");
+dequeClass = QClass::createFinal(*this, dequeMetaClass, iterableClass, "Deque");
+dequeIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "DequeIterator");
+auto dictionaryMetaClass = QClass::createFinal(*this, classClass, classClass, "DictionaryMetaClass");
+dictionaryClass = QClass::createFinal(*this, dictionaryMetaClass, mappingClass, "Dictionary");
+dictionaryIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "DictionaryIterator");
+auto linkedListMetaClass = QClass::createFinal(*this, classClass, classClass, "LinkedListMetaClass");
+linkedListClass = QClass::createFinal(*this, linkedListMetaClass, iterableClass, "LinkedList");
+linkedListIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "LinkedListIterator");
+auto heapMetaClass = QClass::createFinal(*this, classClass, classClass, "HeapMetaClass");
+heapClass = QClass::createFinal(*this, heapMetaClass, iterableClass, "Heap");
+heapIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "HeapIterator");
+auto sortedSetMetaClass = QClass::createFinal(*this, classClass, classClass, "SortedSetMetaClass");
+sortedSetClass = QClass::createFinal(*this, sortedSetMetaClass, iterableClass, "SortedSet");
+sortedSetIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "SortedSetIterator");
 #endif
 #ifndef NO_RANDOM
-auto randomMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "RandomMetaClass");
-randomClass = QClass::createNonInheritable(*this, randomMetaClass, iterableClass, "Random");
+auto randomMetaClass = QClass::createFinal(*this, classClass, classClass, "RandomMetaClass");
+randomClass = QClass::createFinal(*this, randomMetaClass, iterableClass, "Random");
 #endif
 #ifndef NO_GRID
-auto gridMetaClass = QClass::createNonInheritable(*this, classClass, classClass, "GridMetaClass");
-gridClass = QClass::createNonInheritable(*this, gridMetaClass, iterableClass, "Grid");
-gridIteratorClass = QClass::createNonInheritable(*this, classClass, iteratorClass, "GridIterator");
+auto gridMetaClass = QClass::createFinal(*this, classClass, classClass, "GridMetaClass");
+gridClass = QClass::createFinal(*this, gridMetaClass, iterableClass, "Grid");
+gridIteratorClass = QClass::createFinal(*this, classClass, iteratorClass, "GridIterator");
 #endif
 
 init();

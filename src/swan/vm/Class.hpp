@@ -5,6 +5,7 @@
 #include "Allocator.hpp"
 #include "CString.hpp"
 #include "../../include/cpprintf.hpp"
+#include "../../include/bitfield.hpp"
 
 struct ClassGCInfo {
 bool(*gcVisit)(QObject*);
@@ -49,14 +50,11 @@ static ClassGCInfo info = { baseGCVisit<T>, baseGCMemSize<T>, baseGCOrigin<T>, b
 return &info;
 }
 
-union ClassFlags {
-uint8_t value;
-struct {
-bool foreign :1,
-final :1, 
-subclassed :1;
-}; 
-ClassFlags (): value(0) {}
+bitfield(ClassFlag, uint8_t){
+None = 0,
+Foreign = 1,
+Final = 4,
+Subclassed = 8,
 };
 
 struct QClass: QObject {
@@ -66,10 +64,10 @@ c_string name;
 std::vector<QV, trace_allocator<QV>> methods;
 ClassGCInfo* gcInfo;
 uint16_t nFields;
-bool nonInheritable :1, foreign :1;
+bitmask<ClassFlag> flags;
 QV staticFields[0];
 
-QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nFields, bool nonInheritable);
+QClass (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nFields, bitmask<ClassFlag> flags = ClassFlag::None);
 QClass* copyParentMethods ();
 QClass* mergeMixinMethods (QClass* mixin);
 QClass* bind (const std::string& methodName, QNativeFunction func);
@@ -83,7 +81,7 @@ if (re.isNullOrUndefined() && parent) return parent->findMethod(symbol);
 else return re;
 }
 static QClass* create (QVM& vm, QClass* type, QClass* parent, const std::string& name, uint16_t nStaticFields=0, uint16_t nFields=0);
-static QClass* createNonInheritable (QVM& vm, QClass* type, QClass* parent, const std::string& name);
+static QClass* createFinal (QVM& vm, QClass* type, QClass* parent, const std::string& name);
 
 QObject* instantiate ();
 ~QClass () = default;

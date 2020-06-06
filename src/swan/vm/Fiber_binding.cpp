@@ -63,11 +63,11 @@ if (it!=parents.end()) {
 error<invalid_argument>("Invalid parent class: %s", it->getClass(vm).name);
 return;
 }
-if (parent->nonInheritable) {
-error<invalid_argument>("Can't inherit from built-in class %s", parent->name);
+if (parent->flags & ClassFlag::Final) {
+error<invalid_argument>("%s is final", parent->name);
 return;
 }
-if (parent->foreign) {
+if (parent->flags & ClassFlag::Foreign) {
 error<invalid_argument>("Can't inherit from foreign class %s", parent->name);
 return;
 }
@@ -89,7 +89,7 @@ GCLocker gcLocker(vm);
 vector<QV> parents(stack.end() -nParents, stack.end());
 QForeignClass* cls = static_cast<QForeignClass*>(vm.createNewClass(name, parents, 0, nUserBytes, true));
 cls->id = id;
-cls->foreign = true;
+cls->flags |= ClassFlag::Foreign;
 stack.erase(stack.end() -nParents, stack.end());
 vm.foreignClassIds[id] = cls;
 push(cls);
