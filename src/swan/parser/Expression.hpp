@@ -361,7 +361,7 @@ int findField (std::unordered_map<std::string,Field>& flds, const QToken& name, 
 inline int findField (const QToken& name, std::shared_ptr<TypeInfo>** type = nullptr) {  return findField(fields, name, type); }
 inline int findStaticField (const QToken& name, std::shared_ptr<TypeInfo>** type = nullptr) { return findField(staticFields, name, type); }
 std::shared_ptr<FunctionDeclaration> findMethod (const QToken& name, bool isStatic);
-void handleAutoConstructor (QCompiler& compiler, std::unordered_map<std::string,Field>& memberFields, bool isStatic);
+void handleAutoConstructor (TypeAnalyzer& ta, std::unordered_map<std::string,Field>& memberFields, bool isStatic);
 const QToken& nearestToken () override { return name; }
 std::shared_ptr<Expression> optimize () override ;
 void compile (QCompiler&)override ;

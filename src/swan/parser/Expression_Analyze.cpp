@@ -148,6 +148,11 @@ auto oldCls = ta.curClass;
 ta.curClass = this;
 auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
 re |= ta.assignType(*this, finalType);
+if (!(flags & VarFlag::Optimized)) {
+handleAutoConstructor(ta, fields, false);
+handleAutoConstructor(ta, staticFields, true);
+flags |= VarFlag::Optimized;
+}
 if (auto lv = ta.findVariable(name, LV_EXISTING | LV_FOR_READ)) {
 lv->value = shared_this();
 lv->type = type;

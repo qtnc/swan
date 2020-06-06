@@ -139,26 +139,22 @@ parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (flags & VarFlag::ReadOnly) match(T_VAR);
 flags |= VarFlag::Accessor | VarFlag::Method;
 do {
-auto memberFlags = flags;
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
 string fieldName = string(fieldToken.start, fieldToken.length);
-if (auto m = cls.findMethod(fieldToken, static_cast<bool>(memberFlags &VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
-int fieldIndex = cls.findField((memberFlags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
+if (auto m = cls.findMethod(fieldToken, static_cast<bool>(flags & VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
+int fieldIndex = cls.findField((flags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
 shared_ptr<TypeInfo> typeHint = nullptr;
-parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (match(T_EQ)) {
-auto& f = (memberFlags & VarFlag::Static? cls.staticFields : cls.fields)[fieldName];
+auto& f = (flags & VarFlag::Static? cls.staticFields : cls.fields)[fieldName];
 f.defaultValue = parseExpression(P_COMPREHENSION);
 }
-parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (match(T_AS)) typeHint = parseTypeInfo();
-parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 shared_ptr<Expression> field;
-if (memberFlags & VarFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
+if (flags & VarFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
 else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
@@ -167,14 +163,14 @@ thisExpr->type = thisParam->type = make_shared<ClassDeclTypeInfo>(&cls);
 setterParam->type = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
-auto getter = make_shared<FunctionDeclaration>(vm, fieldToken, memberFlags | VarFlag::Pure, empty, field);
-auto setter = make_shared<FunctionDeclaration>(vm, setterNameToken, memberFlags, setterParams, assignment);
+auto getter = make_shared<FunctionDeclaration>(vm, fieldToken, flags | VarFlag::Pure, empty, field);
+auto setter = make_shared<FunctionDeclaration>(vm, setterNameToken, flags, setterParams, assignment);
 getter->fieldIndex = fieldIndex;
 getter->returnType = typeHint;
 setter->fieldIndex = fieldIndex;
 setter->returnType = typeHint;
 cls.methods.push_back(getter);
-if (!(memberFlags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
+if (!(flags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
 } while (match(T_COMMA));
 }
 

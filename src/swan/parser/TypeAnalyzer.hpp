@@ -28,6 +28,7 @@ struct FunctionDeclaration* curMethod = nullptr;
 TypeAnalyzer* parent = nullptr;
 std::vector<AnalyzedVariable> variables;
 int curScope = 0;
+int curRound = 0;
 
 void pushScope ();
 void popScope ();

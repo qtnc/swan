@@ -27,9 +27,9 @@ return bs;
 static void analyze (QCompiler& compiler, shared_ptr<Statement>& sta) {
 if (!compiler.globalAnalyzer) compiler.globalAnalyzer = compiler.parent? compiler.parent->globalAnalyzer : make_shared<TypeAnalyzer>(compiler.parser);
 if (!compiler.analyzer) compiler.analyzer = make_shared<TypeAnalyzer>(compiler.parser, compiler.parent? compiler.parent->analyzer.get() : compiler.globalAnalyzer.get());
-int count = 0;
-while (++count<25 && sta->analyze(*compiler.analyzer)) if(count>3) println("Fin du round %d", count);
-if (count>=3) println("Analyzer count = %d", count);
+auto& analyzer = *compiler.analyzer;
+while ((++analyzer.curRound)<25 && sta->analyze(analyzer)) if(analyzer.curRound>3) println("Fin du round %d", analyzer.curRound);
+if (analyzer.curRound>=3) println("Analyzer count = %d", analyzer.curRound);
 }
 
 void QCompiler::compile () {
