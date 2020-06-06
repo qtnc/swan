@@ -79,8 +79,8 @@ copy(make_move_iterator(upvalues.begin()), make_move_iterator(upvalues.end()), f
 copy(make_move_iterator(debugItems.begin()), make_move_iterator(debugItems.end()), function->debugItems);
 memmove(function->bytecode, bc.data(), bcSize);
 if (isAccessor) {
-function->flags.accessor = true;
-function->flags.fieldIndex = fieldIndex;
+function->flags |= FunctionFlag::Accessor;
+function->fieldIndex = fieldIndex;
 }
 function->file = parser.filename;
 result = result? result : parser.result;

@@ -1,6 +1,6 @@
 #ifndef _____SWAN_FUNCTION_HPP_____
 #define _____SWAN_FUNCTION_HPP_____
-#include "FunctionFlags.hpp"
+#include "../../include/bitfield.hpp"
 #include "Object.hpp"
 #include "Value.hpp"
 #include "Allocator.hpp"
@@ -18,6 +18,15 @@ int32_t offset;
 int16_t line;
 };
 
+bitfield(FunctionFlag, uint8_t){
+None = 0,
+Vararg = 1,
+Pure = 2,
+Final = 4,
+Overridden = 8,
+Accessor = 0x10
+};
+
 struct QFunction: QObject {
 union { Upvariable* upvalues; QV* constantsEnd; };
 union { char *bytecode; Upvariable* upvaluesEnd; };
@@ -25,7 +34,8 @@ union { char* bytecodeEnd; DebugItem* debugItems; };
 union { DebugItem* debugItemsEnd; };
 c_string name, file, typeInfo;
 uint_local_index_t nArgs;
-FunctionFlags flags;
+uint_field_index_t fieldIndex;
+bitmask<FunctionFlag> flags;
 QV constants[];
 
 static QFunction* create (QVM& vm, int nArgs, int nConstants, int nUpvalues, int bcSize, int nDebugItems = 0);

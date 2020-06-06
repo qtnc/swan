@@ -165,7 +165,7 @@ push(QTuple::create(vm, 0, nullptr));
 
 inline void QFiber::callClosure (QClosure& closure, int nArgs) {
 int nClosureArgs = closure.func.nArgs;
-adjustArguments(nArgs, nClosureArgs, closure.func.flags.vararg);
+adjustArguments(nArgs, nClosureArgs, static_cast<bool>(closure.func.flags & FunctionFlag::Vararg));
 uint32_t newStackBase = stack.size() -nClosureArgs;
 bool doRun = callFrames.back().isCppCallFrame();
 callFrames.push_back({&closure, closure.func.bytecode, newStackBase});
@@ -178,7 +178,7 @@ case FiberState::INITIAL: {
 QClosure& closure = *f.callFrames.back().closure;
 f.stack.insert(f.stack.end(), stack.end() -nArgs, stack.end());
 stack.erase(stack.end() -nArgs, stack.end());
-f.adjustArguments(nArgs, closure.func.nArgs, closure.func.flags.vararg);
+f.adjustArguments(nArgs, closure.func.nArgs, static_cast<bool>(closure.func.flags & FunctionFlag::Vararg));
 f.parentFiber = this;
 vm.activeFiber = &f;
 f.run();

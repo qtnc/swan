@@ -676,8 +676,8 @@ else compiler.writeOpCallMethod(args.size() +1, subscriptSetterSymbol);
 }
 
 inline bool isInlinableAccessor (shared_ptr<TypeInfo> type, QFunction* func) {
-return type && func && func->flags.accessor
-&& (type->isExact() || !func->flags.overridden);
+return type && func && (func->flags & FunctionFlag::Accessor)
+&& (type->isExact() || !(func->flags & FunctionFlag::Overridden) );
 }
 
 void MemberLookupOperation::compile (QCompiler& compiler) {
@@ -688,7 +688,7 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, func->flags.fieldIndex);
+if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, func->fieldIndex);
 else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -723,7 +723,7 @@ left->compile(compiler);
 assignedValue->compile(compiler);
 if (isInlinableAccessor(type, func)) {
 compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, func->flags.fieldIndex);
+compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, func->fieldIndex);
 }
 else   compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
@@ -882,17 +882,18 @@ fc.writeDebugLine(body->nearestToken());
 if (body->isExpression()) fc.writeOp(OP_POP);
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
-func->flags.vararg = (flags&FD_VARARG);
-func->flags.final = flags&FD_FINAL;
-func->flags.pure = flags&FD_PURE;
+func->flags
+.set(FunctionFlag::Vararg, flags&FD_VARARG)
+.set(FunctionFlag::Pure, flags&FD_PURE)
+.set(FunctionFlag::Final, flags&FD_FINAL);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (flags&FD_ACCESSOR) {
-func->flags.accessor = true;
-func->flags.fieldIndex = fieldIndex;
+func->flags |= FunctionFlag::Accessor;
+func->fieldIndex = fieldIndex;
 }
-else if (func->flags.accessor) {
+else if (func->flags & FunctionFlag::Accessor) {
 flags |= FD_ACCESSOR;
-fieldIndex = func->flags.fieldIndex;
+fieldIndex = func->fieldIndex;
 }
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";

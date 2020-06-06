@@ -116,7 +116,7 @@ int nDbgItems = readVLN(in);
 int nArgs = readVLN(in);
 QFunction& func = *QFunction::create(vm, nArgs, nConsts, nUpvalues, bcSize, nDbgItems);
 references[fnref] = &func;
-func.flags = read<FunctionFlags>(in);
+func.flags = read<bitmask<FunctionFlag>>(in);
 func.file = readString(in);
 func.name = readString(in);
 for (auto [i, ptr] = tuple{ 0, func.constants }; i<nConsts; ++i, ++ptr) *ptr = (readQVBytecode(vm, in, references, globalTable, methodTable));
