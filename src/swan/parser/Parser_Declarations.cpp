@@ -16,7 +16,7 @@ while (match(T_AT)) {
 var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
 skipNewlines();
 }
-if (!(var->flags &VarFlag::Const) && match(T_CONST)) var->flags |= VarFlag::Const;
+parseKeywordFlags(var->flags, VarFlag::Const);
 if (!(var->flags & VarFlag::Const)) match(T_VAR);
 if (!(var->flags & VarFlag::Vararg) && match(T_DOTDOTDOT)) var->flags |= VarFlag::Vararg;
 switch(nextToken().type){
@@ -33,6 +33,7 @@ skipNewlines();
 if (!(flags & VarFlag::NoDefault) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
 else var->flags |= VarFlag::NoDefault;
 if (match(T_AS)) var->type = parseTypeInfo();
+//parseKeywordFlags(var->flags, VarFlag::Const);
 vars.push_back(var);
 if (flags & VarFlag::Single) break;
 } while(match(T_COMMA));
@@ -103,6 +104,7 @@ void QParser::parseMethodDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
 prevToken();
 QToken name = nextNameToken(true);
 auto func = make_shared<FunctionDeclaration>(vm, name, flags | VarFlag::Method );
+parseKeywordFlags(func->flags, VarFlag::Pure | VarFlag::Final | VarFlag::Static | VarFlag::Async);
 parseFunctionParameters(func, &cls);
 if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
@@ -115,9 +117,10 @@ return;
 if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=2) {
 parseError(("Setter methods must take exactly one argument"));
 }
-if (auto m = cls.findMethod(name, static_cast<bool>(flags & VarFlag::Static))) {
+if (auto m = cls.findMethod(name, static_cast<bool>(func->flags & VarFlag::Static))) {
 parseError("%s already defined in line %d", string(name.start, name.length), getPositionOf(m->name.start).first);
 }
+parseKeywordFlags(func->flags, VarFlag::Pure | VarFlag::Final | VarFlag::Static | VarFlag::Async);
 match(T_COLON);
 if (match(T_SEMICOLON)) func->body = make_shared<SimpleStatement>(cur);
 else func->body = parseStatement();
@@ -126,41 +129,36 @@ cls.methods.push_back(func);
 }
 
 void QParser::parseMethodDecl2 (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-nextToken();
+parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::Async | VarFlag::Pure);
+if (nextToken().type==T_FUNCTION) nextToken();
 parseMethodDecl(cls, flags);
 }
 
-void QParser::parseAsyncMethodDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-if (nextToken().type==T_STATIC && !(flags &VarFlag::Static)) {
-flags |= VarFlag::Static;
-nextToken();
-}
-if (cur.type==T_FUNCTION) nextToken();
-parseMethodDecl(cls, flags | VarFlag::Async);
-}
-
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-flags |= VarFlag::Accessor;
-if (cur.type==T_CONST) flags |= VarFlag::ReadOnly;
+parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (flags & VarFlag::ReadOnly) match(T_VAR);
+flags |= VarFlag::Accessor | VarFlag::Method;
 do {
+auto memberFlags = flags;
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
 string fieldName = string(fieldToken.start, fieldToken.length);
-if (auto m = cls.findMethod(fieldToken, static_cast<bool>(flags &VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
-int fieldIndex = cls.findField((flags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
+if (auto m = cls.findMethod(fieldToken, static_cast<bool>(memberFlags &VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
+int fieldIndex = cls.findField((memberFlags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
 shared_ptr<TypeInfo> typeHint = nullptr;
+parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (match(T_EQ)) {
-auto& f = (flags & VarFlag::Static? cls.staticFields : cls.fields)[fieldName];
+auto& f = (memberFlags & VarFlag::Static? cls.staticFields : cls.fields)[fieldName];
 f.defaultValue = parseExpression(P_COMPREHENSION);
 }
+parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 if (match(T_AS)) typeHint = parseTypeInfo();
+parseKeywordFlags(memberFlags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
 QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 shared_ptr<Expression> field;
-flags |= VarFlag::Method;
-if (flags & VarFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
+if (memberFlags & VarFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
 else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
@@ -169,14 +167,38 @@ thisExpr->type = thisParam->type = make_shared<ClassDeclTypeInfo>(&cls);
 setterParam->type = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);
-shared_ptr<FunctionDeclaration> getter = make_shared<FunctionDeclaration>(vm, fieldToken, flags, empty, field);
-shared_ptr<FunctionDeclaration> setter = make_shared<FunctionDeclaration>(vm, setterNameToken, flags, setterParams, assignment);
+auto getter = make_shared<FunctionDeclaration>(vm, fieldToken, memberFlags | VarFlag::Pure, empty, field);
+auto setter = make_shared<FunctionDeclaration>(vm, setterNameToken, memberFlags, setterParams, assignment);
 getter->fieldIndex = fieldIndex;
 getter->returnType = typeHint;
 setter->fieldIndex = fieldIndex;
 setter->returnType = typeHint;
 cls.methods.push_back(getter);
-if (!(flags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
+if (!(memberFlags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
 } while (match(T_COMMA));
+}
+
+void QParser::parseKeywordFlags (bitmask<VarFlag>& flags, bitmask<VarFlag> allowedFlags) {
+do {
+bitmask<VarFlag> flagToCheck;
+switch(cur.type){
+case T_CONST: flagToCheck = VarFlag::Const | VarFlag::Pure | VarFlag::ReadOnly; break;
+case T_STATIC: flagToCheck = VarFlag::Static; break;
+case T_FINAL: flagToCheck = VarFlag::Final; break;
+case T_ASYNC: flagToCheck = VarFlag::Async; break;
+case T_EXPORT: flagToCheck = VarFlag::Export; break;
+case T_GLOBAL: flagToCheck = VarFlag::Global; break;
+default: continue;
+}
+if (!(flagToCheck & allowedFlags)) {
+parseError("%s not allowed at this place", string(cur.start, cur.length));
+return;
+}
+else if (flags & flagToCheck) {
+parseError("Duplicated %s", string(cur.start, cur.length));
+return;
+}
+flags |= (flagToCheck & allowedFlags);
+} while (matchOneOf(T_CONST, T_STATIC, T_FINAL, T_ASYNC, T_EXPORT, T_GLOBAL));
 }
 

@@ -110,6 +110,8 @@ void parseDecoratedDecl (struct ClassDeclaration&, bitmask<VarFlag>);
 void parseAsyncMethodDecl (struct ClassDeclaration&, bitmask<VarFlag>);
 void parseMethodDecl2 (struct ClassDeclaration&, bitmask<VarFlag>);
 
+void parseKeywordFlags (bitmask<VarFlag>& flags, bitmask<VarFlag> allowedFlags);
+
 std::shared_ptr<Expression> nameExprToConstant (std::shared_ptr<Expression> key);
 void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags);
 

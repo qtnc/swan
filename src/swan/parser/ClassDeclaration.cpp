@@ -54,7 +54,7 @@ ctor->params.push_back(make_shared<Variable>(arg, nullptr, VarFlag::Vararg ));
 ctor->flags |= VarFlag::Vararg;
 ctor->body = BinaryOperation::create(make_shared<SuperExpression>(ctorToken), T_DOT, make_shared<CallExpression>(make_shared<NameExpression>(ctorToken), vector<shared_ptr<Expression>>({ make_shared<UnpackExpression>(arg) }) ));
 }
-methods.push_back(ctor);
+//methods.push_back(ctor);
 }
 if (ctor && inits->statements.size()) {
 inits->chain(ctor->body);

@@ -271,9 +271,10 @@ shared_ptr<Statement> QParser::parseClassDecl () {
 return parseClassDecl(VarFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseClassDecl (bitmask<VarFlag> classFlags) {
+shared_ptr<Statement> QParser::parseClassDecl (bitmask<VarFlag> flags) {
+parseKeywordFlags(flags, VarFlag::Final | VarFlag::Const);
 if (!consume(T_NAME, ("Expected class name after 'class'"))) return nullptr;
-shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, classFlags);
+shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, flags);
 skipNewlines();
 if (matchOneOf(T_IS, T_COLON, T_LT)) do {
 skipNewlines();
@@ -281,14 +282,13 @@ consume(T_NAME, ("Expected class name after 'is'"));
 classDecl->parents.push_back(cur);
 } while (match(T_COMMA));
 else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
+parseKeywordFlags(classDecl->flags, VarFlag::Final | VarFlag::Const);
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
 bitmask<VarFlag> memberFlags;
-if (nextToken().type==T_STATIC) {
-memberFlags |= VarFlag::Static;
 nextToken();
-}
+if (cur.type==T_STATIC) { memberFlags |= VarFlag::Static; nextToken(); }
 const ParserRule& rule = rules[cur.type];
 if (rule.member) (this->*rule.member)(*classDecl, memberFlags);
 else { prevToken(); break; }
@@ -296,8 +296,8 @@ else { prevToken(); break; }
 skipNewlines();
 consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 }
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classFlags |= VarFlag::Global;
-vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, classFlags) };
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classDecl->flags |= VarFlag::Global;
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, classDecl->flags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
