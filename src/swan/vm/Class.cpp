@@ -69,6 +69,7 @@ else if (isString()) return *vm.stringClass;
 else if (isNull()) return *vm.nullClass;
 else if (isNativeFunction())  return *vm.functionClass;
 else if (isGenericSymbolFunction())  return *vm.functionClass;
+else if (isLightUserData()) return *vm.objectClass;
 else {
 QClass* cls = asObject<QObject>()->type;
 return cls? *cls : *vm.classClass;

@@ -50,7 +50,7 @@ return decl;
 }
 
 void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func, ClassDeclaration* cld) {
-if (func->flags &FuncDeclFlag::Method) {
+if (func->flags &VarFlag::Method) {
 auto thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 auto thisVar = make_shared<Variable>(thisExpr);
 if (cld) thisExpr->type = thisVar->type = make_shared<ClassDeclTypeInfo>(cld);
@@ -65,10 +65,10 @@ prevToken();
 parseVarList(func->params, VarFlag::Single);
 }
 if (match(T_AS)) func->returnType = parseTypeInfo();
-if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags & VarFlag::Vararg)) func->flags |= FuncDeclFlag::Vararg;
+if (func->params.size()>=1 && (func->params[func->params.size() -1]->flags & VarFlag::Vararg)) func->flags |= VarFlag::Vararg;
 }
 
-void QParser::parseDecoratedDecl (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {
+void QParser::parseDecoratedDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
 vector<shared_ptr<Expression>> decorations;
 int idxFrom = cls.methods.size();
 bool parsed = false;
@@ -89,7 +89,7 @@ decorations.push_back(decoration);
 if (!parsed) {
 skipNewlines();
 if (nextToken().type==T_STATIC) {
-flags |= FuncDeclFlag::Static;
+flags |= VarFlag::Static;
 nextToken();
 }
 const ParserRule& rule = rules[cur.type];
@@ -99,10 +99,10 @@ else { prevToken(); parseError("Expected declaration to decorate"); }
 for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++it) (*it)->decorations = decorations;
 }
 
-void QParser::parseMethodDecl (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {
+void QParser::parseMethodDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
 prevToken();
 QToken name = nextNameToken(true);
-auto func = make_shared<FunctionDeclaration>(vm, name, flags | FuncDeclFlag::Method );
+auto func = make_shared<FunctionDeclaration>(vm, name, flags | VarFlag::Method );
 parseFunctionParameters(func, &cls);
 if (*name.start=='[' && func->params.size()<=1) {
 parseError(("Subscript operator must take at least one argument"));
@@ -115,7 +115,7 @@ return;
 if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=2) {
 parseError(("Setter methods must take exactly one argument"));
 }
-if (auto m = cls.findMethod(name, static_cast<bool>(flags & FuncDeclFlag::Static))) {
+if (auto m = cls.findMethod(name, static_cast<bool>(flags & VarFlag::Static))) {
 parseError("%s already defined in line %d", string(name.start, name.length), getPositionOf(m->name.start).first);
 }
 match(T_COLON);
@@ -125,33 +125,33 @@ if (!func->body) func->body = make_shared<SimpleStatement>(cur);
 cls.methods.push_back(func);
 }
 
-void QParser::parseMethodDecl2 (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {
+void QParser::parseMethodDecl2 (ClassDeclaration& cls, bitmask<VarFlag> flags) {
 nextToken();
 parseMethodDecl(cls, flags);
 }
 
-void QParser::parseAsyncMethodDecl (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {
-if (nextToken().type==T_STATIC && !(flags &FuncDeclFlag::Static)) {
-flags |= FuncDeclFlag::Static;
+void QParser::parseAsyncMethodDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
+if (nextToken().type==T_STATIC && !(flags &VarFlag::Static)) {
+flags |= VarFlag::Static;
 nextToken();
 }
 if (cur.type==T_FUNCTION) nextToken();
-parseMethodDecl(cls, flags | FuncDeclFlag::Async);
+parseMethodDecl(cls, flags | VarFlag::Async);
 }
 
-void QParser::parseSimpleAccessor (ClassDeclaration& cls, bitmask<FuncDeclFlag> flags) {
-flags |= FuncDeclFlag::Accessor;
-if (cur.type==T_CONST) flags |= FuncDeclFlag::ReadOnly;
-if (flags & FuncDeclFlag::ReadOnly) match(T_VAR);
+void QParser::parseSimpleAccessor (ClassDeclaration& cls, bitmask<VarFlag> flags) {
+flags |= VarFlag::Accessor;
+if (cur.type==T_CONST) flags |= VarFlag::ReadOnly;
+if (flags & VarFlag::ReadOnly) match(T_VAR);
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
 string fieldName = string(fieldToken.start, fieldToken.length);
-if (auto m = cls.findMethod(fieldToken, static_cast<bool>(flags &FuncDeclFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
-int fieldIndex = cls.findField((flags & FuncDeclFlag::Static)? cls.staticFields : cls.fields, fieldToken);
+if (auto m = cls.findMethod(fieldToken, static_cast<bool>(flags &VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
+int fieldIndex = cls.findField((flags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
 shared_ptr<TypeInfo> typeHint = nullptr;
 if (match(T_EQ)) {
-auto& f = (flags & FuncDeclFlag::Static? cls.staticFields : cls.fields)[fieldName];
+auto& f = (flags & VarFlag::Static? cls.staticFields : cls.fields)[fieldName];
 f.defaultValue = parseExpression(P_COMPREHENSION);
 }
 if (match(T_AS)) typeHint = parseTypeInfo();
@@ -159,8 +159,8 @@ QString* setterName = QString::create(vm, fieldName+ ("="));
 QToken setterNameToken = { T_NAME, setterName->data, setterName->length, QV(setterName, QV_TAG_STRING)  };
 shared_ptr<NameExpression> thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 shared_ptr<Expression> field;
-flags |= FuncDeclFlag::Method;
-if (flags & FuncDeclFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
+flags |= VarFlag::Method;
+if (flags & VarFlag::Static) field = make_shared<StaticFieldExpression>(fieldToken);
 else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
@@ -176,7 +176,7 @@ getter->returnType = typeHint;
 setter->fieldIndex = fieldIndex;
 setter->returnType = typeHint;
 cls.methods.push_back(getter);
-if (!(flags & FuncDeclFlag::ReadOnly)) cls.methods.push_back(setter);
+if (!(flags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
 } while (match(T_COMMA));
 }
 

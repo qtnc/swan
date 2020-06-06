@@ -85,19 +85,29 @@ virtual void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable
 virtual bool isFunctionnable () = 0;
 };
 
-bitfield(VarFlag, uint16_t){
+bitfield(VarFlag, uint32_t){
 None = 0,
 Vararg = 1,
 Pure = 2,
 Final = 4,
-Const = 0x100,
-Global = 0x200,
-Export = 0x400,
-Single = 0x800,
-NoDefault = 0x1000,
-Hoisted = 0x2000,
-Optimized = 0x4000,
-Inherited = 0x8000,
+Overridden = 8,
+Accessor = 0x10,
+Reserved1 = 0x20,
+Reserved2 = 0x40,
+Reserved3 = 0x80,
+Method = 0x100,
+Fiber = 0x200,
+Async = 0x400,
+Static = 0x800,
+Const = 0x1000,
+Global = 0x2000,
+Export = 0x4000,
+Single = 0x8000,
+NoDefault = 0x10000,
+Hoisted = 0x20000,
+Inherited = 0x40000,
+ReadOnly = 0x80000,
+Optimized = 0x40000000,
 };
 
 struct Variable {

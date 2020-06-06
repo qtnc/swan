@@ -8,7 +8,7 @@ struct ParserRule {
 typedef std::shared_ptr<Expression>(QParser::*PrefixFn)(void);
 typedef std::shared_ptr<Expression>(QParser::*InfixFn)(std::shared_ptr<Expression> left);
 typedef std::shared_ptr<Statement>(QParser::*StatementFn)(void);
-typedef void(QParser::*MemberFn)(ClassDeclaration&, bitmask<FuncDeclFlag>);
+typedef void(QParser::*MemberFn)(ClassDeclaration&, bitmask<VarFlag>);
 
 PrefixFn prefix = nullptr;
 InfixFn infix = nullptr;

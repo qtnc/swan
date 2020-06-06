@@ -6,14 +6,13 @@
 #include<memory>
 #include<string>
 
-enum class FuncDeclFlag: uint16_t;
 struct QCompiler;
 struct TypeAnalyzer;
 
 struct StringFunctionInfo: FunctionInfo {
 struct QVM& vm;
 std::vector<std::shared_ptr<TypeInfo>> types;
-bitmask<FuncDeclFlag> flags;
+bitmask<VarFlag> flags;
 int nArgs, retArg, retCompArg, fieldIndex;
 
 StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr);

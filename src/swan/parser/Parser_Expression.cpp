@@ -79,18 +79,18 @@ return expr;
 }
 
 shared_ptr<Expression> QParser::parseLambda  () {
-return parseLambda(FuncDeclFlag::None);
+return parseLambda(VarFlag::None);
 }
 
-shared_ptr<Expression> QParser::parseLambda  (bitmask<FuncDeclFlag> flags) {
+shared_ptr<Expression> QParser::parseLambda  (bitmask<VarFlag> flags) {
 auto func = make_shared<FunctionDeclaration>(vm, cur);
 func->flags |= flags;
-if (match(T_GT)) func->flags |= FuncDeclFlag::Method;
-if (match(T_STAR)) func->flags |= FuncDeclFlag::Fiber;
-else if (match(T_AMP)) flags |= FuncDeclFlag::Async;
+if (match(T_GT)) func->flags |= VarFlag::Method;
+if (match(T_STAR)) func->flags |= VarFlag::Fiber;
+else if (match(T_AMP)) flags |= VarFlag::Async;
 parseFunctionParameters(func);
-if (match(T_CONST)) flags |= FuncDeclFlag::Pure;
-if (match(T_FINAL)) flags |= FuncDeclFlag::Final;
+if (match(T_CONST)) flags |= VarFlag::Pure;
+if (match(T_FINAL)) flags |= VarFlag::Final;
 match(T_COLON);
 func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);
@@ -104,10 +104,10 @@ parseError("Expression can't be considered as the argument list for an anonymous
 return fargs;
 }
 auto func = make_shared<FunctionDeclaration>(vm, cur);
-if (match(T_GT)) func->flags |= FuncDeclFlag::Method;
-if (match(T_STAR)) func->flags |= FuncDeclFlag::Fiber;
-else if (match(T_AMP)) func->flags |= FuncDeclFlag::Async;
-if (func->flags & FuncDeclFlag::Method) {
+if (match(T_GT)) func->flags |= VarFlag::Method;
+if (match(T_STAR)) func->flags |= VarFlag::Fiber;
+else if (match(T_AMP)) func->flags |= VarFlag::Async;
+if (func->flags & VarFlag::Method) {
 auto thisVar = make_shared<Variable>(make_shared<NameExpression>(THIS_TOKEN));
 func->params.push_back(thisVar);
 }

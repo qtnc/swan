@@ -250,14 +250,14 @@ return parseAsyncFunctionDecl(VarFlag::Const);
 
 shared_ptr<Statement> QParser::parseAsyncFunctionDecl (bitmask<VarFlag> flags) {
 consume(T_FUNCTION, "Expected 'function' after 'async'");
-return parseFunctionDecl(flags, FuncDeclFlag::Async);
+return parseFunctionDecl(flags, VarFlag::Async);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
-return parseFunctionDecl(VarFlag::None, FuncDeclFlag::None);
+return parseFunctionDecl(VarFlag::None, VarFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseFunctionDecl (bitmask<VarFlag> varFlags, bitmask<FuncDeclFlag> funcFlags) {
+shared_ptr<Statement> QParser::parseFunctionDecl (bitmask<VarFlag> varFlags, bitmask<VarFlag> funcFlags) {
 bool hasName = matchOneOf(T_NAME, T_STRING);
 QToken name = cur;
 auto fnDecl = parseLambda(funcFlags);
@@ -284,9 +284,9 @@ else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
-bitmask<FuncDeclFlag> memberFlags;
+bitmask<VarFlag> memberFlags;
 if (nextToken().type==T_STATIC) {
-memberFlags |= FuncDeclFlag::Static;
+memberFlags |= VarFlag::Static;
 nextToken();
 }
 const ParserRule& rule = rules[cur.type];
@@ -309,7 +309,7 @@ else if (match(T_CLASS)) {
 return parseClassDecl(VarFlag::Const | VarFlag::Global);
 }
 else if (match(T_FUNCTION)) {
-return parseFunctionDecl(VarFlag::Const | VarFlag::Global, FuncDeclFlag::None);
+return parseFunctionDecl(VarFlag::Const | VarFlag::Global, VarFlag::None);
 }
 else if (match(T_ASYNC)) {
 return parseAsyncFunctionDecl(VarFlag::Const | VarFlag::Global);
@@ -323,7 +323,7 @@ auto exportDecl = make_shared<ExportDeclaration>();
 shared_ptr<VariableDeclaration> varDecl;
 if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VarFlag::Const));
 else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VarFlag::Const));
-else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const, FuncDeclFlag::None));
+else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const, VarFlag::None));
 else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VarFlag::Const));
 if (varDecl) {
 auto name = varDecl->vars[0]->name;

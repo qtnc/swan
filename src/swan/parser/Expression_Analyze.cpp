@@ -207,7 +207,7 @@ int FieldExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression>
 int re = assignedValue->analyze(ta);
 ClassDeclaration* cls = ta.getCurClass();
 if (!cls) return re;
-if (ta.getCurMethod()->flags & FuncDeclFlag::Static) return re;
+if (ta.getCurMethod()->flags & VarFlag::Static) return re;
 shared_ptr<TypeInfo>* fieldType = nullptr;
 cls->findField(token, &fieldType);
 if (fieldType) {

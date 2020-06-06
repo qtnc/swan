@@ -348,7 +348,7 @@ if (!cls) {
 compiler.compileError(token, ("Can't use field outside of a class"));
 return;
 }
-if (compiler.getCurMethod()->flags & FuncDeclFlag::Static) {
+if (compiler.getCurMethod()->flags & VarFlag::Static) {
 compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
@@ -368,7 +368,7 @@ if (!cls) {
 compiler.compileError(token, ("Can't use field outside of a class"));
 return;
 }
-if (compiler.getCurMethod()->flags & FuncDeclFlag::Static) {
+if (compiler.getCurMethod()->flags & VarFlag::Static) {
 compiler.compileError(token, ("Can't use field in a static method"));
 return;
 }
@@ -390,7 +390,7 @@ if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
-bool isStatic = static_cast<bool>(compiler.getCurMethod()->flags & FuncDeclFlag::Static);
+bool isStatic = static_cast<bool>(compiler.getCurMethod()->flags & VarFlag::Static);
 int fieldSlot = cls->findStaticField(token);
 if (atLevel<=2 && !isStatic) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_STATIC_FIELD, fieldSlot);
 else if (atLevel<=2) {
@@ -412,7 +412,7 @@ if (!cls) {
 compiler.compileError(token, ("Can't use static field oustide of a class"));
 return;
 }
-bool isStatic = static_cast<bool>( compiler.getCurMethod()->flags & FuncDeclFlag::Static);
+bool isStatic = static_cast<bool>( compiler.getCurMethod()->flags & VarFlag::Static);
 int fieldSlot = cls->findStaticField(token, &fieldType);
 assignedValue->compile(compiler);
 //if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
@@ -802,7 +802,7 @@ auto func = method->compileFunction(compiler);
 compiler.curMethod = nullptr;
 func->name = string(name.start, name.length) + "::" + string(method->name.start, method->name.length);
 compiler.writeDebugLine(method->name);
-if (method->flags &FuncDeclFlag::Static) compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_STATIC_METHOD, methodSymbol);
+if (method->flags &VarFlag::Static) compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_STATIC_METHOD, methodSymbol);
 else compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
 compiler.writeOp(OP_POP);
 }
@@ -878,27 +878,27 @@ if (body->isExpression()) fc.writeOp(OP_POP);
 QFunction* func = fc.getFunction(params.size());
 compiler.result = fc.result;
 func->flags
-.set(FunctionFlag::Vararg, flags &FuncDeclFlag::Vararg)
-.set(FunctionFlag::Pure, flags & flags & FuncDeclFlag::Pure)
-.set(FunctionFlag::Final, flags & FuncDeclFlag::Final);
+.set(FunctionFlag::Vararg, flags &VarFlag::Vararg)
+.set(FunctionFlag::Pure, flags & flags & VarFlag::Pure)
+.set(FunctionFlag::Final, flags & VarFlag::Final);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
-if (flags & FuncDeclFlag::Accessor) {
+if (flags & VarFlag::Accessor) {
 func->flags |= FunctionFlag::Accessor;
 func->fieldIndex = fieldIndex;
 }
 else if (func->flags & FunctionFlag::Accessor) {
-flags |= FuncDeclFlag::Accessor;
+flags |= VarFlag::Accessor;
 fieldIndex = func->fieldIndex;
 }
 if (name.type==T_NAME) func->name = string(name.start, name.length);
 else func->name = "<closure>";
 string sType = type->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);
-if (flags & FuncDeclFlag::Fiber) {
+if (flags & VarFlag::Fiber) {
 QToken fiberToken = { T_NAME, FIBER, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(fiberToken));
 }
-else if (flags &FuncDeclFlag::Async) {
+else if (flags &VarFlag::Async) {
 QToken asyncToken = { T_NAME, ASYNC, 5, QV::UNDEFINED };
 decorations.insert(decorations.begin(), make_shared<NameExpression>(asyncToken));
 }

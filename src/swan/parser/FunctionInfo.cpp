@@ -20,7 +20,7 @@ return make_shared<ComposedTypeInfo>(funcTI, subtypes);
 }
 
 StringFunctionInfo::StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr): 
-vm(ta.vm), flags(FuncDeclFlag::None), fieldIndex(-1), types(), nArgs(0), retArg(-1), retCompArg(-1)  
+vm(ta.vm), flags(VarFlag::None), fieldIndex(-1), types(), nArgs(0), retArg(-1), retCompArg(-1)  
 { build(ta, typeInfoStr); }
 
 void StringFunctionInfo::build (TypeAnalyzer&  ta, const char* str) {
@@ -36,8 +36,8 @@ std::shared_ptr<TypeInfo> StringFunctionInfo::readNextTypeInfo (TypeAnalyzer& ta
 while(str&&*str){
 switch(*str++){
 case ':': case ' ': case ',': case ';': continue;
-case '+': flags |= FuncDeclFlag::Vararg; continue;
-case '>': flags |= FuncDeclFlag::Method; continue;
+case '+': flags |= VarFlag::Vararg; continue;
+case '>': flags |= VarFlag::Method; continue;
 case '*': return TypeInfo::ANY;
 case '#': return TypeInfo::MANY;
 case 'B': case 'b': return make_shared<ClassTypeInfo>(ta.vm.boolClass);
