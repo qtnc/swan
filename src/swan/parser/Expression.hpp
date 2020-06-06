@@ -1,6 +1,7 @@
 #ifndef ___PARSER_COMPILER_EXPRESSION1
 #define ___PARSER_COMPILER_EXPRESSION1
 #include "StatementBase.hpp"
+#include "../../include/bitfield.hpp"
 #include<unordered_map>
 
 struct FuncOrDecl {
@@ -313,6 +314,20 @@ void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
 };
 
+bitfield(FuncDeclFlag, uint16_t){
+None = 0,
+Vararg = 1,
+Pure = 2,
+Final = 4,
+Overridden = 8,
+Accessor = 0x10,
+Fiber = 0x100,
+Method = 0x200,
+Static = 0x400,
+Async = 0x800,
+ReadOnly = 0x1000,
+};
+
 struct FunctionDeclaration: Expression, Decorable, FunctionInfo {
 QVM& vm;
 struct QFunction* func;
@@ -320,10 +335,10 @@ QToken name;
 std::vector<std::shared_ptr<Variable>> params;
 std::shared_ptr<Statement> body;
 std::shared_ptr<TypeInfo> returnType;
-int flags;
-int fieldIndex;
+bitmask<FuncDeclFlag> flags;
+uint_field_index_t fieldIndex;
 
-FunctionDeclaration (QVM& vm0, const QToken& nm, int fl = 0, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), fieldIndex(0), func(nullptr) {}
+FunctionDeclaration (QVM& vm0, const QToken& nm, bitmask<FuncDeclFlag> fl = FuncDeclFlag::None, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), fieldIndex(0), func(nullptr) {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
@@ -336,7 +351,7 @@ std::shared_ptr<TypeInfo> getReturnTypeInfo (int nPassedArgs = 0, std::shared_pt
 std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override;
 int getArgCount () override { return params.size(); }
 std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs); }
-int getFlags () override { return flags; }
+int getFlags () override { return flags.value; }
 int getFieldIndex () override { return fieldIndex; }
 };
 

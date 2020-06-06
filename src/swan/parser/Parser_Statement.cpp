@@ -250,14 +250,14 @@ return parseAsyncFunctionDecl(VD_CONST);
 
 shared_ptr<Statement> QParser::parseAsyncFunctionDecl (int varFlags) {
 consume(T_FUNCTION, "Expected 'function' after 'async'");
-return parseFunctionDecl(varFlags, FD_ASYNC);
+return parseFunctionDecl(varFlags, FuncDeclFlag::Async);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
-return parseFunctionDecl(0);
+return parseFunctionDecl(0, FuncDeclFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, int funcFlags) {
+shared_ptr<Statement> QParser::parseFunctionDecl (int varFlags, bitmask<FuncDeclFlag> funcFlags) {
 bool hasName = matchOneOf(T_NAME, T_STRING);
 QToken name = cur;
 auto fnDecl = parseLambda(funcFlags);
@@ -284,9 +284,9 @@ else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
-int memberFlags = 0;
+bitmask<FuncDeclFlag> memberFlags;
 if (nextToken().type==T_STATIC) {
-memberFlags |= FD_STATIC;
+memberFlags |= FuncDeclFlag::Static;
 nextToken();
 }
 const ParserRule& rule = rules[cur.type];
@@ -309,7 +309,7 @@ else if (match(T_CLASS)) {
 return parseClassDecl(VD_CONST | VD_GLOBAL);
 }
 else if (match(T_FUNCTION)) {
-return parseFunctionDecl(VD_CONST | VD_GLOBAL);
+return parseFunctionDecl(VD_CONST | VD_GLOBAL, FuncDeclFlag::None);
 }
 else if (match(T_ASYNC)) {
 return parseAsyncFunctionDecl(VD_CONST | VD_GLOBAL);
@@ -323,7 +323,7 @@ auto exportDecl = make_shared<ExportDeclaration>();
 shared_ptr<VariableDeclaration> varDecl;
 if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VD_CONST));
 else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VD_CONST));
-else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST));
+else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VD_CONST, FuncDeclFlag::None));
 else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VD_CONST));
 if (varDecl) {
 auto name = varDecl->vars[0]->name;

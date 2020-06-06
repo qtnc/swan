@@ -23,6 +23,7 @@
 #define VD_OPTIMFLAG 0x4000000
 
 // Function declaration flags
+/*
 #define FD_VARARG 1
 #define FD_FIBER 2
 #define FD_METHOD 4
@@ -32,6 +33,7 @@
 #define FD_READ_ONLY 0x200
 #define FD_FINAL 0x400
 #define FD_ACCESSOR 0x800
+*/
 
 // Call resolution flags
 #define CR_GETTER 1

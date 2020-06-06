@@ -67,7 +67,7 @@ struct bitmask
 	constexpr bitmask() : value(static_cast<underlying_type>(0)) {}	
 	constexpr bitmask(const T& value) : value(static_cast<underlying_type>(value)) {}
 	constexpr bitmask(const enumerator<T>& enumerator) : value(static_cast<underlying_type>(enumerator.value)) {}
-	constexpr operator bool() const
+	constexpr explicit operator bool() const
 	{
 		return value != 0;
 	}
@@ -77,6 +77,8 @@ bitmask& set (T x) { *this |= x; return *this; }
 bitmask& flip (T x) { *this ^= x; return *this; }
 bitmask& toggle (T x) { *this ^= x; return *this; }
 bitmask& set (T x, bool b) { value ^= ( -(b&1) ^value) & static_cast<underlying_type>(x); return *this; }
+template<class U> bitmask& set (T x, bitmask<U> b) { return set(x, static_cast<bool>(b)); }
+template<class U> bitmask& set (T x, enumerator<U> b) { return set(x, static_cast<bool>(b)); }
 	
 	underlying_type value;
 };

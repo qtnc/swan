@@ -77,18 +77,18 @@ return expr;
 }
 
 shared_ptr<Expression> QParser::parseLambda  () {
-return parseLambda(0);
+return parseLambda(FuncDeclFlag::None);
 }
 
-shared_ptr<Expression> QParser::parseLambda  (int flags) {
+shared_ptr<Expression> QParser::parseLambda  (bitmask<FuncDeclFlag> flags) {
 auto func = make_shared<FunctionDeclaration>(vm, cur);
 func->flags |= flags;
-if (match(T_GT)) func->flags |= FD_METHOD;
-if (match(T_STAR)) func->flags |= FD_FIBER;
-else if (match(T_AMP)) flags |= FD_ASYNC;
+if (match(T_GT)) func->flags |= FuncDeclFlag::Method;
+if (match(T_STAR)) func->flags |= FuncDeclFlag::Fiber;
+else if (match(T_AMP)) flags |= FuncDeclFlag::Async;
 parseFunctionParameters(func);
-if (match(T_CONST)) flags |= FD_PURE;
-if (match(T_FINAL)) flags |= FD_FINAL;
+if (match(T_CONST)) flags |= FuncDeclFlag::Pure;
+if (match(T_FINAL)) flags |= FuncDeclFlag::Final;
 match(T_COLON);
 func->body = parseStatement();
 if (!func->body) func->body = make_shared<SimpleStatement>(cur);
@@ -102,10 +102,10 @@ parseError("Expression can't be considered as the argument list for an anonymous
 return fargs;
 }
 auto func = make_shared<FunctionDeclaration>(vm, cur);
-if (match(T_GT)) func->flags |= FD_METHOD;
-if (match(T_STAR)) func->flags |= FD_FIBER;
-else if (match(T_AMP)) func->flags |= FD_ASYNC;
-if (func->flags&FD_METHOD) {
+if (match(T_GT)) func->flags |= FuncDeclFlag::Method;
+if (match(T_STAR)) func->flags |= FuncDeclFlag::Fiber;
+else if (match(T_AMP)) func->flags |= FuncDeclFlag::Async;
+if (func->flags & FuncDeclFlag::Method) {
 QToken thisToken = { T_NAME, THIS, 4, QV::UNDEFINED };
 func->params.push_back( make_shared<Variable>(make_shared<NameExpression>(thisToken)));
 }

@@ -3,9 +3,11 @@
 #include "Constants.hpp"
 #include "Token.hpp"
 #include "../../include/cpprintf.hpp"
+#include "../../include/bitfield.hpp"
 #include<string>
 #include<memory>
 
+enum class FuncDeclFlag: uint16_t;
 struct Expression;
 struct Statement;
 struct Variable;
@@ -57,7 +59,7 @@ std::shared_ptr<Expression> parseName ();
 std::shared_ptr<Expression> parseField ();
 std::shared_ptr<Expression> parseStaticField  ();
 std::shared_ptr<Expression> parseLambda ();
-std::shared_ptr<Expression> parseLambda (int flags);
+std::shared_ptr<Expression> parseLambda (bitmask<FuncDeclFlag> flags);
 std::shared_ptr<Expression> parseArrowFunction (std::shared_ptr<Expression> argexpr);
 std::shared_ptr<Expression> parseSuper ();
 std::shared_ptr<Expression> parseUnpackOrExpression (int priority = P_LOWEST);
@@ -96,16 +98,16 @@ std::shared_ptr<Expression> parseImportExpression ();
 std::shared_ptr<Statement> parseGlobalDecl ();
 std::shared_ptr<Statement> parseClassDecl (int flags);
 std::shared_ptr<Statement> parseClassDecl ();
-std::shared_ptr<Statement> parseFunctionDecl (int varFlags, int funcFlags=0);
+std::shared_ptr<Statement> parseFunctionDecl (int varFlags, bitmask<FuncDeclFlag> funcFlags);
 std::shared_ptr<Statement> parseFunctionDecl ();
 std::shared_ptr<Statement> parseAsyncFunctionDecl (int varFlags);
 std::shared_ptr<Statement> parseAsync ();
 
-void parseMethodDecl (struct ClassDeclaration&, int);
-void parseSimpleAccessor (struct ClassDeclaration&, int);
-void parseDecoratedDecl (struct ClassDeclaration&, int);
-void parseAsyncMethodDecl (struct ClassDeclaration&, int);
-void parseMethodDecl2 (struct ClassDeclaration&, int);
+void parseMethodDecl (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
+void parseSimpleAccessor (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
+void parseDecoratedDecl (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
+void parseAsyncMethodDecl (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
+void parseMethodDecl2 (struct ClassDeclaration&, bitmask<FuncDeclFlag>);
 
 std::shared_ptr<Expression> nameExprToConstant (std::shared_ptr<Expression> key);
 void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, int flags);
