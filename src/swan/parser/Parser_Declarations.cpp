@@ -159,7 +159,7 @@ else field = make_shared<FieldExpression>(fieldToken);
 shared_ptr<Expression> param = make_shared<NameExpression>(fieldToken);
 auto thisParam = make_shared<Variable>(thisExpr);
 auto setterParam = make_shared<Variable>(param);
-thisExpr->type = thisParam->type = make_shared<ClassDeclTypeInfo>(&cls);
+thisExpr->type = thisParam->type = make_shared<ClassDeclTypeInfo>(&cls, (flags & VarFlag::Static)? TypeInfoFlag::Static : TypeInfoFlag::None );
 setterParam->type = typeHint;
 vector<shared_ptr<Variable>> empty = { thisParam }, setterParams = { thisParam, setterParam  };
 shared_ptr<Expression> assignment = BinaryOperation::create(field, T_EQ, param);

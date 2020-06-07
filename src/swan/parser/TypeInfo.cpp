@@ -16,10 +16,10 @@ string SubindexTypeInfo::toBinString (QVM& vm) {
 return format("%c%d", index>=0x100? '@' : '%', index&0xFF);
 }
 
-ClassTypeInfo::ClassTypeInfo (QClass* c1, bool ex, bool op):
-type(c1), exact(ex), optional(op) {
-exact = exact || !(type->flags & ClassFlag::Inherited);
-optional = optional && type!=type->vm.nullClass && type!=type->vm.undefinedClass;
+ClassTypeInfo::ClassTypeInfo (QClass* c1, bitmask<TypeInfoFlag> fl):
+type(c1), flags(fl)  {
+if (!(type->flags & ClassFlag::Inherited)) flags |= TypeInfoFlag::Exact;
+if (type!=type->vm.nullClass && type!=type->vm.undefinedClass) flags &=~TypeInfoFlag::Optional;
 }
 
 bool ClassTypeInfo::isNum () { 
@@ -42,16 +42,24 @@ bool ClassTypeInfo::isUndefined () {
 return type==type->vm.undefinedClass; 
 }
 
+bool ClassTypeInfo::isFunction () { 
+return type==type->vm.functionClass
+|| type==type->vm.closureClass
+|| type==type->vm.fiberClass
+|| type==type->vm.boundFunctionClass
+|| type==type->vm.stdFunctionClass;
+}
+
 bool ClassTypeInfo::equals (const std::shared_ptr<TypeInfo>& other) {
 auto cti = dynamic_pointer_cast<ClassTypeInfo>(other);
 if (!cti) return false;
-return type==cti->type && exact==cti->exact && optional==cti->optional;
+return type==cti->type && flags==cti->flags;
 }
 
 string ClassTypeInfo::toString () { 
 string s = type->name.c_str(); 
-if (exact) s+='!';
-if (optional) s+= '?';
+if (flags & TypeInfoFlag::Exact) s+='!';
+if (flags & TypeInfoFlag::Optional) s+= '?';
 return s;
 }
 
@@ -75,17 +83,17 @@ shared_ptr<TypeInfo> ClassTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer
 if (!t0 || t0->isEmpty()) return shared_from_this();
 t0 = t0->resolve(ta);
 if (t0->isNullOrUndefined()) {
-if (optional) return shared_from_this();
-else return make_shared<ClassTypeInfo>(type, exact, true);
+if (flags & TypeInfoFlag::Optional) return shared_from_this();
+else return make_shared<ClassTypeInfo>(type, flags | TypeInfoFlag::Optional);
 }
 auto t = dynamic_pointer_cast<ClassTypeInfo>(t0);
 if (!t) return t0->merge(shared_from_this(), ta);
 if (t->type==type) {
-if (exact==t->exact && optional==t->optional) return shared_from_this();
-else return make_shared<ClassTypeInfo>(type, exact && t->exact, optional || t->optional);
+if (flags == t->flags) return shared_from_this();
+else return make_shared<ClassTypeInfo>(type, (flags & (t->flags & TypeInfoFlag::Exact))  | (t->flags & TypeInfoFlag::Optional) );
 }
 QClass* cls = findCommonParent(type, t->type);
-if (cls) return make_shared<ClassTypeInfo>(cls, false, optional || t->optional);
+if (cls) return make_shared<ClassTypeInfo>(cls, (flags &~ TypeInfoFlag::Exact) |  (t->flags & TypeInfoFlag::Optional) );
 else return TypeInfo::MANY;
 }
 
@@ -98,13 +106,13 @@ if (p1==p2) return p1;
 return nullptr;
 }
 
-NamedTypeInfo::NamedTypeInfo (const QToken& t, bool ex, bool op):
-token(t), exact(ex), optional(op) {}
+NamedTypeInfo::NamedTypeInfo (const QToken& t, bitmask<TypeInfoFlag> fl):
+token(t), flags(fl) {}
 
 string NamedTypeInfo::toBinString (QVM& vm) {
 string s = format("Q%s;", string(token.start, token.length));
-if (exact) s+='!';
-if (optional) s+='?';
+if (flags & TypeInfoFlag::Exact) s+='!';
+if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
 }
 
@@ -113,8 +121,7 @@ auto nti = dynamic_pointer_cast<NamedTypeInfo>(other);
 if (!nti) return false;
 return nti->token.length==token.length 
 && 0==strncmp(nti->token.start, token.start, token.length)
-&& exact==nti->exact 
-&& optional==nti->optional;
+&& flags==nti->flags;
 }
 
 shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeAnalyzer& ta) {
@@ -132,45 +139,45 @@ return m->returnType;
 }while(false);
 if (lv && lv->value) {
 if (auto cd = dynamic_pointer_cast<ClassDeclaration>(lv->value)) {
-return make_shared<ClassDeclTypeInfo>(cd, exact, optional);
+return make_shared<ClassDeclTypeInfo>(cd, flags);
 }
 else if (auto cst = dynamic_pointer_cast<ConstantExpression>(lv->value)) {
 auto value = cst->token.value;
 if (value.isInstanceOf(ta.vm.classClass)) {
 QClass* cls = value.asObject<QClass>();
-return make_shared<ClassTypeInfo>(cls, exact, optional);
+return make_shared<ClassTypeInfo>(cls, flags);
 }}
 }//if lv->value
 println("CAn't resolve '%s', lv=%s, value=%s", string(token.start, token.length), !!lv, lv&&lv->value?typeid(*lv->value).name() : "<null>");
 return TypeInfo::ANY;
 }
 
-ClassDeclTypeInfo::ClassDeclTypeInfo (ClassDeclaration* c1, bool ex, bool op):
-cls(c1), exact(ex || !(c1->flags & VarFlag::Inherited)), optional(op) {
+ClassDeclTypeInfo::ClassDeclTypeInfo (ClassDeclaration* c1, bitmask<TypeInfoFlag> fl):
+cls(c1), flags(fl) {
+if (!(c1->flags & VarFlag::Inherited)) flags |= TypeInfoFlag::Exact;
 }
 
-ClassDeclTypeInfo::ClassDeclTypeInfo (shared_ptr<ClassDeclaration> c1, bool ex, bool op):
-ClassDeclTypeInfo(c1.get(), ex, op) {}
+ClassDeclTypeInfo::ClassDeclTypeInfo (shared_ptr<ClassDeclaration> c1, bitmask<TypeInfoFlag> fl):
+ClassDeclTypeInfo(c1.get(), fl) {}
 
 bool ClassDeclTypeInfo::equals (const std::shared_ptr<TypeInfo>& other) {
 auto cdti = dynamic_pointer_cast<ClassDeclTypeInfo>(other);
 if (!cdti) return false;
-return cls==cdti->cls && exact==cdti->exact && optional==cdti->optional;
+return cls==cdti->cls && flags==cdti->flags;
 }
 
 shared_ptr<TypeInfo> ClassDeclTypeInfo::merge (shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) { 
 if (!t0 || t0->isEmpty()) return shared_from_this();
 t0 = t0->resolve(ta);
 if (t0->isNullOrUndefined()) {
-if (optional) return shared_from_this();
-else return make_shared<ClassDeclTypeInfo>(cls, exact, true);
+if (flags & TypeInfoFlag::Optional) return shared_from_this();
+else return make_shared<ClassDeclTypeInfo>(cls, flags | TypeInfoFlag::Optional);
 }
 auto t = dynamic_pointer_cast<ClassDeclTypeInfo>(t0);
 if (t && t->cls==cls) {
-if (exact==t->exact && optional==t->optional) return shared_from_this();
-else return make_shared<ClassDeclTypeInfo>(cls, exact && t->exact, optional || t->optional);
+if (flags==t->flags) return shared_from_this();
+else return make_shared<ClassDeclTypeInfo>(cls, (flags & (t->flags & TypeInfoFlag::Exact)) | (t->flags & TypeInfoFlag::Optional) );
 }
-//println("Merging %s  and %s (%s)", toString(), t0->toString(), typeid(*t0).name());
 shared_ptr<TypeInfo> re = TypeInfo::MANY;
 vector<shared_ptr<TypeInfo>> v1 = { shared_from_this() };
 for (auto& p: cls->parents) v1.push_back(make_shared<NamedTypeInfo>(p)->resolve(ta));
@@ -183,7 +190,7 @@ if (b0==t && a0==shared_from_this()) continue;
 auto a = dynamic_pointer_cast<ClassDeclTypeInfo>(a0);
 auto b = dynamic_pointer_cast<ClassDeclTypeInfo>(b0);
 if (a && b && a->cls==b->cls) { 
-re = make_shared<ClassDeclTypeInfo>(a->cls, false, optional || t->optional);
+re = make_shared<ClassDeclTypeInfo>(a->cls, (flags &~TypeInfoFlag::Exact) | (t->flags & TypeInfoFlag::Optional) );
 goto found;
 }}}
 for (auto a0: v1) {
@@ -208,15 +215,15 @@ return re;
 
 string ClassDeclTypeInfo::toString () { 
 string s(cls->name.start, cls->name.length); 
-if (exact) s+='!';
-if (optional) s+='?';
+if (flags & TypeInfoFlag::Exact) s+='!';
+if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
 }
 
 string ClassDeclTypeInfo::toBinString (QVM& vm) {
 string s = format("Q%s;", string(cls->name.start, cls->name.length));
-if (exact) s+='!';
-if (optional) s+='?';
+if (flags & TypeInfoFlag::Exact) s+='!';
+if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
 }
 
@@ -258,9 +265,8 @@ string ComposedTypeInfo::toBinString (QVM& vm) {
 ostringstream out;
 out << 'C';
 out << type->toBinString(vm);
-out << '<';
+out << countSubtypes();
 for (int i=0, n=countSubtypes(); i<n; i++) out << subtypes[i]->toBinString(vm);
-out << '>';
 return out.str();
 }
 

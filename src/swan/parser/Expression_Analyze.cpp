@@ -128,15 +128,8 @@ return re;
 int SubscriptExpression::analyze (TypeAnalyzer& ta) {
 int re = receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
-auto rectype = receiver->type;
-shared_ptr<TypeInfo> finalType = nullptr;
-if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(rectype)) {
-if (auto ct = dynamic_pointer_cast<ClassTypeInfo>(cti->type)) {
-if (ct->type==ta.vm.listClass && cti->countSubtypes()==1) finalType = cti->subtypes[0];
-else if (ct->type==ta.vm.mapClass && cti->countSubtypes()==2) finalType = cti->subtypes[1];
-else if (ct->type==ta.vm.tupleClass && args.size()==1) if (auto cxe = dynamic_pointer_cast<ConstantExpression>(args[0])) if (cti->countSubtypes()>=cxe->token.value.d) finalType = cti->subtypes[cxe->token.value.d];
-}}
-if (!finalType) finalType = ta.resolveCallType(receiver, { T_NAME, "[]", 2, QV::UNDEFINED });
+QToken subscriptToken = { T_NAME, "[]", 2, QV::UNDEFINED };
+auto finalType = ta.resolveCallType(receiver, subscriptToken, args.size(), &args[0], CallFlag::None, &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -146,8 +139,8 @@ int ClassDeclaration::analyze (TypeAnalyzer& ta) {
 int re = 0;
 auto oldCls = ta.curClass;
 ta.curClass = this;
-auto finalType = make_shared<ClassDeclTypeInfo>(this, true); 
-re |= ta.assignType(*this, finalType);
+auto classType = make_shared<ClassDeclTypeInfo>(this, TypeInfoFlag::Exact | TypeInfoFlag::Static); 
+re |= ta.assignType(*this, classType);
 if (!(flags & VarFlag::Optimized)) {
 handleAutoConstructor(ta, fields, false);
 handleAutoConstructor(ta, staticFields, true);
@@ -283,7 +276,7 @@ shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.resolveCallType(left, getter->token, 0, nullptr, !!super, &fd);
+auto finalType = ta.resolveCallType(left, getter->token, 0, nullptr, (super? CallFlag::Super : CallFlag::None), &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -293,7 +286,7 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = ta.parser.curMethodNameToken;
-auto finalType = ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), !!super, &fd);
+auto finalType = ta.resolveCallType(left, getter->token, call->args.size(), &(call->args[0]), (super? CallFlag::Super : CallFlag::None), &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -308,7 +301,7 @@ shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
 string sName = string(setter->token.start, setter->token.length) + ("=");
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
-auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, !!super, &fd);
+auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, (super? CallFlag::Super : CallFlag::None), &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -431,9 +424,9 @@ for (auto& arg: args) re |= arg->analyze(ta);
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 auto lv = ta.findVariable(name->token, LV_EXISTING | LV_FOR_READ);
 auto cls = ta.getCurClass();
-if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], false, &fd);
+if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], CallFlag::None, &fd);
 }
-if (!finalType) finalType = ta.resolveCallType(receiver, args.size(), &args[0], &fd);
+if (!finalType) finalType = ta.resolveCallType(receiver, args.size(), &args[0], CallFlag::None, &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;

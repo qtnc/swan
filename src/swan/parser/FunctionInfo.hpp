@@ -1,13 +1,14 @@
 #ifndef ___COMPILER_PARSER_FUNCTION_INFO
 #define ___COMPILER_PARSER_FUNCTION_INFO
 #include "StatementBase.hpp"
-#include "TypeInfo.hpp"
+//#include "TypeInfo.hpp"
 #include "../../include/bitfield.hpp"
 #include<memory>
 #include<string>
 
 struct QCompiler;
 struct TypeAnalyzer;
+struct TypeInfo;
 
 struct StringFunctionInfo: FunctionInfo {
 struct QVM& vm;

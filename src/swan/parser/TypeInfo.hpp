@@ -2,12 +2,20 @@
 #define ___COMPILER_PARSER_TYPE_INFO
 #include "StatementBase.hpp"
 #include "Token.hpp"
+#include "../../include/bitfield.hpp"
 #include<memory>
 #include<string>
 #include<vector>
 
 struct QVM;
 struct QClass;
+
+bitfield(TypeInfoFlag, uint32_t){
+None = 0,
+Exact = 1,
+Optional = 2,
+Static = 4,
+};
 
 struct AnyTypeInfo: TypeInfo {
 bool isEmpty () override { return true; }
@@ -37,16 +45,17 @@ else return false;
 
 struct ClassTypeInfo: TypeInfo {
 QClass* type;
-bool exact, optional;
+bitmask<TypeInfoFlag> flags;
 
-ClassTypeInfo (QClass* cls, bool exact=false, bool optional=false);
+ClassTypeInfo (QClass* cls, bitmask<TypeInfoFlag> flags = TypeInfoFlag::None);
 bool isNum () override;
 bool isBool () override;
 bool isString () override;
+bool isFunction () override;
 bool isNull () override;
 bool isUndefined () override;
-bool isExact () override { return exact; }
-bool isOptional () override { return optional; }
+bool isExact () override { return static_cast<bool>(flags & TypeInfoFlag::Exact); }
+bool isOptional () override { return static_cast<bool>(flags & TypeInfoFlag::Optional); }
 std::string toString () override;
 std::string toBinString (QVM& vm) override;
 bool equals (const std::shared_ptr<TypeInfo>& other) override;
@@ -56,9 +65,9 @@ QClass* findCommonParent (QClass* t1, QClass* t2);
 
 struct NamedTypeInfo: TypeInfo {
 QToken token;
-bool exact, optional;
+bitmask<TypeInfoFlag> flags;
 
-NamedTypeInfo (const QToken& t, bool exact=false, bool optional=false);
+NamedTypeInfo (const QToken& t, bitmask<TypeInfoFlag> flags = TypeInfoFlag::None);
 std::shared_ptr<TypeInfo> resolve (TypeAnalyzer& ta) override;
 std::string toString () override { return std::string(token.start, token.length); }
 std::string toBinString (QVM& vm) override;
@@ -83,10 +92,10 @@ bool isOptional () override { return type && type->isOptional(); }
 
 struct ClassDeclTypeInfo: TypeInfo {
 struct ClassDeclaration* cls;
-bool exact, optional;
+bitmask<TypeInfoFlag> flags;
 
-ClassDeclTypeInfo (std::shared_ptr<ClassDeclaration> c1, bool exact=false, bool optional=false);
-ClassDeclTypeInfo (ClassDeclaration* c1, bool exact=false, bool optional=false);
+ClassDeclTypeInfo (std::shared_ptr<ClassDeclaration> c1, bitmask<TypeInfoFlag> flags = TypeInfoFlag::None);
+ClassDeclTypeInfo (ClassDeclaration* c1, bitmask<TypeInfoFlag> flags = TypeInfoFlag::None);
 std::shared_ptr<TypeInfo> merge (std::shared_ptr<TypeInfo> t0, TypeAnalyzer& ta) override;
 std::string toString () override;
 std::string toBinString (QVM& vm) override;

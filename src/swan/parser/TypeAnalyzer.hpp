@@ -5,12 +5,19 @@
 #include "Parser.hpp"
 #include "../vm/Function.hpp"
 #include "../../include/cpprintf.hpp"
+#include "../../include/bitfield.hpp"
 #include<string>
 #include<vector>
 
 struct QVM;
 struct QParser;
+struct FunctionInfo;
 struct FuncOrDecl;
+
+bitfield(CallFlag, uint32_t){
+None = 0,
+Super = 1,
+};
 
 struct AnalyzedVariable {
 QToken name;
@@ -39,11 +46,14 @@ struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();
 
 std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, FuncOrDecl* fd = nullptr);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, struct ClassDeclaration&  cls, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bool super = false, FuncOrDecl* fd = nullptr);
+std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bitmask<CallFlag> = CallFlag::None, FuncOrDecl* fd = nullptr);
+std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, struct ClassDeclaration&  cls, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bitmask<CallFlag> = CallFlag::None, FuncOrDecl* fd = nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, QV func, int nArgs, std::shared_ptr<Expression>* args, FuncOrDecl* fd =nullptr);
-std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args, FuncOrDecl* fd = nullptr);
+std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs, std::shared_ptr<Expression>* args, bitmask<CallFlag> flags = CallFlag::None, FuncOrDecl* fd = nullptr);
+
 std::shared_ptr<TypeInfo> resolveValueType (QV value);
+std::shared_ptr<FunctionInfo> resolveFunctionInfo (QV value, FuncOrDecl* fd = nullptr);
+
 bool isSameType (const std::shared_ptr<TypeInfo>& t1, const std::shared_ptr<TypeInfo>& t2);
 int assignType (Expression& e, const std::shared_ptr<TypeInfo>& type);
 
