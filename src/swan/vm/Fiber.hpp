@@ -12,6 +12,9 @@
 #include "Allocator.hpp"
 #include<string>
 #include<vector>
+#include "../../include/bitfield.hpp"
+
+enum class ClassFlag: uint8_t;
 
 struct QFiber: Swan::Fiber, QSequence  {
 typedef execution_stack<QV, trace_allocator<QV>> Stack;
@@ -133,7 +136,7 @@ void adjustArguments (int nArgs, int nClosureArgs, bitmask<FunctionFlag> flags);
 void storeMethod (int symbol);
 void storeStaticMethod (int symbol);
 QV loadMethod (QV& obj, int symbol);
-void pushNewClass (int nParents, int nStaticFields, int nFields);
+void pushNewClass (int nParents, int nStaticFields, int nFields, bitmask<ClassFlag> flags);
 void  callSymbol (int symbol, int nArgs);
 void callSuperSymbol (int symbol, int nArgs);
 inline bool callFunc (QV& callable, int nArgs);

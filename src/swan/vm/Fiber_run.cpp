@@ -427,10 +427,11 @@ loadPushClosure(frame.closure, frame.read<uint_constant_index_t>());
 BREAK
 
 CASE(OP_NEW_CLASS) {
-int nParents = frame.read<uint_field_index_t>();
-int nStaticFields = frame.read<uint_field_index_t>();
-int nFields = frame.read<uint_field_index_t>();
-pushNewClass(nParents, nStaticFields, nFields);
+auto nParents = frame.read<uint_field_index_t>();
+auto nStaticFields = frame.read<uint_field_index_t>();
+auto nFields = frame.read<uint_field_index_t>();
+auto flags = frame.read<bitmask<ClassFlag>>();
+pushNewClass(nParents, nStaticFields, nFields, flags);
 }
 BREAK
 

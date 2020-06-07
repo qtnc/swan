@@ -53,7 +53,7 @@ return cls;
 }
 
 
-void QFiber::pushNewClass (int nParents, int nStaticFields, int nFields) {
+void QFiber::pushNewClass (int nParents, int nStaticFields, int nFields, bitmask<ClassFlag> flags) {
 string name = at(-nParents -1).asString();
 vector<QV> parents(stack.end() -nParents, stack.end());
 stack.erase(stack.end() -nParents -1, stack.end());
@@ -64,7 +64,7 @@ error<invalid_argument>("Invalid parent class: %s", it->getClass(vm).name);
 return;
 }
 if (parent->flags & ClassFlag::Final) {
-error<invalid_argument>("%s is final", parent->name);
+error<invalid_argument>("Can't inherit from %s, it is final", parent->name);
 return;
 }
 if (parent->flags & ClassFlag::Foreign) {
@@ -77,6 +77,7 @@ return;
 }
 GCLocker gcLocker(vm);
 QClass* cls = vm.createNewClass(name, parents, nStaticFields, nFields, false);
+cls->flags |= flags;
 push(cls);
 }
 

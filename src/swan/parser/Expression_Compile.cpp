@@ -784,7 +784,14 @@ compiler.compileError(left->nearestToken(), ("Invalid target for assignment"));
 
 void ClassDeclaration::compile (QCompiler& compiler) {
 for (auto decoration: decorations) decoration->compile(compiler);
-struct FieldInfo {  uint_field_index_t nParents, nStaticFields, nFields; } fieldInfo = { static_cast<uint_field_index_t>(parents.size()), 0, 0 };
+struct FieldInfo {  
+uint_field_index_t nParents, nStaticFields, nFields;
+bitmask<ClassFlag> flags;
+}fieldInfo = { 
+static_cast<uint_field_index_t>(parents.size()), 0, 0, 
+(flags & VarFlag::Final)? ClassFlag::Final : ClassFlag::None
+};
+
 ClassDeclaration* oldClassDecl = compiler.curClass;
 compiler.curClass = this;
 int nameConstant = compiler.findConstant(QV(compiler.vm, string(name.start, name.length)));

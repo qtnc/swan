@@ -3,6 +3,7 @@
 #include "ForeignClass.hpp"
 #include "VM.hpp"
 #include "ExtraAlgorithms.hpp"
+using namespace std;
 
 QClass::QClass (QVM& vm0, QClass* type0, QClass* parent0, const std::string& name0, uint16_t nf, bitmask<ClassFlag> cf):
 QObject(type0), 
@@ -51,7 +52,11 @@ return bind(methodName, func);
 QClass* QClass::bind (int symbol, const QV& val) {
 insert_n(methods, 1+symbol-methods.size(), QV::UNDEFINED);
 auto& m = methods[symbol];
-if (m.isClosure()) m.asObject<QClosure>()->func.flags |= FunctionFlag::Overridden;
+if (m.isClosure()) {
+QClosure* closure = m.asObject<QClosure>();
+if (closure->func.flags & FunctionFlag::Final) error<invalid_argument>("%s can't be overridden in %s, it is final", closure->func.name, name);
+closure->func.flags |= FunctionFlag::Overridden;
+}
 m  = val;
 return this;
 }
