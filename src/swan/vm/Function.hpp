@@ -24,7 +24,8 @@ Vararg = 1,
 Pure = 2,
 Final = 4,
 Overridden = 8,
-Accessor = 0x10
+Accessor = 0x10,
+Static = 0x20,
 };
 
 struct QFunction: QObject {

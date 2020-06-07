@@ -684,7 +684,7 @@ if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
 int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
 left->compile(compiler);
-if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, func->fieldIndex);
+if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>( (func->flags & FunctionFlag::Static)? OP_LOAD_STATIC_FIELD : OP_LOAD_FIELD, func->fieldIndex);
 else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
 return;
 }
@@ -719,7 +719,7 @@ left->compile(compiler);
 assignedValue->compile(compiler);
 if (isInlinableAccessor(type, func)) {
 compiler.writeOpArg<uint8_t>(OP_SWAP, 0xFE);
-compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, func->fieldIndex);
+compiler.writeOpArg<uint_field_index_t>( (func->flags & FunctionFlag::Static)? OP_STORE_STATIC_FIELD : OP_STORE_FIELD, func->fieldIndex);
 }
 else   compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_2 : OP_CALL_METHOD_2, symbol);
 return;
@@ -878,7 +878,8 @@ compiler.result = fc.result;
 func->flags
 .set(FunctionFlag::Vararg, flags &VarFlag::Vararg)
 .set(FunctionFlag::Pure, flags & flags & VarFlag::Pure)
-.set(FunctionFlag::Final, flags & VarFlag::Final);
+.set(FunctionFlag::Final, flags & VarFlag::Final)
+.set(FunctionFlag::Static, flags & VarFlag::Static);
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
 if (flags & VarFlag::Accessor) {
 func->flags |= FunctionFlag::Accessor;
