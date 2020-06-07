@@ -117,9 +117,7 @@ if (fi) return fi->getFunctionTypeInfo();
 return make_shared<ClassTypeInfo>(&value.getClass(vm));
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV value, int nArgs, shared_ptr<Expression>* args, FuncOrDecl* fd) {
-auto fi = resolveFunctionInfo(value, fd);
-if (fi) {
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, std::shared_ptr<FunctionInfo> fi, int nArgs, shared_ptr<Expression>* args) {
 receiver->analyze(*this);
 shared_ptr<TypeInfo> argtypes[nArgs+1];
 argtypes[0] = receiver->type;
@@ -129,59 +127,60 @@ argtypes[i+1] = args[i]->type;
 }
 return fi->getReturnTypeInfo(nArgs+1, argtypes);
 }
-return TypeInfo::ANY;
+ 
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, QV value, int nArgs, shared_ptr<Expression>* args, FuncOrDecl* fd) {
+auto fi = resolveFunctionInfo(value, fd);
+if (fi) return resolveCallType(receiver, fi, nArgs, args);
+else return TypeInfo::ANY;
 }
 
-std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (shared_ptr<Expression> receiver, ClassDeclaration& cls, const QToken& name, int nArgs, shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd) {
-shared_ptr<FunctionDeclaration> m;
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, std::shared_ptr<ClassDeclTypeInfo> cdti, const QToken& name, int nArgs, std::shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* pfd) {
+shared_ptr<TypeInfo> ti = TypeInfo::ANY;
+shared_ptr<FunctionDeclaration> fd = nullptr;
 if (!(flags & CallFlag::Super)) {
-m = cls.findMethod(name, false);
-if (!m) m = cls.findMethod(name, true);
+fd = cdti->cls->findMethod(name, static_cast<bool>( cdti->flags & TypeInfoFlag::Static));
 }
-if (!m) for (auto& parentToken: cls.parents) {
-auto parentTI = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
-if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(parentTI)) {
-m = cdt->cls->findMethod(name, false);
-if (!m) m = cdt->cls->findMethod(name, true);
+if (fd) {
+ti = resolveCallType(receiver, fd, nArgs, args);
+if (pfd) pfd->method = fd.get();
 }
-else if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(parentTI)) {
-QV method = clt->type->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
+else if (!(cdti->flags & TypeInfoFlag::Static)) {
+for (auto& parentToken: cdti->cls->parents) {
+auto parent = make_shared<NamedTypeInfo>(parentToken) ->resolve(*this);
+if (auto pcdti = dynamic_pointer_cast<ClassDeclTypeInfo>(parent)) ti = resolveCallType(receiver, pcdti, name, nArgs, args, flags &~CallFlag::Super, pfd);
+else if (auto cti = dynamic_pointer_cast<ClassTypeInfo>(parent)) ti = resolveCallType(receiver, cti, name, nArgs, args, flags &~CallFlag::Super, pfd);
+if (ti) break;
+}}
+return ti;
+}
+
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, std::shared_ptr<ClassTypeInfo> cti, const QToken& name, int nArgs, std::shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd) {
+auto cls = cti->type;
+if (flags & CallFlag::Super) cls = cls->parent;
+if (cti->flags & TypeInfoFlag::Static) cls = cls->type;
+QV method = cls->findMethod(vm.findMethodSymbol(string(name.start, name.length)));
 return resolveCallType(receiver, method, nArgs, args, fd);
-}
-if (m) break;
-}
-if (m) {
-if (fd) fd->method = m.get();
-return m->returnType;
-}
-return TypeInfo::ANY;
 }
 
 std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Expression> receiver, const QToken& name, int nArgs, shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd) {
 receiver->analyze(*this);
 shared_ptr<TypeInfo> receiverType = receiver->type->resolve(*this);
 if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiverType)) receiverType = cti->type;
-if (auto clt = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) {
-auto cls = clt->type;
-if (flags & CallFlag::Super) cls = cls->parent;
-QV method = cls->findMethod(parser.vm.findMethodSymbol(string(name.start, name.length)));
-return resolveCallType(receiver, method, nArgs, args, fd);
-}
-else if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) {
-return resolveCallType(receiver, *cdt->cls, name, nArgs, args, flags, fd);
-}
-return TypeInfo::ANY;
+if (auto cti = dynamic_pointer_cast<ClassTypeInfo>(receiverType)) return resolveCallType(receiver, cti, name, nArgs, args, flags, fd);
+else if (auto cdti = dynamic_pointer_cast<ClassDeclTypeInfo>(receiverType)) return resolveCallType(receiver, cdti, name, nArgs, args, flags, fd);
+else return TypeInfo::ANY;
 }
 
 std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd) {
 receiver->analyze(*this);
 auto funcType = receiver->type;
 if (auto cdt = dynamic_pointer_cast<ClassDeclTypeInfo>(funcType)) {
-return cdt;
-}
-else if (auto ct = dynamic_pointer_cast<ComposedTypeInfo>(funcType)) {
-int n = ct->countSubtypes();
-if (n>0) return ct->subtypes[n -1];
+if (cdt->flags & TypeInfoFlag::Static) {
+return make_shared<ClassDeclTypeInfo>(cdt->cls, TypeInfoFlag::Exact);
+}}
+else if (auto cti = dynamic_pointer_cast<ComposedTypeInfo>(funcType)) {
+int n = cti->countSubtypes();
+if (n>0) return cti->subtypes[n -1];
 }
 //other cases
 return TypeInfo::ANY;

@@ -241,9 +241,8 @@ if (auto lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ)) {
 auto finalType = ta.mergeTypes(type, lv->type);
 return ta.assignType(*this, finalType);
 }
-auto cls = ta.getCurClass();
-if (cls) {
-auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, token);
+if (auto cls = ta.getCurClass()) {
+auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), make_shared<ClassDeclTypeInfo>(cls), token);
 auto finalType = ta.mergeTypes(type, resolvedType);
 return ta.assignType(*this, finalType);
 }
@@ -263,7 +262,7 @@ memcpy(&setterName[0], token.start, token.length);
 setterName[token.length+1] = 0;
 setterName[token.length] = '=';
 QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
-auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, setterNameToken, 1, &assignedValue);
+auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), make_shared<ClassDeclTypeInfo>(cls), setterNameToken, 1, &assignedValue);
 resolvedType = ta.mergeTypes(type, resolvedType);
 re |= ta.assignType(*this, resolvedType);
 }
@@ -424,7 +423,7 @@ for (auto& arg: args) re |= arg->analyze(ta);
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
 auto lv = ta.findVariable(name->token, LV_EXISTING | LV_FOR_READ);
 auto cls = ta.getCurClass();
-if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), *cls, name->token, args.size(), &args[0], CallFlag::None, &fd);
+if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), make_shared<ClassDeclTypeInfo>(cls), name->token, args.size(), &args[0], CallFlag::None, &fd);
 }
 if (!finalType) finalType = ta.resolveCallType(receiver, args.size(), &args[0], CallFlag::None, &fd);
 finalType = ta.mergeTypes(type, finalType);
@@ -436,7 +435,10 @@ int SubscriptExpression::analyzeAssignment  (TypeAnalyzer& ta, shared_ptr<Expres
 int re = receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
 re |= assignedValue->analyze(ta);
-//todo: update generic subtype if possible
+QToken subscriptSetterToken = { T_NAME, "[]=", 3, QV::UNDEFINED };
+auto finalType = ta.resolveCallType(receiver, subscriptSetterToken, args.size(), &args[0], CallFlag::None, &fd);
+finalType = ta.mergeTypes(type, finalType);
+re |= ta.assignType(*this, finalType);
 return re;
 }
 
