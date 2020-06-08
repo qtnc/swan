@@ -47,6 +47,7 @@ struct Statement: std::enable_shared_from_this<Statement>  {
 inline std::shared_ptr<Statement> shared_this () { return shared_from_this(); }
 virtual const QToken& nearestToken () = 0;
 virtual bool isExpression () { return false; }
+virtual bool isPure () { return false; }
 virtual bool isDecorable () { return false; }
 virtual bool isUsingExports () { return false; }
 virtual std::shared_ptr<Statement> optimizeStatement () { return shared_this(); }

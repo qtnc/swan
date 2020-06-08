@@ -58,7 +58,9 @@ std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver
 
 std::shared_ptr<TypeInfo> resolveCallType (std::shared_ptr<Expression> receiver, std::shared_ptr<FunctionInfo> fi, int nArgs = 0, std::shared_ptr<Expression>* args = nullptr);
 std::shared_ptr<TypeInfo> resolveValueType (QV value);
+
 std::shared_ptr<FunctionInfo> resolveFunctionInfo (QV value, FuncOrDecl* fd = nullptr);
+std::shared_ptr<FunctionInfo> resolveFunctionInfo (const char* cstrTypeInfo);
 
 bool isSameType (const std::shared_ptr<TypeInfo>& t1, const std::shared_ptr<TypeInfo>& t2);
 int assignType (Expression& e, const std::shared_ptr<TypeInfo>& type);

@@ -411,7 +411,16 @@ return re;
 
 int MethodLookupOperation::analyze (TypeAnalyzer& ta) {
 int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0);
-re |= ta.assignType(*this, TypeInfo::MANY);
+auto name = dynamic_pointer_cast<NameExpression>(right);
+if (!name) return re;
+shared_ptr<TypeInfo> finalType = TypeInfo::ANY;
+auto receiver = left;
+FuncOrDecl fd;
+ta.resolveCallType(receiver, name->token, 0, nullptr, CallFlag::None, &fd);
+auto fi = fd.getFunctionInfo(ta);
+if (fi) finalType = fi->getFunctionTypeInfo();
+finalType = ta.mergeTypes(type, finalType);
+re |= ta.assignType(*this, finalType);
 return re;
 }
 
@@ -455,7 +464,7 @@ return re;
 
 int MethodLookupOperation::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0) | (assignedValue? assignedValue->analyze(ta) :0);
-re |= ta.assignType(*this, TypeInfo::MANY);
+re |= ta.assignType(*this, assignedValue->type);
 return re;
 }
 

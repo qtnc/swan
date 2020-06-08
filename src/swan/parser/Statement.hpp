@@ -9,6 +9,7 @@ SimpleStatement (const QToken& t): token(t) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override {}
 int analyze (TypeAnalyzer& ta) override { return false; }
+bool isPure () override { return true; }
 };
 
 struct IfStatement: Statement, Comprenable   {
@@ -21,6 +22,7 @@ std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return condition->nearestToken(); }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return (!condition || condition->isPure()) && (!ifPart || ifPart->isPure()) && (!elsePart || elsePart->isPure()); }
 };
 
 struct SwitchStatement: Statement {
@@ -50,6 +52,7 @@ void compileTraditional (QCompiler& compiler);
 int analyze (TypeAnalyzer& ta) override;
 int analyzeForEach (TypeAnalyzer& ta);
 int analyzeTraditional (TypeAnalyzer& ta);
+bool isPure () override { return (!inExpression || inExpression->isPure()) && (!incrExpression || incrExpression->isPure()) && (!loopStatement || loopStatement->isPure()); }
 };
 
 struct WhileStatement: Statement {
@@ -60,6 +63,7 @@ std::shared_ptr<Statement> optimizeStatement () override;
 const QToken& nearestToken () override { return condition->nearestToken(); }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return (!condition || condition->isPure()) && (!loopStatement || loopStatement->isPure()); }
 };
 
 struct RepeatWhileStatement: Statement {
@@ -70,6 +74,7 @@ std::shared_ptr<Statement> optimizeStatement () override ;
 const QToken& nearestToken () override { return loopStatement->nearestToken(); }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return (!condition || condition->isPure()) && (!loopStatement || loopStatement->isPure()); }
 };
 
 struct ContinueStatement: SimpleStatement {
@@ -115,6 +120,7 @@ void chain (const std::shared_ptr<Statement>& st) final override ;
 std::shared_ptr<Statement> optimizeStatement () override;
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return (!tryPart || tryPart->isPure()) && (!finallyPart || finallyPart->isPure()); }
 };
 
 struct WithStatement: Statement, Comprenable  {
@@ -129,6 +135,7 @@ void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
 void parseHead (QParser& parser);
 void parseTail  (QParser& parser);
+bool isPure () override { return !body || body->isPure(); }
 };
 
 struct BlockStatement: Statement, Comprenable  {
@@ -142,6 +149,7 @@ const QToken& nearestToken () override { return statements[0]->nearestToken(); }
 bool isUsingExports () override;
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return std::all_of(statements.begin(), statements.end(), [&](auto& s){ return s->isPure(); }); }
 };
 
 struct VariableDeclaration: Statement, Decorable {

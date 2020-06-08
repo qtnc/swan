@@ -95,17 +95,33 @@ var->value = make_shared<ConstantExpression>(tkcst);
 return var;
 }}
 
+shared_ptr<FunctionInfo> TypeAnalyzer::resolveFunctionInfo (const char* str) {
+return make_shared<StringFunctionInfo>(*this, str);
+}
+
+shared_ptr<FunctionInfo> FuncOrDecl::getFunctionInfo (TypeAnalyzer& ta) {
+shared_ptr<FunctionInfo> fi = nullptr;
+if (method) fi = static_pointer_cast<FunctionInfo>(static_pointer_cast<FunctionDeclaration>(method->shared_this()));
+else if (func) fi = ta.resolveFunctionInfo(func->typeInfo.c_str());
+else if (nativeFunc) {
+auto it = ta.vm.nativeFuncTypeInfos.find(nativeFunc);
+if (it!=ta.vm.nativeFuncTypeInfos.end()) fi = ta.resolveFunctionInfo(it->second.c_str());
+}
+return fi;
+}
+
 shared_ptr<FunctionInfo> TypeAnalyzer::resolveFunctionInfo  (QV value, FuncOrDecl* fd) {
 shared_ptr<FunctionInfo> fi = nullptr;
 if (value.isClosure()) {
 QClosure& closure = *value.asObject<QClosure>();
-if (!closure.func.typeInfo.empty()) fi = make_shared<StringFunctionInfo>(*this, closure.func.typeInfo.c_str());
+if (!closure.func.typeInfo.empty()) fi = resolveFunctionInfo(closure.func.typeInfo.c_str());
 if (fd) fd->func = &closure.func;
 }
 else if (value.isNativeFunction()) {
-auto ptr = value.asNativeFunction();
-auto it = vm.nativeFuncTypeInfos.find(ptr);
-if (it!=vm.nativeFuncTypeInfos.end()) fi = make_shared<StringFunctionInfo>(*this, it->second.c_str());
+auto nativeFunc = value.asNativeFunction();
+auto it = vm.nativeFuncTypeInfos.find(nativeFunc);
+if (it!=vm.nativeFuncTypeInfos.end()) fi = resolveFunctionInfo(it->second.c_str());
+if (fd) fd->nativeFunc = nativeFunc;
 }
 //other cases ?
 return fi;

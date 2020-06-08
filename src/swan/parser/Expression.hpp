@@ -7,7 +7,9 @@
 struct FuncOrDecl {
 struct QFunction* func = nullptr;
 struct FunctionDeclaration* method = nullptr;
+QNativeFunction nativeFunc = nullptr;
 QFunction* getFunc ();
+std::shared_ptr<struct FunctionInfo> getFunctionInfo (struct TypeAnalyzer&);
 };
 
 struct ConstantExpression: Expression {
@@ -16,6 +18,7 @@ ConstantExpression(QToken x): token(x) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return true; }
 };
 
 struct DupExpression: Expression  {
@@ -32,6 +35,7 @@ std::vector<std::shared_ptr<Expression>> items;
 LiteralSequenceExpression (const QToken& t, const std::vector<std::shared_ptr<Expression>>& p = {}): kind(t), items(p) {}
 const QToken& nearestToken () { return kind; }
 std::shared_ptr<Expression> optimize () ;
+bool isPure () override { return true; }
 bool isVararg () ;
 bool isSingleSequence ();
 bool isAssignable () override;
@@ -61,10 +65,11 @@ std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>>
 LiteralMapExpression (const QToken& t): kind(t) {}
 const QToken& nearestToken () override { return kind; }
 std::shared_ptr<Expression> optimize () override;
-virtual void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable>>& params) override;
-virtual bool isFunctionnable () override;
-virtual bool isAssignable () override;
-virtual void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override;
+void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable>>& params) override;
+bool isPure () override { return true; }
+bool isFunctionnable () override;
+bool isAssignable () override;
+void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override;
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
@@ -72,10 +77,10 @@ int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedVal
 
 struct LiteralTupleExpression: LiteralSequenceExpression, Functionnable {
 LiteralTupleExpression (const QToken& t, const std::vector<std::shared_ptr<Expression>>& p = {}): LiteralSequenceExpression(t, p) {}
-virtual QClass* getSequenceClass (QVM& vm) override;
-virtual void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable>>& params) override;
-virtual bool isFunctionnable () override;
-virtual void compile (QCompiler& compiler) override;
+QClass* getSequenceClass (QVM& vm) override;
+void makeFunctionParameters (std::vector<std::shared_ptr<struct Variable>>& params) override;
+bool isFunctionnable () override;
+void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
 };
 
@@ -86,6 +91,7 @@ LiteralGridExpression (const QToken& t, const std::vector<std::vector<std::share
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return true; }
 };
 
 struct LiteralRegexExpression: Expression {
@@ -95,6 +101,7 @@ LiteralRegexExpression(const QToken& tk, const std::string& p, const std::string
 const QToken& nearestToken () override { return tok; }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return true; }
 };
 
 struct NameExpression: Expression, Assignable, Functionnable {
@@ -117,6 +124,7 @@ void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
+bool isPure () override { return true; }
 };
 
 struct StaticFieldExpression: Expression, Assignable {
@@ -127,6 +135,7 @@ void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
+bool isPure () override { return true; }
 };
 
 struct SuperExpression: Expression {
@@ -145,6 +154,7 @@ void compile (QCompiler& compiler)override;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue) override ;
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
+bool isPure () override { return true; }
 };
 
 struct GenericMethodSymbolExpression: Expression {
@@ -153,6 +163,7 @@ GenericMethodSymbolExpression (const QToken& t): token(t) {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return true; }
 };
 
 struct BinaryOperation: Expression {
@@ -168,6 +179,7 @@ std::shared_ptr<Expression> optimize ()override ;
 std::shared_ptr<Expression> optimizeChainedComparisons ();
 void compile (QCompiler& compiler)override ;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return left && right && left->isPure() && right->isPure(); }
 };
 
 struct UnaryOperation: Expression {
@@ -178,6 +190,7 @@ std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
 const QToken& nearestToken () override { return expr->nearestToken(); }
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return expr && expr->isPure(); }
 };
 
 struct ShortCircuitingBinaryOperation: BinaryOperation {
@@ -192,6 +205,7 @@ const QToken& nearestToken () override { return condition->nearestToken(); }
 std::shared_ptr<Expression> optimize () override;
 void compile (QCompiler& compiler)override ;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return condition && condition->isPure() && (!ifPart || ifPart->isPure()) && (!elsePart || elsePart->isPure()); }
 };
 
 struct SwitchExpression: Expression {
@@ -233,6 +247,7 @@ void makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) ove
 bool isFunctionnable () override;
 void compile (QCompiler& compiler)  override;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return expr && expr->isPure(); }
 };
 
 struct AbstractCallExpression: Expression {
@@ -285,6 +300,7 @@ AssignmentOperation (std::shared_ptr<Expression> l, QTokenType o, std::shared_pt
 std::shared_ptr<Expression> optimize ()override ;
 void compile (QCompiler& compiler)override ;
 int analyze (TypeAnalyzer& ta) override;
+bool isPure () override { return false; }
 };
 
 struct YieldExpression: Expression {

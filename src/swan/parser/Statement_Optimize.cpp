@@ -1,6 +1,7 @@
 #include "Statement.hpp"
 #include "Expression.hpp"
 #include "Constants.hpp"
+#include "../../include/cpprintf.hpp"
 using namespace std;
 
 void IfStatement::chain (const shared_ptr<Statement>& st) { 
@@ -108,7 +109,7 @@ from=from->optimize();
 return shared_this(); 
 }
 
-shared_ptr<Statement> BlockStatement::optimizeStatement () { 
+shared_ptr<Statement> BlockStatement::optimizeStatement () {
 if (optimized) return shared_this(); 
 for (auto& sta: statements) sta=sta->optimizeStatement(); 
 if (statements.size()==1) return statements[0];

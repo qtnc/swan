@@ -40,7 +40,7 @@ if (flags & VarFlag::Single) break;
 }
 
 shared_ptr<Statement> QParser::parseVarDecl () {
-return parseVarDecl(cur.type==T_CONST? VarFlag::Const : VarFlag::None);
+return parseVarDecl(VarFlag::None);
 }
 
 shared_ptr<Statement> QParser::parseVarDecl (bitmask<VarFlag> flags) {
