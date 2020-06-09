@@ -72,13 +72,12 @@ if (isSameType(type, oldType)) return false;
 return true;
 }
 
-AnalyzedVariable* TypeAnalyzer::findVariable (const QToken& name, int flags) {
-bool createNew = flags&LV_NEW;
+AnalyzedVariable* TypeAnalyzer::findVariable (const QToken& name, bitmask<FindVarFlag> flags) {
 auto rvar = find_if(variables.rbegin(), variables.rend(), [&](auto& x){
 return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
 });
 bool found = rvar!=variables.rend();
-if (createNew) {
+if (flags & FindVarFlag::New) {
 variables.emplace_back(name, curScope);
 return &variables.back();
 }
