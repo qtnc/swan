@@ -8,7 +8,7 @@ using namespace std;
 
 extern const QToken THIS_TOKEN;
 
-void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
+void QParser::parseVarList (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags, bitmask<VarFlag> allowedFlags) {
 do {
 auto var = make_shared<Variable>(nullptr, nullptr, flags);
 skipNewlines();
@@ -16,8 +16,10 @@ while (match(T_AT)) {
 var->decorations.insert(var->decorations.begin(), parseExpression(P_PREFIX));
 skipNewlines();
 }
-parseKeywordFlags(var->flags, VarFlag::Const);
-if (!(var->flags & VarFlag::Const)) match(T_VAR);
+if (allowedFlags.value) {
+parseKeywordFlags(var->flags, allowedFlags);
+match(T_VAR);
+}
 if (!(var->flags & VarFlag::Vararg) && match(T_DOTDOTDOT)) var->flags |= VarFlag::Vararg;
 switch(nextToken().type){
 case T_NAME: var->name = parseName(); break;
@@ -30,10 +32,9 @@ default: parseError("Expecting identifier, '(', '[' or '{' in variable declarati
 }
 if (!(var->flags & VarFlag::Vararg) && match(T_DOTDOTDOT)) var->flags |= VarFlag::Vararg;
 skipNewlines();
-if (!(flags & VarFlag::NoDefault) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
+if (!(var->flags & VarFlag::NoDefault) && match(T_EQ)) var->value = parseExpression(P_COMPREHENSION);
 else var->flags |= VarFlag::NoDefault;
 if (match(T_AS)) var->type = parseTypeInfo();
-//parseKeywordFlags(var->flags, VarFlag::Const);
 vars.push_back(var);
 if (flags & VarFlag::Single) break;
 } while(match(T_COMMA));
@@ -58,7 +59,7 @@ if (cld) thisExpr->type = thisVar->type = make_shared<ClassDeclTypeInfo>(cld);
 func->params.push_back(thisVar);
 }
 if (match(T_LEFT_PAREN) && !match(T_RIGHT_PAREN)) {
-parseVarList(func->params, VarFlag::None);
+parseVarList(func->params, VarFlag::None, VarFlag::Const);
 consume(T_RIGHT_PAREN, ("Expected ')' to close parameter list"));
 }
 else if (match(T_NAME)) {
@@ -174,7 +175,16 @@ if (!(flags & VarFlag::ReadOnly)) cls.methods.push_back(setter);
 } while (match(T_COMMA));
 }
 
+shared_ptr<Statement> makeExportFromVarDecl (shared_ptr<VariableDeclaration> varDecl) {
+auto exportDecl = make_shared<ExportDeclaration>();
+auto name = varDecl->vars[0]->name;
+exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
+vector<shared_ptr<Statement>> sta = { varDecl, exportDecl };
+return make_shared<BlockStatement>(sta, false);
+}
+
 void QParser::parseKeywordFlags (bitmask<VarFlag>& flags, bitmask<VarFlag> allowedFlags) {
+bool first = true;
 do {
 bitmask<VarFlag> flagToCheck;
 switch(cur.type){
@@ -184,17 +194,16 @@ case T_FINAL: flagToCheck = VarFlag::Final; break;
 case T_ASYNC: flagToCheck = VarFlag::Async; break;
 case T_EXPORT: flagToCheck = VarFlag::Export; break;
 case T_GLOBAL: flagToCheck = VarFlag::Global; break;
-default: continue;
+default: first=false; continue;
 }
 if (!(flagToCheck & allowedFlags)) {
 parseError("%s not allowed at this place", string(cur.start, cur.length));
-return;
 }
 else if (flags & flagToCheck) {
-parseError("Duplicated %s", string(cur.start, cur.length));
-return;
+if (!first) parseError("Duplicated %s", string(cur.start, cur.length));
 }
 flags |= (flagToCheck & allowedFlags);
+first=false;
 } while (matchOneOf(T_CONST, T_STATIC, T_FINAL, T_ASYNC, T_EXPORT, T_GLOBAL));
 }
 

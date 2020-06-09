@@ -95,8 +95,8 @@ STATEMENT(SEMICOLON, SimpleStatement),
 STATEMENT(BREAK, Break),
 STATEMENT(CLASS, ClassDecl),
 STATEMENT(CONTINUE, Continue),
-STATEMENT(EXPORT, ExportDecl),
-STATEMENT(GLOBAL, GlobalDecl),
+STATEMENT(EXPORT, GeneralDecl),
+STATEMENT(GLOBAL, GeneralDecl),
 STATEMENT(IF, If),
 STATEMENT(REPEAT, RepeatWhile),
 STATEMENT(RETURN, Return),
@@ -108,10 +108,11 @@ STATEMENT(WHILE, While),
 { T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION, P_LEFT }},
 { T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
 { T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_CONST, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_CONST, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
 { T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_ASYNC, { nullptr, nullptr, &QParser::parseAsync, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_FINAL, { nullptr, nullptr, nullptr, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }}
+{ T_ASYNC, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_FINAL, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_STATIC, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }}
 #undef PREFIX
 #undef PREFIX_OP
 #undef INFIX

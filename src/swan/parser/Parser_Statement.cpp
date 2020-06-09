@@ -5,6 +5,8 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
+shared_ptr<Statement> makeExportFromVarDecl (shared_ptr<VariableDeclaration> varDecl);
+
 void QParser::multiVarExprToSingleLiteralMap (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
 if (vars.size()==1 && dynamic_pointer_cast<LiteralMapExpression>(vars[0]->name)) return;
 auto map = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken()), defmap = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken());
@@ -100,7 +102,7 @@ return sw;
 
 void ForStatement::parseHead (QParser& parser) {
 bool paren = parser.match(T_LEFT_PAREN);
-parser.parseVarList(loopVariables, VarFlag::None);
+parser.parseVarList(loopVariables, VarFlag::None, VarFlag::Const);
 if (loopVariables.size()==1 && (loopVariables[0]->flags &VarFlag::NoDefault) && parser.match(T_IN)) {
 parser.skipNewlines();
 inExpression = parser.parseExpression(P_COMPREHENSION);
@@ -250,20 +252,20 @@ return parseAsyncFunctionDecl(VarFlag::Const);
 
 shared_ptr<Statement> QParser::parseAsyncFunctionDecl (bitmask<VarFlag> flags) {
 consume(T_FUNCTION, "Expected 'function' after 'async'");
-return parseFunctionDecl(flags, VarFlag::Async);
+return parseFunctionDecl(flags | VarFlag::Async);
 }
 
 shared_ptr<Statement> QParser::parseFunctionDecl () {
-return parseFunctionDecl(VarFlag::None, VarFlag::None);
+return parseFunctionDecl(VarFlag::None);
 }
 
-shared_ptr<Statement> QParser::parseFunctionDecl (bitmask<VarFlag> varFlags, bitmask<VarFlag> funcFlags) {
+shared_ptr<Statement> QParser::parseFunctionDecl (bitmask<VarFlag> flags) {
 bool hasName = matchOneOf(T_NAME, T_STRING);
 QToken name = cur;
-auto fnDecl = parseLambda(funcFlags);
+auto fnDecl = parseLambda(flags);
 if (!hasName) return fnDecl;
-if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) varFlags |= VarFlag::Global;
-vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, varFlags) };
+if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
+vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, flags) };
 return make_shared<VariableDeclaration>(vars);
 }
 
@@ -272,7 +274,6 @@ return parseClassDecl(VarFlag::None);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl (bitmask<VarFlag> flags) {
-parseKeywordFlags(flags, VarFlag::Final | VarFlag::Const);
 if (!consume(T_NAME, ("Expected class name after 'class'"))) return nullptr;
 shared_ptr<ClassDeclaration> classDecl = make_shared<ClassDeclaration>(cur, flags);
 skipNewlines();
@@ -282,7 +283,7 @@ consume(T_NAME, ("Expected class name after 'is'"));
 classDecl->parents.push_back(cur);
 } while (match(T_COMMA));
 else classDecl->parents.push_back({ T_NAME, ("Object"), 6, QV::UNDEFINED });
-parseKeywordFlags(classDecl->flags, VarFlag::Final | VarFlag::Const);
+parseKeywordFlags(classDecl->flags, VarFlag::Final | VarFlag::Const | VarFlag::Global);
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
@@ -301,6 +302,17 @@ vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExp
 return make_shared<VariableDeclaration>(vars);
 }
 
+shared_ptr<Statement> QParser::parseGeneralDecl () {
+bitmask<VarFlag> flags;
+parseKeywordFlags(flags, VarFlag::Const | VarFlag::Final | VarFlag::Global | VarFlag::Export | VarFlag::Async);
+if (match(T_VAR)) return parseVarDecl(flags);
+else if (match(T_FUNCTION)) return parseFunctionDecl(flags);
+else if (match(T_NAME)) { prevToken(); return parseVarDecl(flags); }
+else if (match(T_CLASS)) return parseClassDecl(flags);
+else parseError("Expected variable, function or class declaration after %s", string(cur.start, cur.length));
+return nullptr;
+}
+
 shared_ptr<Statement> QParser::parseGlobalDecl () {
 if (matchOneOf(T_VAR, T_CONST)) {
 return parseVarDecl(VarFlag::Global);
@@ -309,7 +321,7 @@ else if (match(T_CLASS)) {
 return parseClassDecl(VarFlag::Const | VarFlag::Global);
 }
 else if (match(T_FUNCTION)) {
-return parseFunctionDecl(VarFlag::Const | VarFlag::Global, VarFlag::None);
+return parseFunctionDecl(VarFlag::Const | VarFlag::Global);
 }
 else if (match(T_ASYNC)) {
 return parseAsyncFunctionDecl(VarFlag::Const | VarFlag::Global);
@@ -323,14 +335,9 @@ auto exportDecl = make_shared<ExportDeclaration>();
 shared_ptr<VariableDeclaration> varDecl;
 if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VarFlag::Const));
 else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VarFlag::Const));
-else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const, VarFlag::None));
+else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const));
 else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VarFlag::Const));
-if (varDecl) {
-auto name = varDecl->vars[0]->name;
-exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
-vector<shared_ptr<Statement>> sta = { varDecl, exportDecl };
-return make_shared<BlockStatement>(sta, false);
-}
+if (varDecl) return makeExportFromVarDecl(varDecl);
 else {
 do {
 shared_ptr<Expression> exportExpr = parseExpression();
@@ -356,7 +363,7 @@ bitmask<VarFlag> flags;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 if (match(T_STAR)) importSta->importAll = true;
 else {
-parseVarList(importSta->imports, flags);
+parseVarList(importSta->imports, flags, VarFlag::Const);
 multiVarExprToSingleLiteralMap(importSta->imports, flags);
 }
 consume(T_IN, "Expected 'in' after import variables");
@@ -370,7 +377,7 @@ bitmask<VarFlag> flags;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 importSta->from = parseExpression(P_COMPREHENSION);
 consume(T_IMPORT, "Expected 'import' after import source");
-parseVarList(importSta->imports, flags);
+parseVarList(importSta->imports, flags, VarFlag::Const);
 multiVarExprToSingleLiteralMap(importSta->imports, flags);
 return importSta;
 }

@@ -257,12 +257,14 @@ std::shared_ptr<Expression> receiver;
 std::vector<std::shared_ptr<Expression>> args;
 QTokenType callType;
 FuncOrDecl fd;
+bool pure;
 
-AbstractCallExpression (std::shared_ptr<Expression> recv0, QTokenType tp, const std::vector<std::shared_ptr<Expression>>& args0): receiver(recv0), callType(tp), args(args0) {}
+AbstractCallExpression (std::shared_ptr<Expression> recv0, QTokenType tp, const std::vector<std::shared_ptr<Expression>>& args0): receiver(recv0), callType(tp), args(args0), pure(false)  {}
 const QToken& nearestToken () override { return receiver->nearestToken(); }
 std::shared_ptr<Expression> optimize () override ;
 void compileArgs (QCompiler& compiler);
 bool isVararg ();
+bool isPure () override { return pure; }
 };
 
 struct CallExpression: AbstractCallExpression {
@@ -294,6 +296,7 @@ void compile (QCompiler& compiler)override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
+bool isPure () override { return true; }
 };
 
 struct AssignmentOperation: BinaryOperation {
