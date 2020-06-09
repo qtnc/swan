@@ -238,10 +238,12 @@ return re;
 int NameExpression::analyze (TypeAnalyzer& ta) {
 if (token.type==T_END) token = ta.parser.curMethodNameToken;
 if (auto lv = ta.findVariable(token, LV_EXISTING | LV_FOR_READ)) {
+pure = true;
 auto finalType = ta.mergeTypes(type, lv->type);
 return ta.assignType(*this, finalType);
 }
 if (auto cls = ta.getCurClass()) {
+pure = false;
 auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), make_shared<ClassDeclTypeInfo>(cls), token);
 auto finalType = ta.mergeTypes(type, resolvedType);
 return ta.assignType(*this, finalType);
@@ -266,6 +268,7 @@ auto resolvedType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), 
 resolvedType = ta.mergeTypes(type, resolvedType);
 re |= ta.assignType(*this, resolvedType);
 }
+pure = false;
 return re;
 }
 

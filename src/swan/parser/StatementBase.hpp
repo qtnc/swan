@@ -34,10 +34,12 @@ virtual ~TypeInfo () = default;
 };
 
 struct FunctionInfo {
+QVM& vm;
+FunctionInfo (QVM& vm0): vm(vm0) {}
 virtual std::shared_ptr<TypeInfo> getReturnTypeInfo (int nPassedArgs=0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) = 0;
 virtual std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) = 0;
 virtual int getArgCount () = 0;
-virtual std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) = 0;
+virtual std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr);
 virtual int getFlags () { return 0; }
 virtual int getFieldIndex () { return -1; }
 virtual ~FunctionInfo () = default;

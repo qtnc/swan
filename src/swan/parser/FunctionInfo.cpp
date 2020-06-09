@@ -5,22 +5,22 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-shared_ptr<TypeInfo> getFunctionTypeInfo (FunctionInfo& fti, struct QVM& vm, int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
-int nArgs = fti.getArgCount();
+shared_ptr<TypeInfo> FunctionInfo::getFunctionTypeInfo (int nPassedArgs, shared_ptr<TypeInfo>* passedArgs) {
+int nArgs = getArgCount();
 auto funcTI = make_shared<ClassTypeInfo>(vm.functionClass);
-auto rt = fti.getReturnTypeInfo(nPassedArgs, passedArgs);
+auto rt = getReturnTypeInfo(nPassedArgs, passedArgs);
 vector<shared_ptr<TypeInfo>> subtypes;
 subtypes.resize(nArgs+1);
 for (int i=0; i<nArgs; i++) {
-auto ati = fti.getArgTypeInfo(i, nPassedArgs, passedArgs);
-subtypes[i] = ati?ati:TypeInfo::MANY;
+auto ati = getArgTypeInfo(i, nPassedArgs, passedArgs);
+subtypes[i] = ati?ati:TypeInfo::ANY;
 }
-subtypes[nArgs] = rt?rt:TypeInfo::MANY;
+subtypes[nArgs] = rt?rt:TypeInfo::ANY;
 return make_shared<ComposedTypeInfo>(funcTI, subtypes);
 }
 
 StringFunctionInfo::StringFunctionInfo (TypeAnalyzer& ta, const char* typeInfoStr): 
-vm(ta.vm), flags(VarFlag::None), fieldIndex(-1), types(), nArgs(0), retArg(-1), retCompArg(-1)  
+FunctionInfo(ta.vm), flags(VarFlag::None), fieldIndex(-1), types(), nArgs(0)
 { build(ta, typeInfoStr); }
 
 void StringFunctionInfo::build (TypeAnalyzer&  ta, const char* str) {
@@ -107,6 +107,3 @@ if (types.size() && n>=0 && n<nArgs) return handleSubindex(types[n], nPassedArgs
 else return TypeInfo::MANY;
 }
 
-std::shared_ptr<TypeInfo> StringFunctionInfo::getFunctionTypeInfo (int nPassedArgs, std::shared_ptr<TypeInfo>* passedArgs) {
-return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs);
-}

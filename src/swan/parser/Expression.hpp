@@ -106,7 +106,8 @@ bool isPure () override { return true; }
 
 struct NameExpression: Expression, Assignable, Functionnable {
 QToken token;
-NameExpression (QToken x): token(x) {}
+bool pure;
+NameExpression (QToken x): token(x), pure(false)  {}
 const QToken& nearestToken () override { return token; }
 void compile (QCompiler& compiler) override ;
 void compileAssignment (QCompiler& compiler, std::shared_ptr<Expression> assignedValue)override ;
@@ -114,6 +115,7 @@ void makeFunctionParameters (std::vector<std::shared_ptr<Variable>>& params) ove
 bool isFunctionnable () override { return true; }
 int analyze (TypeAnalyzer& ta) override;
 int analyzeAssignment (TypeAnalyzer& ta, std::shared_ptr<Expression> assignedValue) override;
+bool isPure () override { return pure; }
 };
 
 struct FieldExpression: Expression, Assignable {
@@ -331,7 +333,6 @@ int analyze (TypeAnalyzer& ta) override;
 };
 
 struct FunctionDeclaration: Expression, Decorable, FunctionInfo {
-QVM& vm;
 struct QFunction* func;
 QToken name;
 std::vector<std::shared_ptr<Variable>> params;
@@ -340,7 +341,7 @@ std::shared_ptr<TypeInfo> returnType;
 bitmask<VarFlag> flags;
 uint_field_index_t fieldIndex;
 
-FunctionDeclaration (QVM& vm0, const QToken& nm, bitmask<VarFlag> fl = VarFlag::None, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  vm(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), fieldIndex(0), func(nullptr) {}
+FunctionDeclaration (QVM& vm0, const QToken& nm, bitmask<VarFlag> fl = VarFlag::None, const std::vector<std::shared_ptr<Variable>>& fp = {}, std::shared_ptr<Statement> b = nullptr):  FunctionInfo(vm0), name(nm), params(fp), body(b), returnType(nullptr), flags(fl), fieldIndex(0), func(nullptr) {}
 const QToken& nearestToken () override { return name; }
 void compileParams (QCompiler& compiler);
 struct QFunction* compileFunction (QCompiler& compiler);
@@ -352,7 +353,6 @@ int analyzeParams (TypeAnalyzer& ta);
 std::shared_ptr<TypeInfo> getReturnTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return returnType; }
 std::shared_ptr<TypeInfo> getArgTypeInfo (int n, int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override;
 int getArgCount () override { return params.size(); }
-std::shared_ptr<TypeInfo> getFunctionTypeInfo (int nPassedArgs = 0, std::shared_ptr<TypeInfo>* passedArgs = nullptr) override { return ::getFunctionTypeInfo(*this, vm, nPassedArgs, passedArgs); }
 int getFlags () override { return flags.value; }
 int getFieldIndex () override { return fieldIndex; }
 };
