@@ -84,7 +84,7 @@ return &variables.back();
 else if (found)  return &*rvar;
 else if (parent) return parent->findVariable(name, flags);
 else {
-int index = vm.findGlobalSymbol(string(name.start, name.length), LV_EXISTING | LV_FOR_READ);
+int index = vm.findGlobalSymbol(string(name.start, name.length));
 if (index<0) return nullptr;
 QToken tkcst = { T_NAME, nullptr, 0, vm.globalVariables[index] };
 variables.emplace_back(name, curScope);

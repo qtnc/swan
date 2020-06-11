@@ -11,6 +11,7 @@
 struct GlobalVariable {
 int index;
 bool isConst;
+inline GlobalVariable (int i = -1, bool c = false): index(i), isConst(c) {}
 };
 
 struct QVM: Swan::VM  {
@@ -64,9 +65,9 @@ virtual QFiber& createFiber () final override;
 virtual inline QFiber& getActiveFiber () final override { return *activeFiber; }
 
 int findMethodSymbol (const std::string& name);
-int findGlobalSymbol (const std::string& name, int flags, bool* isConst=nullptr);
-void bindGlobal (const std::string& name, const QV& value, bool isConst=false);
-void bindGlobal (const std::string& name, QNativeFunction value, const char* typeInfo);
+int findGlobalSymbol (const std::string& name, bool forWrite = false);
+int bindGlobal (const std::string& name, const QV& value, bool isConst=false);
+int bindGlobal (const std::string& name, QNativeFunction value, const char* typeInfo);
 QClass* createNewClass (const std::string& name, std::vector<QV>& parents, int nStaticFields, int nFields, bool foreign);
 
 void addToGC (QObject* obj);

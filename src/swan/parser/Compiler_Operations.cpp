@@ -3,8 +3,9 @@
 #include "TypeInfo.hpp"
 #include "../vm/VM.hpp"
 #include "../vm/Function.hpp"
+#include<boost/algorithm/find_backward.hpp>
 using namespace std;
-
+using namespace boost::algorithm;
 
 static int findName (vector<string>& names, const string& name, bool createIfNotExist) {
 auto it = find(names.begin(), names.end(), name);
@@ -68,44 +69,79 @@ if (scope<0) scope = curScope;
 return count_if(localVariables.begin(), localVariables.end(), [&](auto& x){ return x.scope>=scope; });
 }
 
-int QCompiler::findLocalVariable (const QToken& name, int flags, LocalVariable** ptr) {
-bool createNew = flags&LV_NEW, isConst = flags&LV_CONST;
-auto rvar = find_if(localVariables.rbegin(), localVariables.rend(), [&](auto& x){
+int QCompiler::createLocalVariable (const QToken& name, bool isConst) {
+auto it = find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
 return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
 });
-if (rvar==localVariables.rend() && !createNew && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)!=QVM::Option::VAR_IMPLICIT) return -1;
-else if (rvar==localVariables.rend() || (createNew && rvar->scope<curScope)) {
-if (createNew && rvar!=localVariables.rend()) compileWarn(name, "Shadowig %s declared at line %d", string(rvar->name.start, rvar->name.length), parser.getPositionOf(rvar->name.start).first);
+if (it!=localVariables.end()) {
+if (it->scope>=curScope) return ERR_ALREADY_EXIST;
+else compileWarn(name, "Shadowig %s declared at line %d", string(it->name.start, it->name.length), parser.getPositionOf(it->name.start).first);
+}
 if (localVariables.size() >= std::numeric_limits<uint_local_index_t>::max()) compileError(name, "Too many local variables");
 int n = localVariables.size();
 localVariables.emplace_back(name, curScope, isConst);
-if (ptr) *ptr = &localVariables[n];
 return n;
-}
-else if (!createNew)  {
-if (rvar->isConst && isConst) return LV_ERR_CONST;
-int n = rvar.base() -localVariables.begin() -1;
-if (ptr) *ptr = &localVariables[n];
-return n;
-}
-else compileError(name, ("Variable already defined"));
-return -1;
 }
 
-int QCompiler::findUpvalue (const QToken& token, int flags, LocalVariable** ptr) {
-if (!parent) return -1;
-int slot = parent->findLocalVariable(token, flags, ptr);
+int QCompiler::findLocalVariable (const QToken& name, bool forWrite) {
+auto it = find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
+return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
+});
+if (it==localVariables.end()) {
+if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) return createLocalVariable(name);
+else return ERR_NOT_FOUND;
+}
+if (forWrite && it->isConst) return ERR_CONSTANT;
+return it - localVariables.begin();
+}
+
+int QCompiler::findUpvalue (const QToken& name, bool forWrite) {
+if (!parent) return ERR_NOT_FOUND;
+int slot = parent->findLocalVariable(name, forWrite);
 if (slot>=0) {
 parent->localVariables[slot].hasUpvalues=true;
 int upslot = addUpvalue(slot, false);
-if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(token, "Too many upvalues");
+if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(name, "Too many upvalues");
 return upslot;
 }
-else if (slot==LV_ERR_CONST) return slot;
-slot = parent->findUpvalue(token, flags, ptr);
-if (slot>=0) return addUpvalue(slot, true);
-if (slot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(token, "Too many upvalues");
+else if (slot!=ERR_NOT_FOUND) return slot;
+slot = parent->findUpvalue(name, forWrite);
+if (slot>=0) {
+int upslot = addUpvalue(slot, true);
+if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(name, "Too many upvalues");
+return upslot;
+}
 return slot;
+}
+
+int QCompiler::createGlobalVariable (const QToken& name, bool isConst) {
+int slot = findGlobalVariable(name, true);
+if (slot==ERR_NOT_FOUND) slot = vm.bindGlobal(string(name.start, name.length), QV::UNDEFINED, isConst);
+return slot;
+}
+
+int QCompiler::findGlobalVariable (const QToken& name, bool forWrite) {
+int slot = vm.findGlobalSymbol(string(name.start, name.length), forWrite);
+if (slot==ERR_NOT_FOUND && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) slot = vm.bindGlobal(string(name.start, name.length), QV::UNDEFINED, false);
+return slot;
+}
+
+int QCompiler::findGlobalVariable (const string& name, bool forWrite) {
+int slot = vm.findGlobalSymbol(name, forWrite);
+if (slot==ERR_NOT_FOUND && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) slot = vm.bindGlobal(name, QV::UNDEFINED, false);
+return slot;
+}
+
+FindVarResult QCompiler::findVariable (const QToken& name, bool forWrite) {
+int slot = ERR_NOT_FOUND;
+if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)<QVM::Option::VAR_IMPLICIT_GLOBAL) {
+slot = findLocalVariable(name, forWrite);
+if (slot!=ERR_NOT_FOUND) return { slot, VarKind::Local };
+slot = findUpvalue(name, forWrite);
+if (slot!=ERR_NOT_FOUND) return { slot, VarKind::Upvalue };
+}
+slot = findGlobalVariable(name, forWrite);
+return { slot, VarKind::Global };
 }
 
 int QCompiler::addUpvalue (int slot, bool upperUpvalue) {
@@ -114,21 +150,6 @@ if (it!=upvalues.end()) return it - upvalues.begin();
 int i = upvalues.size();
 upvalues.push_back({ static_cast<uint_local_index_t>(slot), upperUpvalue });
 return i;
-}
-
-int QCompiler::findGlobalVariable (const QToken& name, int flags, LocalVariable** ptr) {
-bool isConst;
-int slot = parser.vm.findGlobalSymbol(string(name.start, name.length), flags, &isConst);
-if (ptr && slot>=0) {
-QCompiler* p = this; while(p->parent) p=p->parent;
-auto it = find_if(p->globalVariables.begin(), p->globalVariables.end(), [&](auto& x){ return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0; });
-if (it!=p->globalVariables.end()) *ptr = &*it;
-else {
-p->globalVariables.emplace_back(name, 0, isConst);
-*ptr = &(p->globalVariables.back());
-//(*ptr)->type = resolveValueType(vm.globalVariables[slot]);
-}}
-return slot;
 }
 
 int QCompiler::findConstant (const QV& value) {
@@ -150,21 +171,3 @@ int n = methodSymbols.size();
 methodSymbols.push_back(name);
 return n;
 }}
-
-int QVM::findGlobalSymbol (const string& name, int flags, bool* isConst) {
-auto it = globalSymbols.find(name);
-if (it!=globalSymbols.end()) {
-auto& gv = it->second;
-if (isConst) *isConst = gv.isConst;
-if (flags&LV_NEW && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return LV_ERR_ALREADY_EXIST;
-else if ((flags&LV_FOR_WRITE) && gv.isConst) return LV_ERR_CONST;
-return gv.index;
-}
-else if (!(flags&LV_NEW) && varDeclMode!=Option::VAR_IMPLICIT_GLOBAL) return -1;
-else {
-int n = globalSymbols.size();
-globalSymbols[name] = { n, flags&LV_CONST };
-globalVariables.push_back(QV::UNDEFINED);
-return n;
-}}
-

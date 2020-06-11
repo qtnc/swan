@@ -34,6 +34,17 @@ std::vector<std::pair<int,int>> jumpsToPatch;
 Loop (int sc, int st): scope(sc), startPos(st), condPos(-1), endPos(-1) {}
 };
 
+enum class VarKind {
+Local,
+Upvalue,
+Global,
+};
+
+struct FindVarResult {
+int slot;
+VarKind type;
+};
+
 struct QCompiler {
 QVM& vm;
 QParser& parser;
@@ -43,7 +54,7 @@ QCompiler* parent = nullptr;
 std::shared_ptr<TypeAnalyzer> analyzer = nullptr, globalAnalyzer=nullptr;
 std::ostringstream out;
 std::vector<DebugItem> debugItems;
-std::vector<LocalVariable> localVariables, globalVariables;
+std::vector<LocalVariable> localVariables; //globalVariables;
 std::vector<Upvariable> upvalues;
 std::vector<Loop> loops;
 std::vector<QV> constants;
@@ -92,11 +103,15 @@ void pushScope ();
 void popScope ();
 
 int countLocalVariablesInScope (int scope = -1);
-int findLocalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
-int findUpvalue (const QToken& name, int flags, LocalVariable** ptr = nullptr);
-int findGlobalVariable (const QToken& name, int flags, LocalVariable** ptr = nullptr);
+int findLocalVariable (const QToken& name, bool forWrite = false);
+int findUpvalue (const QToken& name, bool forWrite = false);
 int findConstant (const QV& value);
 int addUpvalue (int slot, bool upperUpvalue);
+FindVarResult findVariable (const QToken& name, bool forWrite=false);
+int createLocalVariable (const QToken& name, bool isConst = false);
+int findGlobalVariable (const QToken& name, bool forWrite = false);
+int findGlobalVariable (const std::string& name, bool forWrite = false);
+int createGlobalVariable (const QToken& name, bool isConst = false);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();

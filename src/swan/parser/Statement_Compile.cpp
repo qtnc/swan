@@ -150,7 +150,7 @@ compiler.out.seekp(tryPos);
 compiler.out.write(reinterpret_cast<const char*>(&curPos), sizeof(uint32_t));
 compiler.out.seekp(curPos);
 compiler.pushScope();
-compiler.findLocalVariable(catchVar, LV_NEW);
+compiler.createLocalVariable(catchVar);
 catchPart->compile(compiler);
 if (catchPart->isExpression()) compiler.writeOp(OP_POP);
 compiler.popScope();
@@ -197,7 +197,7 @@ else compileForEach(compiler);
 
 void ForStatement::compileForEach (QCompiler& compiler) {
 compiler.pushScope();
-int iteratorSlot = compiler.findLocalVariable(compiler.createTempName(*inExpression), LV_NEW | LV_CONST);
+int iteratorSlot = compiler.createLocalVariable(compiler.createTempName(*inExpression), true);
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
@@ -209,7 +209,7 @@ inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
 compiler.pushLoop();
 compiler.pushScope();
-int valueSlot = compiler.findLocalVariable(loopVariable->token, LV_NEW);
+int valueSlot = compiler.createLocalVariable(loopVariable->token);
 int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
 compiler.writeDebugLine(inExpression->nearestToken());
@@ -296,15 +296,14 @@ if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(compiler, var->name, names)) {
-if (var->flags &VarFlag::Global) compiler.findGlobalVariable(nm->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0));
-else { compiler.findLocalVariable(nm->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0)); compiler.writeOp(OP_LOAD_UNDEFINED); }
+if (var->flags &VarFlag::Global) compiler.createGlobalVariable(nm->token, static_cast<bool>(var->flags & VarFlag::Const));
+else { compiler.createLocalVariable(nm->token, static_cast<bool>(var->flags & VarFlag::Const)); compiler.writeOp(OP_LOAD_UNDEFINED); }
 }
 continue;
 }
 int slot = -1;
-LocalVariable* lv = nullptr;
-if ((var->flags & VarFlag::Global)) slot = compiler.findGlobalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const )? LV_CONST : 0));
-else slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
+if ((var->flags & VarFlag::Global)) slot = compiler.createGlobalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const ));
+else slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const));
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
 //println("Var name=%s, vv=%s, lv=%p, lvv=%s", string(name->token.start, name->token.length), var->value?typeid(*var->value).name():"<null>", lv, lv&&lv->value?typeid(*lv->value).name():"<null>");
@@ -365,7 +364,7 @@ void ExportDeclaration::compile (QCompiler& compiler) {
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
 bool multi = exports.size()>1;
-int exportsSlot = compiler.findLocalVariable(exportsToken, LV_EXISTING | LV_FOR_READ);
+int exportsSlot = compiler.findLocalVariable(exportsToken);
 compiler.writeOpLoadLocal(exportsSlot);
 for (auto& p: exports) {
 if (multi) compiler.writeOp(OP_DUP);

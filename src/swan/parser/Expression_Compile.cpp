@@ -58,7 +58,7 @@ return any_of(items.begin(), items.end(), ::isUnpack);
 
 void LiteralListExpression::compile (QCompiler& compiler) {
 compiler.writeDebugLine(nearestToken());
-int listSymbol = compiler.vm.findGlobalSymbol(("List"), LV_EXISTING | LV_FOR_READ);
+int listSymbol = compiler.findGlobalVariable("List");
 if (isSingleSequence()) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, listSymbol);
 items[0]->compile(compiler);
@@ -79,7 +79,7 @@ else compiler.writeOpCallMethod(items.size(), ofSymbol);
 
 
 void LiteralSetExpression::compile (QCompiler& compiler) {
-int setSymbol = compiler.vm.findGlobalSymbol(("Set"), LV_EXISTING | LV_FOR_READ);
+int setSymbol = compiler.findGlobalVariable("Set");
 compiler.writeDebugLine(nearestToken());
 if (isSingleSequence()) {
 compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, setSymbol);
@@ -101,7 +101,7 @@ else compiler.writeOpCallMethod(items.size(), ofSymbol);
 
 void LiteralMapExpression::compile (QCompiler& compiler) {
 vector<std::shared_ptr<Expression>> unpacks;
-int mapSymbol = compiler.vm.findGlobalSymbol(("Map"), LV_EXISTING | LV_FOR_READ);
+int mapSymbol = compiler.findGlobalVariable("Map");
 int subscriptSetterSymbol = compiler.vm.findMethodSymbol(("[]="));
 int callSymbol = compiler.vm.findMethodSymbol(("()"));
 compiler.writeDebugLine(nearestToken());
@@ -141,7 +141,7 @@ compiler.writeOp(OP_POP);
 
 void LiteralTupleExpression::compile (QCompiler& compiler) {
 bool isVector = kind.type==T_SEMICOLON;
-int tupleSymbol = compiler.vm.findGlobalSymbol((isVector?"Vector":"Tuple"), LV_EXISTING | LV_FOR_READ);
+int tupleSymbol = compiler.findGlobalVariable(isVector?"Vector":"Tuple");
 compiler.writeDebugLine(nearestToken());
 if (isVector) {
 for (auto item: items) if (item->isUnpack()) compiler.compileError(item->nearestToken(), "Spread expression not permitted here");
@@ -166,7 +166,7 @@ else compiler.writeOpCallMethod(items.size(), ofSymbol);
 }}
 
 void LiteralGridExpression::compile (QCompiler& compiler) {
-int gridSymbol = compiler.vm.findGlobalSymbol(("Grid"), LV_EXISTING | LV_FOR_READ);
+int gridSymbol = compiler.findGlobalVariable("Grid");
 int size = data.size() * data[0].size();
 int argLimit = std::numeric_limits<uint_local_index_t>::max() -5;
 compiler.writeDebugLine(nearestToken());
@@ -183,7 +183,7 @@ if (size>argLimit) compiler.writeOp(OP_CALL_FUNCTION_VARARG);
 else compiler.writeOpCallFunction(size+2);
 }
 void LiteralRegexExpression::compile (QCompiler& compiler) {
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "Regex", 5, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable("Regex"));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, pattern), QV_TAG_STRING)));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(QString::create(compiler.parser.vm, options), QV_TAG_STRING)));
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -234,7 +234,7 @@ auto method = compiler.getCurMethod();
 
 void ImportExpression::compile (QCompiler& compiler) {
 doCompileTimeImport(compiler.parser.vm, compiler.parser.filename, from);
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable({ T_NAME, "import", 6, QV::UNDEFINED }, LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable("import"));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(compiler.parser.vm, compiler.parser.filename)));
 from->compile(compiler);
 compiler.writeOp(OP_CALL_FUNCTION_2);
@@ -249,39 +249,29 @@ func->name = "<comprehension>";
 //###set argtypes
 compiler.result = fc.result;
 int funcSlot = compiler.findConstant(QV(func, QV_TAG_NORMAL_FUNCTION));
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.vm.findGlobalSymbol("Fiber", LV_EXISTING | LV_FOR_READ));
+compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, compiler.findGlobalVariable("Fiber"));
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CLOSURE, funcSlot);
 compiler.writeOp(OP_CALL_FUNCTION_1);
 }
 
-
 void NameExpression::compile (QCompiler& compiler) {
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
-LocalVariable* lv = nullptr;
-int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
-if (slot==0 && compiler.getCurClass()) {
+auto var = compiler.findVariable(token);
+if (var.slot==0 && var.type==VarKind::Local && compiler.getCurClass()) {
 compiler.writeOp(OP_LOAD_THIS);
 return;
 }
-else if (slot>=0) { 
-compiler.writeOpLoadLocal(slot);
-return;
-}
-slot = compiler.findUpvalue(token, LV_FOR_READ, &lv);
-if (slot>=0) { 
-compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, slot);
-return;
-}
-slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_READ, &lv);
-if (slot>=0) { 
-compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, slot);
-return;
-}
+else if (var.slot>=0) { 
+switch(var.type){
+case VarKind::Local: compiler.writeOpLoadLocal(var.slot); return;
+case VarKind::Upvalue: compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, var.slot); return;
+case VarKind::Global: compiler.writeOpArg<uint_global_symbol_t>(OP_LOAD_GLOBAL, var.slot); return;
+}}
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN));
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
 return;
 }
@@ -289,52 +279,31 @@ compiler.compileError(token, ("Undefined variable"));
 }
 
 void NameExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
-LocalVariable* lv = nullptr;
 if (token.type==T_END) token = compiler.parser.curMethodNameToken;
 assignedValue->compile(compiler);
-int slot = compiler.findLocalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
-if (slot>=0) {
-compiler.writeOpStoreLocal(slot);
-return;
+auto var = compiler.findVariable(token, true);
+if (var.slot>=0)  switch(var.type){
+case VarKind::Local: compiler.writeOpStoreLocal(var.slot); return;
+case VarKind::Upvalue: compiler.writeOpArg<uint_upvalue_index_t>(OP_STORE_UPVALUE, var.slot); return;
+case VarKind::Global: compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, var.slot); return;
+default: __builtin_unreachable();
 }
-else if (slot==LV_ERR_CONST) {
-compiler.compileError(token, ("Constant cannot be reassigned"));
-return;
-}
-slot = compiler.findUpvalue(token, LV_FOR_WRITE, &lv);
-if (slot>=0) {
-compiler.writeOpArg<uint_upvalue_index_t>(OP_STORE_UPVALUE, slot);
-return;
-}
-else if (slot==LV_ERR_CONST) {
-compiler.compileError(token, ("Constant cannot be reassigned"));
-return;
-}
-slot = compiler.findGlobalVariable(token, LV_EXISTING | LV_FOR_WRITE, &lv);
-if (slot>=0) {
-compiler.writeOpArg<uint_global_symbol_t>(OP_STORE_GLOBAL, slot);
-return;
-}
-else if (slot==LV_ERR_CONST) {
-compiler.compileError(token, ("Constant cannot be reassigned"));
-return;
-}
-else if (slot==LV_ERR_ALREADY_EXIST) {
-compiler.compileError(token, ("Already existing variable"));
-return;
+switch(var.slot){
+case ERR_CONSTANT: compiler.compileError(token, ("Constant cannot be reassigned")); return;
+case ERR_ALREADY_EXIST: compiler.compileError(token, ("Already existing variable")); return;
+default: break;
 }
 int atLevel = 0;
 ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
-else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN, LV_EXISTING | LV_FOR_READ));
+else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN));
 char setterName[token.length+2];
 memcpy(&setterName[0], token.start, token.length);
 setterName[token.length+1] = 0;
 setterName[token.length] = '=';
 QToken setterNameToken = { T_NAME, setterName, token.length+1, QV::UNDEFINED };
 assignedValue->compile(compiler);
-//todo: update type of field var
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_2, compiler.vm.findMethodSymbol(setterName));
 return;
 }
@@ -355,7 +324,7 @@ return;
 int fieldSlot = cls->findField(token);
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_LOAD_THIS_FIELD, fieldSlot);
 else {
-int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_FIELD, fieldSlot);
 }}
@@ -377,7 +346,7 @@ assignedValue->compile(compiler);
 //if (fieldType) *fieldType = compiler.mergeTypes(*fieldType, assignedValue->getType(compiler));
 if (atLevel<=2) compiler.writeOpArg<uint_field_index_t>(OP_STORE_THIS_FIELD, fieldSlot);
 else  {
-int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_FIELD, fieldSlot);
 }
@@ -398,7 +367,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
 }
 else {
-int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
 compiler.writeOpArg<uint_field_index_t>(OP_LOAD_STATIC_FIELD, fieldSlot);
@@ -422,7 +391,7 @@ compiler.writeOp(OP_LOAD_THIS);
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
 }
 else {
-int thisSlot = compiler.findUpvalue(THIS_TOKEN, LV_FOR_READ);
+int thisSlot = compiler.findUpvalue(THIS_TOKEN);
 compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, thisSlot);
 if (!isStatic) compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol("class"));
 compiler.writeOpArg<uint_field_index_t>(OP_STORE_STATIC_FIELD, fieldSlot);
@@ -460,7 +429,7 @@ void LiteralSequenceExpression::compileAssignment (QCompiler& compiler, shared_p
 compiler.pushScope();
 QToken tmpToken = compiler.createTempName(*this);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
-int slot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+int slot = compiler.createLocalVariable(tmpToken, true);
 assignedValue->compile(compiler);
 for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
@@ -524,7 +493,7 @@ return true;
 void LiteralMapExpression::compileAssignment (QCompiler& compiler, shared_ptr<Expression> assignedValue) {
 compiler.pushScope();
 QToken tmpToken = compiler.createTempName(*this);
-int tmpSlot = compiler.findLocalVariable(tmpToken, LV_NEW | LV_CONST);
+int tmpSlot = compiler.createLocalVariable(tmpToken, true);
 int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 assignedValue->compile(compiler);
@@ -752,11 +721,10 @@ compiler.compileError(right->nearestToken(), ("Bad operand for '::' operator in 
 }
 
 void CallExpression::compile (QCompiler& compiler) {
-LocalVariable* lv = nullptr;
 auto func = fd.getFunc();
-int globalIndex = -1;
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
-if (compiler.findLocalVariable(name->token, LV_EXISTING | LV_FOR_READ, &lv)<0 && compiler.findUpvalue(name->token, LV_FOR_READ, &lv)<0 && (globalIndex=compiler.findGlobalVariable(name->token, LV_FOR_READ, &lv))<0 && compiler.getCurClass()) {
+auto var = compiler.findVariable(name->token);
+if (var.slot<0 && compiler.getCurClass()) {
 auto thisExpr = make_shared<NameExpression>(THIS_TOKEN);
 auto expr = BinaryOperation::create(thisExpr, T_DOT, shared_this())->optimize();
 expr->compile(compiler);
@@ -833,7 +801,7 @@ shared_ptr<NameExpression> name = nullptr;
 LocalVariable* lv = nullptr;
 int slot;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
-slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
+slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const));
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
@@ -841,7 +809,7 @@ compiler.writeOp(OP_POP);
 }}
 else {
 name = make_shared<NameExpression>(compiler.createTempName(*var->name));
-slot = compiler.findLocalVariable(name->token, LV_NEW | ((var->flags & VarFlag::Const)? LV_CONST : 0), &lv);
+slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const) );
 if (!(var->flags & VarFlag::Optimized)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 destructuring.push_back(var);
 var->flags |= VarFlag::Optimized;

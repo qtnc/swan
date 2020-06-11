@@ -24,15 +24,25 @@ f.callSymbol(ctorSymbol, f.getArgCount());
 f.returnValue(instance);
 }
 
-void QVM::bindGlobal (const string& name, const QV& value, bool isConst) {
-int symbol = findGlobalSymbol(name, 1 | (isConst?2:0));
-insert_n(globalVariables, 1+symbol-globalVariables.size(), QV::UNDEFINED);
-globalVariables.at(symbol) = value;
+int QVM::findGlobalSymbol (const std::string& name, bool forWrite) {
+auto it = globalSymbols.find(name);
+if (it==globalSymbols.end()) return -1;
+else if (forWrite && it->second.isConst) return -2;
+return it->second.index;
 }
 
-void QVM::bindGlobal (const string& name, QNativeFunction value, const char* typeInfo) {
-bindGlobal(name, value, false);
+int QVM::bindGlobal (const string& name, const QV& value, bool isConst) {
+auto& gv = globalSymbols[name];
+if (gv.index<0) gv.index = globalVariables.size();
+gv.isConst = isConst;
+insert_n(globalVariables, 1 + gv.index - globalVariables.size(), QV::UNDEFINED);
+globalVariables[gv.index] = value;
+return gv.index;
+}
+
+int QVM::bindGlobal (const string& name, QNativeFunction value, const char* typeInfo) {
 nativeFuncTypeInfos[value] = typeInfo;
+return bindGlobal(name, value, false);
 }
 
 
@@ -153,9 +163,9 @@ return v;
 }
 
 void QFiber::loadGlobal (const string& name) {
-int symbol = vm.findGlobalSymbol(name, 0);
-if (symbol<0) pushNull();
-else push(vm.globalVariables.at(symbol));
+int symbol = vm.findGlobalSymbol(name);
+if (symbol<0) pushUndefined();
+else push(vm.globalVariables[symbol]);
 }
 
 void QFiber::storeGlobal (const string& name, bool isConst) {
