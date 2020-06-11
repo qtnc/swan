@@ -48,7 +48,7 @@ shared_ptr<Statement> QParser::parseVarDecl (bitmask<VarFlag> flags) {
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 auto decl = make_shared<VariableDeclaration>();
 parseVarList(decl->vars, flags);
-return decl;
+return decorateVarDecl(decl, flags);
 }
 
 void QParser::parseFunctionParameters (shared_ptr<FunctionDeclaration>& func, ClassDeclaration* cld) {
@@ -102,7 +102,7 @@ for (auto it=cls.methods.begin() + idxFrom, end = cls.methods.end(); it<end; ++i
 }
 
 void QParser::parseMethodDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-prevToken();
+if (cur.type!=T_FUNCTION) prevToken();
 QToken name = nextNameToken(true);
 auto func = make_shared<FunctionDeclaration>(vm, name, flags | VarFlag::Method );
 parseKeywordFlags(func->flags, VarFlag::Pure | VarFlag::Final | VarFlag::Static | VarFlag::Async);
@@ -129,16 +129,22 @@ if (!func->body) func->body = make_shared<SimpleStatement>(cur);
 cls.methods.push_back(func);
 }
 
-void QParser::parseMethodDecl2 (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::Async | VarFlag::Pure);
-if (nextToken().type==T_FUNCTION) nextToken();
-parseMethodDecl(cls, flags);
+void QParser::parseMemberDeclKeywords (ClassDeclaration& cls, bitmask<VarFlag> flags) {
+parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::Async | VarFlag::ReadOnly);
+skipNewlines();
+const ParserRule& rule = rules[nextToken().type];
+if (rule.member) (this->*rule.member)(cls, flags);
+else parseError("Expected member name after modifiers");
+}
+
+void QParser::parseMemberDecl (ClassDeclaration& cls, bitmask<VarFlag> flags) {
+if (flags & VarFlag::ReadOnly) parseSimpleAccessor(cls, flags);
+else parseMethodDecl(cls, flags);
 }
 
 void QParser::parseSimpleAccessor (ClassDeclaration& cls, bitmask<VarFlag> flags) {
-parseKeywordFlags(flags, VarFlag::Static | VarFlag::Final | VarFlag::ReadOnly);
-if (flags & VarFlag::ReadOnly) match(T_VAR);
 flags |= VarFlag::Accessor | VarFlag::Method;
+if (cur.type==T_NAME) prevToken();
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
@@ -181,6 +187,11 @@ auto name = varDecl->vars[0]->name;
 exportDecl->exports.push_back(make_pair(name->nearestToken(), name));
 vector<shared_ptr<Statement>> sta = { varDecl, exportDecl };
 return make_shared<BlockStatement>(sta, false);
+}
+
+shared_ptr<Statement> QParser::decorateVarDecl (shared_ptr<VariableDeclaration> varDecl, bitmask<VarFlag> flags) {
+if (flags & VarFlag::Export) return makeExportFromVarDecl(varDecl);
+else return varDecl;
 }
 
 void QParser::parseKeywordFlags (bitmask<VarFlag>& flags, bitmask<VarFlag> allowedFlags) {

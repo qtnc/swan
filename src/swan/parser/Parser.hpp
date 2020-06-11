@@ -67,7 +67,9 @@ std::shared_ptr<Expression> parseUnpackOrExpression (int priority = P_LOWEST);
 std::shared_ptr<Expression> parseGenericMethodSymbol ();
 std::shared_ptr<Expression> parseDebugExpression ();
 std::shared_ptr<Expression> parseDecoratedExpression ();
+
 void parseFunctionParameters (std::shared_ptr<struct FunctionDeclaration>& func, struct ClassDeclaration* cld = nullptr);
+void parseVarList (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags, bitmask<VarFlag> allowedFlags = bitmask<VarFlag>());
 
 std::shared_ptr<Statement> parseStatement ();
 std::shared_ptr<Statement> parseStatements ();
@@ -90,29 +92,26 @@ std::shared_ptr<Statement> parseWith ();
 std::shared_ptr<Expression> parseYield ();
 std::shared_ptr<Statement> parseVarDecl ();
 std::shared_ptr<Statement> parseVarDecl (bitmask<VarFlag> flags);
-void parseVarList (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags, bitmask<VarFlag> allowedFlags = bitmask<VarFlag>());
 std::shared_ptr<Statement> parseGeneralDecl ();
 std::shared_ptr<Statement> parseExportDecl ();
 std::shared_ptr<Statement> parseImportDecl (bool expressionOnly);
 std::shared_ptr<Statement> parseImportDecl ();
 std::shared_ptr<Statement> parseImportDecl2 ();
 std::shared_ptr<Expression> parseImportExpression ();
-std::shared_ptr<Statement> parseGlobalDecl ();
 std::shared_ptr<Statement> parseClassDecl (bitmask<VarFlag> flags);
 std::shared_ptr<Statement> parseClassDecl ();
 std::shared_ptr<Statement> parseFunctionDecl (bitmask<VarFlag> flags);
 std::shared_ptr<Statement> parseFunctionDecl ();
-std::shared_ptr<Statement> parseAsyncFunctionDecl (bitmask<VarFlag> flags);
-std::shared_ptr<Statement> parseAsync ();
 
 void parseMethodDecl (struct ClassDeclaration&, bitmask<VarFlag>);
 void parseSimpleAccessor (struct ClassDeclaration&, bitmask<VarFlag>);
 void parseDecoratedDecl (struct ClassDeclaration&, bitmask<VarFlag>);
-void parseAsyncMethodDecl (struct ClassDeclaration&, bitmask<VarFlag>);
-void parseMethodDecl2 (struct ClassDeclaration&, bitmask<VarFlag>);
+void parseMemberDecl (struct ClassDeclaration&, bitmask<VarFlag>);
+void parseMemberDeclKeywords (struct ClassDeclaration&, bitmask<VarFlag>);
 
 void parseKeywordFlags (bitmask<VarFlag>& flags, bitmask<VarFlag> allowedFlags);
 
+std::shared_ptr<Statement> decorateVarDecl (std::shared_ptr<struct VariableDeclaration> varDecl, bitmask<VarFlag> flags);
 std::shared_ptr<Expression> nameExprToConstant (std::shared_ptr<Expression> key);
 void multiVarExprToSingleLiteralMap (std::vector<std::shared_ptr<Variable>>& vars, bitmask<VarFlag> flags);
 

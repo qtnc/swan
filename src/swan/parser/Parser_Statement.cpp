@@ -5,8 +5,6 @@
 #include "../vm/VM.hpp"
 using namespace std;
 
-shared_ptr<Statement> makeExportFromVarDecl (shared_ptr<VariableDeclaration> varDecl);
-
 void QParser::multiVarExprToSingleLiteralMap (vector<shared_ptr<Variable>>& vars, bitmask<VarFlag> flags) {
 if (vars.size()==1 && dynamic_pointer_cast<LiteralMapExpression>(vars[0]->name)) return;
 auto map = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken()), defmap = make_shared<LiteralMapExpression>(vars[0]->name->nearestToken());
@@ -245,16 +243,6 @@ else parseError("Expression can't be decorated");
 return expr;
 }
 
-
-shared_ptr<Statement> QParser::parseAsync () {
-return parseAsyncFunctionDecl(VarFlag::Const);
-}
-
-shared_ptr<Statement> QParser::parseAsyncFunctionDecl (bitmask<VarFlag> flags) {
-consume(T_FUNCTION, "Expected 'function' after 'async'");
-return parseFunctionDecl(flags | VarFlag::Async);
-}
-
 shared_ptr<Statement> QParser::parseFunctionDecl () {
 return parseFunctionDecl(VarFlag::None);
 }
@@ -266,7 +254,7 @@ auto fnDecl = parseLambda(flags);
 if (!hasName) return fnDecl;
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) flags |= VarFlag::Global;
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(name), fnDecl, flags) };
-return make_shared<VariableDeclaration>(vars);
+return decorateVarDecl(make_shared<VariableDeclaration>(vars), flags);
 }
 
 shared_ptr<Statement> QParser::parseClassDecl () {
@@ -287,11 +275,8 @@ parseKeywordFlags(classDecl->flags, VarFlag::Final | VarFlag::Const | VarFlag::G
 if (match(T_LEFT_BRACE)) {
 while(true) {
 skipNewlines();
-bitmask<VarFlag> memberFlags;
-nextToken();
-if (cur.type==T_STATIC) { memberFlags |= VarFlag::Static; nextToken(); }
-const ParserRule& rule = rules[cur.type];
-if (rule.member) (this->*rule.member)(*classDecl, memberFlags);
+const ParserRule& rule = rules[nextToken().type];
+if (rule.member) (this->*rule.member)(*classDecl, VarFlag::None);
 else { prevToken(); break; }
 }
 skipNewlines();
@@ -299,7 +284,7 @@ consume(T_RIGHT_BRACE, ("Expected '}' to close class body"));
 }
 if (vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) classDecl->flags |= VarFlag::Global;
 vector<shared_ptr<Variable>> vars = { make_shared<Variable>( make_shared<NameExpression>(classDecl->name), classDecl, classDecl->flags) };
-return make_shared<VariableDeclaration>(vars);
+return decorateVarDecl(make_shared<VariableDeclaration>(vars), flags);
 }
 
 shared_ptr<Statement> QParser::parseGeneralDecl () {
@@ -312,50 +297,6 @@ else if (match(T_CLASS)) return parseClassDecl(flags);
 else parseError("Expected variable, function or class declaration after %s", string(cur.start, cur.length));
 return nullptr;
 }
-
-shared_ptr<Statement> QParser::parseGlobalDecl () {
-if (matchOneOf(T_VAR, T_CONST)) {
-return parseVarDecl(VarFlag::Global);
-}
-else if (match(T_CLASS)) {
-return parseClassDecl(VarFlag::Const | VarFlag::Global);
-}
-else if (match(T_FUNCTION)) {
-return parseFunctionDecl(VarFlag::Const | VarFlag::Global);
-}
-else if (match(T_ASYNC)) {
-return parseAsyncFunctionDecl(VarFlag::Const | VarFlag::Global);
-}
-parseError(("Expected 'function', 'var' or 'class' after 'global'"));
-return nullptr;
-}
-
-shared_ptr<Statement> QParser::parseExportDecl () {
-auto exportDecl = make_shared<ExportDeclaration>();
-shared_ptr<VariableDeclaration> varDecl;
-if (matchOneOf(T_VAR, T_CONST)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseVarDecl(VarFlag::Const));
-else if (match(T_CLASS)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseClassDecl(VarFlag::Const));
-else if (match(T_FUNCTION)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseFunctionDecl(VarFlag::Const));
-else if (match(T_ASYNC)) varDecl = dynamic_pointer_cast<VariableDeclaration>(parseAsyncFunctionDecl(VarFlag::Const));
-if (varDecl) return makeExportFromVarDecl(varDecl);
-else {
-do {
-shared_ptr<Expression> exportExpr = parseExpression();
-if (!exportExpr) { parseError("Expected 'class', 'function', 'var' or expression after 'export'"); return nullptr; }
-QToken nameToken = cur;
-shared_ptr<NameExpression> nameExpr = dynamic_pointer_cast<NameExpression>(exportExpr);
-if (nameExpr && !match(T_AS)) nameToken = nameExpr->token;
-else {
-if (!nameExpr) consume(T_AS, "Expected 'as' after export expression");
-consume(T_NAME, "Expected export name after 'as'");
-nameToken = cur;
-}
-exportDecl->exports.push_back(make_pair(nameToken, exportExpr));
-} while (match(T_COMMA));
-}
-return exportDecl;
-}
-
 
 shared_ptr<Statement> QParser::parseImportDecl () {
 auto importSta = make_shared<ImportDeclaration>();

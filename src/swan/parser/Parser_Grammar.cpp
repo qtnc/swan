@@ -9,6 +9,7 @@ unordered_map<int,ParserRule> rules = {
 #define INFIX_OP(token, infix, name, priority, direction) { T_##token, { nullptr, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, nullptr,  (#name), P_##priority, P_##direction  }}
 #define MULTIFIX(token, prefix, infix, prefixName, infixName, priority, direction) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, nullptr, (#prefixName), (#infixName), P_##priority, P_##direction }}
 #define OPERATOR(token, prefix, infix, prefixName, infixName, priority, direction) { T_##token, { &QParser::parse##prefix, &QParser::parse##infix, nullptr, &QParser::parseMethodDecl, (#prefixName), (#infixName), P_##priority, P_##direction  }}
+#define MODIFIER(token) { T_##token, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMemberDeclKeywords, nullptr, nullptr, P_PREFIX, P_LEFT }}
 #define STATEMENT(token, func) { T_##token, { nullptr, nullptr, &QParser::parse##func, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT  }}
 
 OPERATOR(PLUS, PrefixOp, InfixOp, unp, +, TERM, LEFT),
@@ -54,6 +55,7 @@ INFIX_OP(GT, InfixOp, >, COMPARISON, LEFT),
 INFIX_OP(LTE, InfixOp, <=, COMPARISON, LEFT),
 INFIX_OP(GTE, InfixOp, >=, COMPARISON, LEFT),
 INFIX_OP(LTEQGT, InfixOp, <=>, COMPARISON, LEFT),
+
 INFIX_OP(IS, InfixIs, is, COMPARISON, SWAP_OPERANDS),
 INFIX_OP(IN, InfixOp, in, COMPARISON, SWAP_OPERANDS),
 
@@ -72,16 +74,19 @@ INFIX_OP(SLASH, InfixOp, /, FACTOR, LEFT),
 { T_LEFT_BRACKET, { &QParser::parseLiteralList, &QParser::parseSubscript, nullptr, &QParser::parseMethodDecl, nullptr, ("[]"), P_SUBSCRIPT, P_LEFT }},
 { T_LEFT_BRACE, { &QParser::parseLiteralMapOrSet, nullptr, &QParser::parseBlock, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
 { T_AT, { &QParser::parseDecoratedExpression, &QParser::parseInfixOp, &QParser::parseDecoratedStatement, &QParser::parseDecoratedDecl, "@", "@", P_EXPONENT, P_LEFT }},
-{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, &QParser::parseMethodDecl2, "function", "function", P_PREFIX, P_LEFT }},
-{ T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMethodDecl, nullptr, nullptr, P_PREFIX, P_LEFT }},
+{ T_FUNCTION, { &QParser::parseLambda, nullptr, &QParser::parseFunctionDecl, &QParser::parseMethodDecl, "function", "function", P_PREFIX, P_LEFT }},
+{ T_NAME, { &QParser::parseName, nullptr, nullptr, &QParser::parseMemberDecl, nullptr, nullptr, P_PREFIX, P_LEFT }},
+
 INFIX(MINUSGT, ArrowFunction, ->, COMPREHENSION, RIGHT),
 INFIX(EQGT, ArrowFunction, =>, COMPREHENSION, RIGHT),
 INFIX(DOT, InfixOp, ., MEMBER, LEFT),
 INFIX(DOTQUEST, InfixOp, .?, MEMBER, LEFT),
 MULTIFIX(COLONCOLON, GenericMethodSymbol, InfixOp, ::, ::, MEMBER, LEFT),
+
 PREFIX(UND, Field, _),
 PREFIX(UNDUND, StaticField, __),
 PREFIX(SUPER, Super, super),
+
 PREFIX(TRUE, Literal, true),
 PREFIX(FALSE, Literal, false),
 PREFIX(NULL, Literal, null),
@@ -95,8 +100,6 @@ STATEMENT(SEMICOLON, SimpleStatement),
 STATEMENT(BREAK, Break),
 STATEMENT(CLASS, ClassDecl),
 STATEMENT(CONTINUE, Continue),
-STATEMENT(EXPORT, GeneralDecl),
-STATEMENT(GLOBAL, GeneralDecl),
 STATEMENT(IF, If),
 STATEMENT(REPEAT, RepeatWhile),
 STATEMENT(RETURN, Return),
@@ -105,19 +108,23 @@ STATEMENT(TRY, Try),
 STATEMENT(WITH, With),
 STATEMENT(WHILE, While),
 
+MODIFIER(ASYNC),
+MODIFIER(CONST),
+MODIFIER(EXPORT),
+MODIFIER(FINAL),
+MODIFIER(GLOBAL),
+MODIFIER(STATIC),
+
 { T_FOR, { nullptr, &QParser::parseComprehension, &QParser::parseFor, nullptr, nullptr, "for", P_COMPREHENSION, P_LEFT }},
 { T_IMPORT, { &QParser::parseImportExpression, nullptr, &QParser::parseImportDecl, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
 { T_VAR, { nullptr, nullptr, &QParser::parseVarDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_CONST, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseSimpleAccessor, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_ASYNC, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_FINAL, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }},
-{ T_STATIC, { nullptr, nullptr, &QParser::parseGeneralDecl, &QParser::parseMethodDecl2, nullptr, nullptr, P_PREFIX, P_LEFT }}
+{ T_SWITCH, { &QParser::parseSwitchExpression, nullptr, &QParser::parseSwitchStatement, nullptr, nullptr, nullptr, P_PREFIX, P_LEFT }}
 #undef PREFIX
 #undef PREFIX_OP
 #undef INFIX
 #undef INFIX_OP
 #undef OPERATOR
+#undef MODIFIER
 #undef STATEMENT
 };
 
