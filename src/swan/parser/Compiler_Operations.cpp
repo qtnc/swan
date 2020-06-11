@@ -19,7 +19,6 @@ else return -1;
 }
 
 
-
 LocalVariable::LocalVariable (const QToken& n, int s, bool ic): 
 name(n), scope(s), type(TypeInfo::ANY), value(nullptr), hasUpvalues(false), isConst(ic) {}
 
@@ -69,24 +68,26 @@ if (scope<0) scope = curScope;
 return count_if(localVariables.begin(), localVariables.end(), [&](auto& x){ return x.scope>=scope; });
 }
 
-int QCompiler::createLocalVariable (const QToken& name, bool isConst) {
-auto it = find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
+inline auto findLV (vector<LocalVariable>& localVariables, const QToken& name) {
+return find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
 return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
 });
+}
+
+int QCompiler::createLocalVariable (const QToken& name, bool isConst) {
+auto it = findLV(localVariables, name);
 if (it!=localVariables.end()) {
 if (it->scope>=curScope) return ERR_ALREADY_EXIST;
 else compileWarn(name, "Shadowig %s declared at line %d", string(it->name.start, it->name.length), parser.getPositionOf(it->name.start).first);
 }
-if (localVariables.size() >= std::numeric_limits<uint_local_index_t>::max()) compileError(name, "Too many local variables");
+if (localVariables.size() >= std::numeric_limits<uint_local_index_t>::max()) return ERR_TOO_MANY;
 int n = localVariables.size();
 localVariables.emplace_back(name, curScope, isConst);
 return n;
 }
 
 int QCompiler::findLocalVariable (const QToken& name, bool forWrite) {
-auto it = find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
-return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
-});
+auto it = findLV(localVariables, name);
 if (it==localVariables.end()) {
 if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) return createLocalVariable(name);
 else return ERR_NOT_FOUND;
@@ -101,14 +102,14 @@ int slot = parent->findLocalVariable(name, forWrite);
 if (slot>=0) {
 parent->localVariables[slot].hasUpvalues=true;
 int upslot = addUpvalue(slot, false);
-if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(name, "Too many upvalues");
+if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) return ERR_TOO_MANY;
 return upslot;
 }
 else if (slot!=ERR_NOT_FOUND) return slot;
 slot = parent->findUpvalue(name, forWrite);
 if (slot>=0) {
 int upslot = addUpvalue(slot, true);
-if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) compileError(name, "Too many upvalues");
+if (upslot >= std::numeric_limits<uint_upvalue_index_t>::max()) return ERR_TOO_MANY;
 return upslot;
 }
 return slot;
@@ -142,6 +143,16 @@ if (slot!=ERR_NOT_FOUND) return { slot, VarKind::Upvalue };
 }
 slot = findGlobalVariable(name, forWrite);
 return { slot, VarKind::Global };
+}
+
+FindVarResult QCompiler::createVariable (const QToken& name, bitmask<VarFlag> flags) {
+bool isConst = static_cast<bool>(flags & VarFlag::Const), isGlobal = static_cast<bool>(flags & VarFlag::Global);
+int slot = ERR_NOT_FOUND;
+if (isGlobal) slot = createGlobalVariable(name, isConst);
+else slot = createLocalVariable(name, isConst);
+if (slot==ERR_ALREADY_EXIST) compileError(name, "Variable already exist");
+else if (slot==ERR_TOO_MANY) compileError(name, "Too many variables");
+return { slot, isGlobal? VarKind::Global : VarKind::Local };
 }
 
 int QCompiler::addUpvalue (int slot, bool upperUpvalue) {

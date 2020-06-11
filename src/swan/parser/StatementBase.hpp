@@ -114,12 +114,6 @@ ReadOnly = 0x80000,
 Optimized = 0x40000000,
 };
 
-bitfield(FindVarFlag, uint32_t){
-Existing = 0, New = 1,
-Read = 0, Write = 4,
-Const = 2,
-};
-
 struct Variable {
 std::shared_ptr<Expression> name, value;
 std::shared_ptr<TypeInfo> type;

@@ -798,10 +798,9 @@ vector<shared_ptr<Variable>> destructuring;
 compiler.writeDebugLine(nearestToken());
 for (auto& var: params) {
 shared_ptr<NameExpression> name = nullptr; 
-LocalVariable* lv = nullptr;
 int slot;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
-slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const));
+slot = compiler.createVariable(name->token, var->flags) .slot;
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
@@ -809,7 +808,7 @@ compiler.writeOp(OP_POP);
 }}
 else {
 name = make_shared<NameExpression>(compiler.createTempName(*var->name));
-slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const) );
+slot = compiler.createVariable(name->token, var->flags) .slot;
 if (!(var->flags & VarFlag::Optimized)) var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 destructuring.push_back(var);
 var->flags |= VarFlag::Optimized;

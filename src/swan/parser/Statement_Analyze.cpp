@@ -82,7 +82,7 @@ int re = tryPart->analyze(ta);
 ta.popScope();
 if (catchPart) {
 ta.pushScope();
-ta.findVariable(catchVar, FindVarFlag::New);
+ta.createVariable(catchVar);
 re |= catchPart->analyze(ta);
 ta.popScope();
 }
@@ -126,13 +126,13 @@ int re = 0;
 QToken iteratorToken = { T_NAME, "iterator", 8, QV::UNDEFINED };
 QToken nextToken = { T_NAME, "next", 4, QV::UNDEFINED };
 auto inVar = make_shared<NameExpression>(ta.createTempName(*inExpression));
-ta.findVariable(inVar->token, FindVarFlag::New);
+ta.createVariable(inVar->token);
 BinaryOperation::create(inVar, T_EQ, BinaryOperation::create(inExpression, T_DOT, make_shared<NameExpression>(iteratorToken))) ->optimize() ->analyze(ta);
 ta.pushScope();
 shared_ptr<NameExpression> loopVariable = loopVariables.size()==1? dynamic_pointer_cast<NameExpression>(loopVariables[0]->name) : nullptr;
 bool destructuring = !loopVariable;
 if (destructuring) loopVariable = make_shared<NameExpression>(ta.createTempName(this->token));
-ta.findVariable(loopVariable->token, FindVarFlag::New);
+ta.createVariable(loopVariable->token);
 auto nextCallExpr = BinaryOperation::create(inVar, T_DOT, make_shared<NameExpression>(nextToken));
 BinaryOperation::create(loopVariable, T_EQ, nextCallExpr) ->optimize() ->analyze(ta);
 if (destructuring) {
@@ -188,11 +188,11 @@ if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(ta, var->name, names)) {
-ta.findVariable(nm->token, FindVarFlag::New); 
+ta.createVariable(nm->token); 
 }
 continue;
 }//if !name
-AnalyzedVariable* lv = ta.findVariable(name->token, FindVarFlag::New);
+AnalyzedVariable* lv = ta.createVariable(name->token);
 for (auto& decoration: decorations) re |= decoration->analyze(ta);
 for (auto& decoration: var->decorations) re |= decoration->analyze(ta);
 bool hoisted = false; //static_cast<bool>(var->flags & VarFlag::Hoisted);

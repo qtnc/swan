@@ -127,7 +127,7 @@ return nti->token.length==token.length
 shared_ptr<TypeInfo> NamedTypeInfo::resolve (TypeAnalyzer& ta) {
 AnalyzedVariable* lv = nullptr;
 do {
-lv = ta.findVariable(token, FindVarFlag::Existing | FindVarFlag::Read );
+lv = ta.findVariable(token);
 if (lv) break;
 ClassDeclaration* cls = ta.getCurClass();
 if (cls) {

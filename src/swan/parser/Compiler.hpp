@@ -3,6 +3,7 @@
 #include "Constants.hpp"
 #include "Token.hpp"
 #include "Parser.hpp"
+#include "StatementBase.hpp"
 #include "../vm/OpCodeInfo.hpp"
 #include "../vm/Function.hpp"
 #include "../../include/cpprintf.hpp"
@@ -104,14 +105,19 @@ void popScope ();
 
 int countLocalVariablesInScope (int scope = -1);
 int findLocalVariable (const QToken& name, bool forWrite = false);
-int findUpvalue (const QToken& name, bool forWrite = false);
-int findConstant (const QV& value);
-int addUpvalue (int slot, bool upperUpvalue);
-FindVarResult findVariable (const QToken& name, bool forWrite=false);
 int createLocalVariable (const QToken& name, bool isConst = false);
+
+int findConstant (const QV& value);
+
+int findUpvalue (const QToken& name, bool forWrite = false);
+int addUpvalue (int slot, bool upperUpvalue);
+
 int findGlobalVariable (const QToken& name, bool forWrite = false);
 int findGlobalVariable (const std::string& name, bool forWrite = false);
 int createGlobalVariable (const QToken& name, bool isConst = false);
+
+FindVarResult findVariable (const QToken& name, bool forWrite=false);
+FindVarResult createVariable (const QToken& name, bitmask<VarFlag> flags = VarFlag::None);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();

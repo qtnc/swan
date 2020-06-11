@@ -150,7 +150,7 @@ compiler.out.seekp(tryPos);
 compiler.out.write(reinterpret_cast<const char*>(&curPos), sizeof(uint32_t));
 compiler.out.seekp(curPos);
 compiler.pushScope();
-compiler.createLocalVariable(catchVar);
+compiler.createVariable(catchVar, VarFlag::Const);
 catchPart->compile(compiler);
 if (catchPart->isExpression()) compiler.writeOp(OP_POP);
 compiler.popScope();
@@ -197,7 +197,7 @@ else compileForEach(compiler);
 
 void ForStatement::compileForEach (QCompiler& compiler) {
 compiler.pushScope();
-int iteratorSlot = compiler.createLocalVariable(compiler.createTempName(*inExpression), true);
+int iteratorSlot = compiler.createVariable(compiler.createTempName(*inExpression), VarFlag::Const) .slot;
 int iteratorSymbol = compiler.vm.findMethodSymbol(("iterator"));
 int nextSymbol = compiler.vm.findMethodSymbol(("next"));
 int subscriptSymbol = compiler.vm.findMethodSymbol(("[]"));
@@ -209,7 +209,7 @@ inExpression->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, iteratorSymbol);
 compiler.pushLoop();
 compiler.pushScope();
-int valueSlot = compiler.createLocalVariable(loopVariable->token);
+int valueSlot = compiler.createVariable(loopVariable->token) .slot;
 int loopStart = compiler.writePosition();
 compiler.loops.back().condPos = compiler.writePosition();
 compiler.writeDebugLine(inExpression->nearestToken());
@@ -296,17 +296,14 @@ if (!name) {
 destructured.push_back(var);
 vector<shared_ptr<NameExpression>> names;
 for (auto& nm: decompose(compiler, var->name, names)) {
-if (var->flags &VarFlag::Global) compiler.createGlobalVariable(nm->token, static_cast<bool>(var->flags & VarFlag::Const));
-else { compiler.createLocalVariable(nm->token, static_cast<bool>(var->flags & VarFlag::Const)); compiler.writeOp(OP_LOAD_UNDEFINED); }
+compiler.createVariable(nm->token, var->flags);
+if (!(var->flags & VarFlag::Global)) compiler.writeOp(OP_LOAD_UNDEFINED);
 }
 continue;
 }
-int slot = -1;
-if ((var->flags & VarFlag::Global)) slot = compiler.createGlobalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const ));
-else slot = compiler.createLocalVariable(name->token, static_cast<bool>(var->flags & VarFlag::Const));
+int slot = compiler.createVariable(name->token, var->flags) .slot;
 for (auto& decoration: decorations) decoration->compile(compiler);
 for (auto& decoration: var->decorations) decoration->compile(compiler);
-//println("Var name=%s, vv=%s, lv=%p, lvv=%s", string(name->token.start, name->token.length), var->value?typeid(*var->value).name():"<null>", lv, lv&&lv->value?typeid(*lv->value).name():"<null>");
 bool hoisted = static_cast<bool>(var->flags & VarFlag::Hoisted);
 if (var->value && !hoisted) {
 if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {

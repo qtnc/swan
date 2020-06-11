@@ -9,7 +9,6 @@
 #include<string>
 #include<vector>
 
-enum class FindVarFlag: uint32_t;
 struct QVM;
 struct QParser;
 struct FunctionInfo;
@@ -43,7 +42,8 @@ int curRound = 0;
 void pushScope ();
 void popScope ();
 
-AnalyzedVariable* findVariable (const QToken& name, bitmask<FindVarFlag> flags);
+AnalyzedVariable* findVariable (const QToken& name);
+AnalyzedVariable* createVariable (const QToken& name);
 
 struct ClassDeclaration* getCurClass (int* atLevel = nullptr);
 struct FunctionDeclaration* getCurMethod ();

@@ -146,7 +146,7 @@ handleAutoConstructor(ta, fields, false);
 handleAutoConstructor(ta, staticFields, true);
 flags |= VarFlag::Optimized;
 }
-if (auto lv = ta.findVariable(name, FindVarFlag::Existing | FindVarFlag::Read)) {
+if (auto lv = ta.findVariable(name)) {
 lv->value = shared_this();
 lv->type = type;
 }
@@ -237,7 +237,7 @@ return re;
 
 int NameExpression::analyze (TypeAnalyzer& ta) {
 if (token.type==T_END) token = ta.parser.curMethodNameToken;
-if (auto lv = ta.findVariable(token, FindVarFlag::Existing | FindVarFlag::Read )) {
+if (auto lv = ta.findVariable(token)) {
 pure = true;
 auto finalType = ta.mergeTypes(type, lv->type);
 return ta.assignType(*this, finalType);
@@ -254,7 +254,7 @@ return 0;
 int NameExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 if (token.type==T_END) token = ta.parser.curMethodNameToken;
 int re = assignedValue->analyze(ta);
-if (auto lv = ta.findVariable(token, FindVarFlag::Existing | FindVarFlag::Write)) {
+if (auto lv = ta.findVariable(token)) {
 lv->type = ta.mergeTypes(lv->type, assignedValue->type);
 re |= ta.assignType(*this, lv->type);
 }
@@ -315,7 +315,7 @@ int LiteralSequenceExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<E
 ta.pushScope();
 QToken tmpToken = ta.createTempName(*this);
 auto tmpVar = make_shared<NameExpression>(tmpToken);
-ta.findVariable(tmpToken, FindVarFlag::New);
+ta.createVariable(tmpToken);
 int re = assignedValue? assignedValue->analyze(ta) :0;
 for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
@@ -359,7 +359,7 @@ return re;
 int LiteralMapExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 ta.pushScope();
 QToken tmpToken = ta.createTempName(*this);
-ta.findVariable(tmpToken, FindVarFlag::New);
+ta.createVariable(tmpToken);
 int count = -1;
 auto tmpVar = make_shared<NameExpression>(tmpToken);
 int re = assignedValue? assignedValue->analyze(ta) :0;
@@ -433,7 +433,7 @@ int re = 0;
 if (receiver) re |= receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
 if (auto name=dynamic_pointer_cast<NameExpression>(receiver)) {
-auto lv = ta.findVariable(name->token, FindVarFlag::Existing | FindVarFlag::Read );
+auto lv = ta.findVariable(name->token);
 auto cls = ta.getCurClass();
 if (!lv && cls) finalType = ta.resolveCallType(make_shared<NameExpression>(THIS_TOKEN), make_shared<ClassDeclTypeInfo>(cls), name->token, args.size(), &args[0], CallFlag::None, &fd);
 }
@@ -496,12 +496,12 @@ if (var->value) re |= var->value->analyze(ta);
 shared_ptr<NameExpression> name = nullptr; 
 AnalyzedVariable* lv = nullptr;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
-lv = ta.findVariable(name->token, FindVarFlag::New);
+lv = ta.createVariable(name->token);
 if (var->value) lv->type = ta.mergeTypes(lv->type, var->value->type);
 }
 else {
 name = make_shared<NameExpression>(ta.createTempName(*var->name));
-lv = ta.findVariable(name->token, FindVarFlag::New);
+lv = ta.createVariable(name->token);
 if (!(var->flags & VarFlag::Optimized)) {
 var->value = var->value? BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize() : name;
 re |= var->value->analyze(ta);

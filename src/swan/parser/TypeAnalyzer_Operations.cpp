@@ -3,7 +3,9 @@
 #include "FunctionInfo.hpp"
 #include "Expression.hpp"
 #include "../vm/VM.hpp"
+#include<boost/algorithm/find_backward.hpp>
 using namespace std;
+using namespace boost::algorithm;
 
 
 static int findName (vector<string>& names, const string& name, bool createIfNotExist) {
@@ -72,27 +74,32 @@ if (isSameType(type, oldType)) return false;
 return true;
 }
 
-AnalyzedVariable* TypeAnalyzer::findVariable (const QToken& name, bitmask<FindVarFlag> flags) {
-auto rvar = find_if(variables.rbegin(), variables.rend(), [&](auto& x){
+inline auto findLV (vector<AnalyzedVariable>& localVariables, const QToken& name) {
+return find_if_backward(localVariables.begin(), localVariables.end(), [&](auto& x){
 return x.name.length==name.length && strncmp(name.start, x.name.start, name.length)==0;
 });
-bool found = rvar!=variables.rend();
-if (flags & FindVarFlag::New) {
+}
+
+AnalyzedVariable* TypeAnalyzer::createVariable (const QToken& name) {
 variables.emplace_back(name, curScope);
 return &variables.back();
 }
-else if (found)  return &*rvar;
-else if (parent) return parent->findVariable(name, flags);
+
+AnalyzedVariable* TypeAnalyzer::findVariable (const QToken& name) {
+auto it = findLV(variables, name);
+if (it!=variables.end()) return &*it;
+else if (parent) return parent->findVariable(name);
 else {
 int index = vm.findGlobalSymbol(string(name.start, name.length));
-if (index<0) return nullptr;
-QToken tkcst = { T_NAME, nullptr, 0, vm.globalVariables[index] };
-variables.emplace_back(name, curScope);
-auto var = &variables.back();
+if (index>=0) {
+auto var = createVariable(name);
 var->type = resolveValueType(vm.globalVariables[index]);
+QToken tkcst = { T_NAME, nullptr, 0, vm.globalVariables[index] };
 var->value = make_shared<ConstantExpression>(tkcst);
 return var;
 }}
+return nullptr;
+}
 
 shared_ptr<FunctionInfo> TypeAnalyzer::resolveFunctionInfo (const char* str) {
 return make_shared<StringFunctionInfo>(*this, str);
