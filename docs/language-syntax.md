@@ -285,6 +285,7 @@ The syntax for writing literal grids is as following:
 Which can also be written in a one-line shortened form:  
 `[1, 2, 3; 4, 5, 6; 7, 8, 9]`
 
+As shown in the example, values are separated by commas, and rows by semicolons.
 Elements in a grid are accessed by their coordinates: `g[0, 0]` is the first celle on the top left and `g[-1, -1]` the last cell on the bottom right.
 
 ## Functions and closures
@@ -715,18 +716,36 @@ This is the most common case, since usually the name of the imported element is 
 You can use `import *` to bind all exported map keys into local variables, but you can do it only if the source is a constant string, i.e. no `import *` from a dynamic source.
 Import can also be used as an expression. In this case a map is returned. This can be useful for dynamic imports, i.e. `var file = 'some.swan', map = import file`. IN this case `import *` isn't permitted either.
 
-To be able to import symbols from another source, they have to be explicitly exported first. The export keyword can be used in several ways:
+To be able to import symbols from another source, they have to be explicitly exported first. Classes, functions and variables can be exported:
 
-- export *expression* as *exportName*
 - export class *ClassName* { ... }
 - export function *functionName* (arguments) { ... }
 - export var *variableName* = *expression*
 
-With the first syntax, the given expression is stored in the exporting symbols with the given name.
-The second, third and fourth syntaxes respectively declare a class, function or serie of local variables. They are both stored in exporting symbols and normally usable in the current file.
+They respectively declare a class, function or serie of local variables. They are both stored in exporting symbols and normally usable in the current file.
 When using the export keyword, a local variable *exports* is automatically created to hold a map of exported symbols. 
 
-## Miscellaneous syntax suggars
+## Miscellaneous and syntax suggars
+### Modifiers
+The keywords `async`, `const`, `export`, `final`, `global` and `static` are collectively called modiifiers. One or more of them can be applied to classes, methods, functions and variables to modify their state or behavior.
+
+- For variables, they can be specified before the `var`keyword, e.g. `const var x = 0`
+- For functions, they can be specified before the `def` keyword, or after the parameter list, e.g. `const def f () {}` or `def f () const {}`
+- For methods, they can be specified before the methdo name, or after the paremeter list, e.g. `static method () {}` or `method () final {}`
+- For function and method parameters, they can be specified before parameter name, e.g. `const x`
+- For classes, they can be specified before the `class` keyword, or before the opening brace, e.g. `final class Derived is Base  {}` or `class Derived is Base final {}`
+
+The meaning of the keywords should be obvious. They are almost the same as in other programming languages. Here's a quick recap:
+
+- `final` applied to a method: this method can't be overridden in a subclass. 
+- `final` applied on a class: this class can't be inherited/subclassed.
+- `const` applied to a variable or parameter: the variable can't be modified, i.e. overwritten with another value.
+- `const` applied to a function or method: it indicates that no side effect is produced by the function or method, i.e. it doesn't modify anything. Currently it isn't effectively checked; it's just an indication for possible optimization.
+- `static` declares a class member rather than an instance member.
+- `async` applied on a function or method: denotes an asynchronous function or method, currently not really supported but reserved for future use
+- `global` declares a global variable
+- `export` declares an exported variable, function or class
+
 ### Implicit map 
 When the last parameter of a function is a map, you can omit the encosing braces when calling it:
 
