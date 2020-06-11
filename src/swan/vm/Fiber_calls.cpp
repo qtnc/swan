@@ -230,7 +230,6 @@ int nUpvalues = func.upvaluesEnd - func.upvalues;
 QClosure* newClosure = vm.constructVLS<QClosure, Upvalue*>(nUpvalues, vm, func);
 memset(newClosure->upvalues, 0, sizeof(Upvalue*) * nUpvalues);
 push(QV(newClosure, QV_TAG_CLOSURE));
-for (auto [newUpvalue, upvalue, upvalueEnd] = tuple{ newClosure->upvalues, func.upvalues, func.upvaluesEnd }; upvalue<upvalueEnd; ++upvalue, ++newUpvalue) {
+if (nUpvalues) for (auto [newUpvalue, upvalue, upvalueEnd] = tuple{ newClosure->upvalues, func.upvalues, func.upvaluesEnd }; upvalue<upvalueEnd; ++upvalue, ++newUpvalue) {
 *newUpvalue = upvalue->upperUpvalue? curClosure->upvalues[upvalue->slot] : captureUpvalue(upvalue->slot);
-}
-}
+}}

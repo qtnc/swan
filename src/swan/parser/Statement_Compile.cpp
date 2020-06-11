@@ -358,6 +358,7 @@ make_shared<VariableDeclaration>(imports)->optimizeStatement()->compile(compiler
 
 
 void ExportDeclaration::compile (QCompiler& compiler) {
+if (compiler.getCurClass() || compiler.getCurMethod()) compiler.compileError(nearestToken(), "Export not allowed at function or class level");
 QToken exportsToken = { T_NAME, EXPORTS, 7, QV::UNDEFINED};
 int subscriptSetterSymbol = compiler.parser.vm.findMethodSymbol(("[]="));
 bool multi = exports.size()>1;

@@ -88,12 +88,9 @@ return n;
 
 int QCompiler::findLocalVariable (const QToken& name, bool forWrite) {
 auto it = findLV(localVariables, name);
-if (it==localVariables.end()) {
-if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) return createLocalVariable(name);
-else return ERR_NOT_FOUND;
-}
-if (forWrite && it->isConst) return ERR_CONSTANT;
-return it - localVariables.begin();
+if (it==localVariables.end()) return ERR_NOT_FOUND;
+else if (forWrite && it->isConst) return ERR_CONSTANT;
+else return it - localVariables.begin();
 }
 
 int QCompiler::findUpvalue (const QToken& name, bool forWrite) {
@@ -122,26 +119,23 @@ return slot;
 }
 
 int QCompiler::findGlobalVariable (const QToken& name, bool forWrite) {
-int slot = vm.findGlobalSymbol(string(name.start, name.length), forWrite);
-if (slot==ERR_NOT_FOUND && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) slot = vm.bindGlobal(string(name.start, name.length), QV::UNDEFINED, false);
-return slot;
+return vm.findGlobalSymbol(string(name.start, name.length), forWrite);
 }
 
 int QCompiler::findGlobalVariable (const string& name, bool forWrite) {
-int slot = vm.findGlobalSymbol(name, forWrite);
-if (slot==ERR_NOT_FOUND && parser.vm.getOption(QVM::Option::VAR_DECL_MODE)>=QVM::Option::VAR_IMPLICIT) slot = vm.bindGlobal(name, QV::UNDEFINED, false);
-return slot;
+return vm.findGlobalSymbol(name, forWrite);
 }
 
 FindVarResult QCompiler::findVariable (const QToken& name, bool forWrite) {
-int slot = ERR_NOT_FOUND;
-if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)<QVM::Option::VAR_IMPLICIT_GLOBAL) {
-slot = findLocalVariable(name, forWrite);
+int slot = findLocalVariable(name, forWrite);
 if (slot!=ERR_NOT_FOUND) return { slot, VarKind::Local };
 slot = findUpvalue(name, forWrite);
 if (slot!=ERR_NOT_FOUND) return { slot, VarKind::Upvalue };
-}
 slot = findGlobalVariable(name, forWrite);
+if (slot==ERR_NOT_FOUND) {
+if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT) return { createLocalVariable(name), VarKind::Local };
+else if (parser.vm.getOption(QVM::Option::VAR_DECL_MODE)==QVM::Option::VAR_IMPLICIT_GLOBAL) slot = createGlobalVariable(name);
+}
 return { slot, VarKind::Global };
 }
 

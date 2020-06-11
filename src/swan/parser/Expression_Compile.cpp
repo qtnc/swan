@@ -800,7 +800,7 @@ for (auto& var: params) {
 shared_ptr<NameExpression> name = nullptr; 
 int slot;
 if (name = dynamic_pointer_cast<NameExpression>(var->name)) {
-slot = compiler.createVariable(name->token, var->flags) .slot;
+slot = compiler.createVariable(name->token, var->flags)  .slot;
 if (var->value) {
 auto value = BinaryOperation::create(name, T_QUESTQUESTEQ, var->value)->optimize();
 value->compile(compiler);
