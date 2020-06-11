@@ -50,11 +50,10 @@ QString& s = *value.asObject<QString>();
 return hashBytes(reinterpret_cast<const uint8_t*>(s.data), reinterpret_cast<const uint8_t*>(s.data+s.length));
 }
 else if (value.isNum()) {
-return value.i>>32ULL;
+return value.i ^(value.i>>32ULL) ^(value.i>>53ULL);
 }
 else if (!value.isObject()) {
-const uint32_t* p = reinterpret_cast<const uint32_t*>(&value.i);
-return p[0] ^p[1];
+return value.i ^(value.i>>32ULL);
 }
 else {
 QFiber& f = vm.getActiveFiber();

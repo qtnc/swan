@@ -77,6 +77,11 @@ auto h = hash(f.at(0));
 f.returnValue(static_cast<double>(h));
 }
 
+void objectDefaultHashCode (QFiber& f) {
+QV value = f.at(0);
+f.returnValue(static_cast<double>( (value.i>>3ULL)^(value.i>>35ULL)   ));
+}
+
 static void objectToString (QFiber& f) {
 const QClass& cls = f.at(0).getClass(f.vm);
 f.returnValue(format("%s@%#0$16llX", cls.name, f.at(0).i) );
@@ -213,7 +218,7 @@ objectClass
 ->bind("constructor", doNothing)
 ->bind("class", objectGetClass)
 ->bind("toString", objectToString, "OS")
-->bind("hashCode", objectHashCode, "ON")
+->bind("hashCode", objectDefaultHashCode, "ON")
 ->bind("is", objectEquals, "OOB")
 ->bind("==", objectEquals, "OOB")
 ->bind("!=", objectNotEquals, "OOB")

@@ -32,12 +32,12 @@ else writeOpArg<uint_local_index_t>(OP_CALL_FUNCTION, nArgs);
 }
 
 void QCompiler::writeOpCallMethod (uint8_t nArgs, uint_method_symbol_t symbol) {
-if (nArgs<8) writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
+if (nArgs<7) writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_METHOD_1 + nArgs), symbol);
 else writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_METHOD, symbol, nArgs+1);
 }
 
 void QCompiler::writeOpCallSuper  (uint8_t nArgs, uint_method_symbol_t symbol) {
-if (nArgs<8) writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
+if (nArgs<7) writeOpArg<uint_method_symbol_t>(static_cast<QOpCode>(OP_CALL_SUPER_1 + nArgs), symbol);
 else writeOpArgs<uint_method_symbol_t, uint_local_index_t>(OP_CALL_SUPER, symbol, nArgs+1);
 }
 

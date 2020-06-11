@@ -171,6 +171,7 @@ numClass
 ->bind("unp", doNothing, "O@0")
 ->bind("<=>", numMinus, "NNN")
 ->bind("toString", numToString, "NS")
+->bind("hashCode", objectHashCode, "NN")
 ->bind("toJSON", numToJSON)
 ->bind("format", numFormat, "NN?S?S?N?N?S") 
 ->bind("..", numToRange, "NNR")
