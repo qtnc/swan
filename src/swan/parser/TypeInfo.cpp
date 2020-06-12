@@ -34,6 +34,10 @@ bool ClassTypeInfo::isString () {
 return type==type->vm.stringClass; 
 }
 
+bool ClassTypeInfo::isRange () { 
+return type==type->vm.rangeClass; 
+}
+
 bool ClassTypeInfo::isNull () { 
 return type==type->vm.nullClass; 
 }

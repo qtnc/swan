@@ -128,6 +128,17 @@ return re;
 int SubscriptExpression::analyze (TypeAnalyzer& ta) {
 int re = receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
+if (receiver->type && args.size()==1 && args[0]->type) {
+auto cst = dynamic_pointer_cast<ConstantExpression>(args[0]);
+auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiver->type);
+auto ctp = cti && cti->type ? dynamic_pointer_cast<ClassTypeInfo>(cti->type) : nullptr;
+if (cst && ctp && ctp->type==ta.vm.tupleClass && cst->token.type==T_NUM && cst->token.value.d>=0 && cst->token.value.d<cti->subtypes.size() ) {
+auto finalType = cti->subtypes[static_cast<size_t>(cst->token.value.d)];
+println("Found!type=%s", finalType->toString());
+finalType = ta.mergeTypes(type, finalType);
+re |= ta.assignType(*this, finalType);
+return re;
+}}
 QToken subscriptToken = { T_NAME, "[]", 2, QV::UNDEFINED };
 auto finalType = ta.resolveCallType(receiver, subscriptToken, args.size(), &args[0], CallFlag::None, &fd);
 finalType = ta.mergeTypes(type, finalType);
@@ -313,9 +324,6 @@ return re;
 
 int LiteralSequenceExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 ta.pushScope();
-QToken tmpToken = ta.createTempName(*this);
-auto tmpVar = make_shared<NameExpression>(tmpToken);
-ta.createVariable(tmpToken);
 int re = assignedValue? assignedValue->analyze(ta) :0;
 for (int i=0, n=items.size(); i<n; i++) {
 shared_ptr<Expression> item = items[i], defaultValue = nullptr;
@@ -346,11 +354,11 @@ shared_ptr<Expression> minusOne = make_shared<ConstantExpression>(minusOneToken)
 index = BinaryOperation::create(index, T_DOTDOTDOT, minusOne);
 }
 vector<shared_ptr<Expression>> indices = { index };
-auto subscript = make_shared<SubscriptExpression>(tmpVar, indices);
+auto subscript = make_shared<SubscriptExpression>( assignedValue, indices);
 if (defaultValue) defaultValue = BinaryOperation::create(subscript, T_QUESTQUEST, defaultValue)->optimize();
 else defaultValue = subscript;
 if (typeHint) defaultValue = make_shared<TypeHintExpression>(defaultValue, typeHint)->optimize();
-re |= assignable->analyzeAssignment(ta, defaultValue);
+assignable->analyzeAssignment(ta, defaultValue);
 }
 ta.popScope();
 return re;
@@ -358,10 +366,7 @@ return re;
 
 int LiteralMapExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {
 ta.pushScope();
-QToken tmpToken = ta.createTempName(*this);
-ta.createVariable(tmpToken);
 int count = -1;
-auto tmpVar = make_shared<NameExpression>(tmpToken);
 int re = assignedValue? assignedValue->analyze(ta) :0;
 vector<shared_ptr<Expression>> allKeys;
 for (auto& item: items) {
@@ -385,10 +390,10 @@ else if (auto unp = dynamic_pointer_cast<UnpackExpression>(assigned))  assignabl
 }
 if (!assignable || !assignable->isAssignable()) continue;
 shared_ptr<Expression> value = nullptr;
-if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(tmpVar, T_DOT, make_shared<NameExpression>(method->token));
+if (auto method = dynamic_pointer_cast<GenericMethodSymbolExpression>(item.first))  value = BinaryOperation::create(assignedValue, T_DOT, make_shared<NameExpression>(method->token));
 else if (auto unp = dynamic_pointer_cast<UnpackExpression>(item.first)) {
 auto excludeKeys = make_shared<LiteralTupleExpression>(unp->nearestToken(), allKeys);
-value = BinaryOperation::create(tmpVar, T_MINUS, excludeKeys);
+value = BinaryOperation::create(assignedValue, T_MINUS, excludeKeys);
 }
 else {
 shared_ptr<Expression> subscript = item.first;
@@ -402,11 +407,11 @@ subscript = make_shared<ConstantExpression>(field->token);
 }
 allKeys.push_back(subscript);
 vector<shared_ptr<Expression>> indices = { subscript };
-value = make_shared<SubscriptExpression>(tmpVar, indices);
+value = make_shared<SubscriptExpression>(assignedValue, indices);
 }
 if (defaultValue) value = BinaryOperation::create(value, T_QUESTQUEST, defaultValue)->optimize();
 if (typeHint) value = make_shared<TypeHintExpression>(value, typeHint)->optimize();
-re |= assignable->analyzeAssignment(ta, value);
+assignable->analyzeAssignment(ta, value);
 }
 ta.popScope();
 return re;

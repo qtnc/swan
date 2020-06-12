@@ -126,7 +126,7 @@ f.returnValue(static_cast<double>(tuple.length));
 void QVM::initTupleType () {
 tupleClass
 ->copyParentMethods()
-->bind("[]", tupleSubscript)
+->bind("[]", tupleSubscript, "TNO")
 ->bind("iterator", tupleIterator, "TCI1O")
 ->bind("length", tupleLength, "TN")
 ->bind("toString", tupleToString, "TS")
