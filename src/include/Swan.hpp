@@ -144,7 +144,7 @@ if (finish<begin) finish=begin;
 };
 
 /** 
-Handle: an handle allow to keep Swan values of unknown type, in order to reuse them later possibly multiple timese.
+Handle: an handle allow to keep Swan values of unknown type, in order to reuse them later possibly multiple times.
 For example, handles can be used to keep Swan callbacks to call from C++ at later time.
 Keeping an handle alive prevent the corresponding Swan object from being garbage-collected. 
 */
