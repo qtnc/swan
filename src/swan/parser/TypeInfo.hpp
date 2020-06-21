@@ -52,6 +52,7 @@ bool isNum () override;
 bool isBool () override;
 bool isString () override;
 bool isRange  () override;
+bool isTuple  () override;
 bool isFunction () override;
 bool isNull () override;
 bool isUndefined () override;

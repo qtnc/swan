@@ -128,19 +128,7 @@ return re;
 int SubscriptExpression::analyze (TypeAnalyzer& ta) {
 int re = receiver->analyze(ta);
 for (auto& arg: args) re |= arg->analyze(ta);
-if (receiver->type && args.size()==1 && args[0]->type) {
-auto cst = dynamic_pointer_cast<ConstantExpression>(args[0]);
-auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiver->type);
-auto ctp = cti && cti->type ? dynamic_pointer_cast<ClassTypeInfo>(cti->type) : nullptr;
-if (cst && ctp && ctp->type==ta.vm.tupleClass && cst->token.type==T_NUM && cst->token.value.d>=0 && cst->token.value.d<cti->subtypes.size() ) {
-auto finalType = cti->subtypes[static_cast<size_t>(cst->token.value.d)];
-println("Found!type=%s", finalType->toString());
-finalType = ta.mergeTypes(type, finalType);
-re |= ta.assignType(*this, finalType);
-return re;
-}}
-QToken subscriptToken = { T_NAME, "[]", 2, QV::UNDEFINED };
-auto finalType = ta.resolveCallType(receiver, subscriptToken, args.size(), &args[0], CallFlag::None, &fd);
+auto finalType = ta.resolveSubscriptType(receiver, args.size(), &args[0], CallFlag::None, &fd);
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -419,14 +407,36 @@ return re;
 
 int MethodLookupOperation::analyze (TypeAnalyzer& ta) {
 int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0);
-auto name = dynamic_pointer_cast<NameExpression>(right);
-if (!name) return re;
+auto rname = dynamic_pointer_cast<NameExpression>(right);
+if (!rname) return re;
+auto lname = dynamic_pointer_cast<NameExpression>(left);
+auto lvar = lname? ta.findVariable(lname->token) : nullptr;
+auto cdti = dynamic_pointer_cast<ClassDeclTypeInfo>(left->type);
+auto cti = dynamic_pointer_cast<ClassTypeInfo>(left->type);
+auto cst = lvar&&lvar->value?dynamic_pointer_cast<ConstantExpression>(lvar->value) :nullptr;
 shared_ptr<TypeInfo> finalType = TypeInfo::ANY;
-auto receiver = left;
-FuncOrDecl fd;
-ta.resolveCallType(receiver, name->token, 0, nullptr, CallFlag::None, &fd);
-auto fi = fd.getFunctionInfo(ta);
+if (cti && cst && cst->token.value.isInstanceOf(ta.vm.classClass)) {
+auto cls = cst->token.value.asObject<QClass>();
+int symbol = ta.vm.findMethodSymbol(string(rname->token.start, rname->token.length));
+QV method = cls->findMethod(symbol);
+if (method.isNullOrUndefined()) method = cls->type->findMethod(symbol);
+auto fi = ta.resolveFunctionInfo(method);
 if (fi) finalType = fi->getFunctionTypeInfo();
+} 
+else  if (cdti && lvar && lvar->value && !!dynamic_pointer_cast<ClassDeclaration>(lvar->value)) {
+auto fi = cdti->cls->findMethod(rname->token, false);
+if (!fi) fi = cdti->cls->findMethod(rname->token, true);
+if (fi) finalType = fi->getFunctionTypeInfo();
+}
+else {
+FuncOrDecl fd;
+ta.resolveCallType(left, rname->token, 0, nullptr, CallFlag::None, &fd);
+auto fi = fd.getFunctionInfo(ta);
+if (fi) if (auto funcType = dynamic_pointer_cast<ComposedTypeInfo>(fi->getFunctionTypeInfo())) {
+vector<shared_ptr<TypeInfo>> subtypes;
+copy(funcType->subtypes.begin() +1, funcType->subtypes.end(), back_inserter(subtypes));
+finalType = make_shared<ComposedTypeInfo>(funcType->type, subtypes);
+}}
 finalType = ta.mergeTypes(type, finalType);
 re |= ta.assignType(*this, finalType);
 return re;
@@ -534,11 +544,11 @@ return re;
 }
 
 int GenericMethodSymbolExpression::analyze (TypeAnalyzer& ta) {
-return ta.assignType(*this, TypeInfo::MANY);
+return ta.assignType(*this, make_shared<ClassTypeInfo>(ta.vm.functionClass));
 }
 
 int AnonymousLocalExpression::analyze (TypeAnalyzer& ta) {
-return ta.assignType(*this, TypeInfo::MANY);
+return ta.assignType(*this, TypeInfo::ANY);
 }
 
 int AnonymousLocalExpression::analyzeAssignment (TypeAnalyzer& ta, shared_ptr<Expression> assignedValue) {

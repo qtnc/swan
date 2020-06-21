@@ -208,6 +208,27 @@ if (n>0) return cti->subtypes[n -1];
 return TypeInfo::ANY;
 }
 
+std::shared_ptr<TypeInfo> TypeAnalyzer::resolveSubscriptType   (std::shared_ptr<Expression> receiver, int nArgs, shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd) {
+if (receiver->type && nArgs==1 && args[0]->type) {
+auto cti = dynamic_pointer_cast<ComposedTypeInfo>(receiver->type);
+if (cti && cti->type && cti->type->isTuple()) {
+auto cst = dynamic_pointer_cast<ConstantExpression>(args[0]);
+if (cst && cst->token.type==T_NUM && cst->token.value.d>=0 && cst->token.value.d<cti->subtypes.size() ) {
+return cti->subtypes[static_cast<size_t>(cst->token.value.d)];
+}
+else if (args[0]->type && args[0]->type->isRange()) {
+//todo: tuple range
+}}
+else if (cti && cti->type) {
+if (any_of(args, args+nArgs, [&](auto& t){ return t->type && t->type->isRange(); })) return cti;
+else return cti->subtypes.back();
+}}
+QToken subscriptToken = { T_NAME, "[]", 2, QV::UNDEFINED };
+return resolveCallType(receiver, subscriptToken, nArgs, args, flags, fd);
+}
+
 void TypeAnalyzer::report (shared_ptr<Expression> expr) {
 typeInfo(expr->nearestToken(), "Expr type = %s", expr->type? expr->type->toString() : "<null>");
 }
+
+

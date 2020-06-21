@@ -20,6 +20,7 @@ virtual bool isNum () { return false; }
 virtual bool isBool () { return false; }
 virtual bool isString () { return false; }
 virtual bool isRange  () { return false; }
+virtual bool isTuple   () { return false; }
 virtual bool isFunction () { return false; }
 virtual bool isNull  () { return false; }
 virtual bool isUndefined () { return false; }

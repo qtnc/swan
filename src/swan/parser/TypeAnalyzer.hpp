@@ -50,6 +50,8 @@ struct FunctionDeclaration* getCurMethod ();
 
 std::shared_ptr<TypeInfo> mergeTypes (std::shared_ptr<TypeInfo> t1, std::shared_ptr<TypeInfo> t2);
 
+std::shared_ptr<TypeInfo> resolveSubscriptType   (std::shared_ptr<Expression> receiver, int nArgs, std::shared_ptr<Expression>* args, bitmask<CallFlag> flags, FuncOrDecl* fd);
+
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> func, int nArgs = 0, std::shared_ptr<Expression>* args = nullptr, bitmask<CallFlag> flags = CallFlag::None, FuncOrDecl* fd = nullptr);
 std::shared_ptr<TypeInfo> resolveCallType  (std::shared_ptr<Expression> receiver, const QToken& methodName, int nArgs=0, std::shared_ptr<Expression>* args = nullptr, bitmask<CallFlag> = CallFlag::None, FuncOrDecl* fd = nullptr);
 

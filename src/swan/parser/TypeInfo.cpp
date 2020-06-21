@@ -38,6 +38,10 @@ bool ClassTypeInfo::isRange () {
 return type==type->vm.rangeClass; 
 }
 
+bool ClassTypeInfo::isTuple () { 
+return type==type->vm.tupleClass; 
+}
+
 bool ClassTypeInfo::isNull () { 
 return type==type->vm.nullClass; 
 }
