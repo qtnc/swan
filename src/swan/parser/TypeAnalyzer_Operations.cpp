@@ -90,7 +90,7 @@ auto it = findLV(variables, name);
 if (it!=variables.end()) return &*it;
 else if (parent) return parent->findVariable(name);
 else {
-int index = vm.findGlobalSymbol(string(name.start, name.length));
+int index = vm.findGlobalSymbol(name.str());
 if (index>=0) {
 auto var = createVariable(name);
 var->type = resolveValueType(vm.globalVariables[index]);
@@ -180,7 +180,7 @@ std::shared_ptr<TypeInfo> TypeAnalyzer::resolveCallType (std::shared_ptr<Express
 auto cls = cti->type;
 if (flags & CallFlag::Super) cls = cls->parent;
 if (cti->flags & TypeInfoFlag::Static) cls = cls->type;
-QV method = cls->findMethod(vm.findMethodSymbol(string(name.start, name.length)));
+QV method = cls->findMethod(vm.findMethodSymbol(name.str()));
 return resolveCallType(receiver, method, nArgs, args, fd);
 }
 

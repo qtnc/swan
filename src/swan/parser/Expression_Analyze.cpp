@@ -300,7 +300,7 @@ int re = (left? left->analyze(ta) :0) | (right? right->analyze(ta) :0) | (assign
 shared_ptr<SuperExpression> super = dynamic_pointer_cast<SuperExpression>(left);
 shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
-string sName = string(setter->token.start, setter->token.length) + ("=");
+string sName = setter->token.str()  + ("=");
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 auto finalType = ta.resolveCallType(left, sToken, 1, &assignedValue, (super? CallFlag::Super : CallFlag::None), &fd);
 finalType = ta.mergeTypes(type, finalType);
@@ -417,7 +417,7 @@ auto cst = lvar&&lvar->value?dynamic_pointer_cast<ConstantExpression>(lvar->valu
 shared_ptr<TypeInfo> finalType = TypeInfo::ANY;
 if (cti && cst && cst->token.value.isInstanceOf(ta.vm.classClass)) {
 auto cls = cst->token.value.asObject<QClass>();
-int symbol = ta.vm.findMethodSymbol(string(rname->token.start, rname->token.length));
+int symbol = ta.vm.findMethodSymbol(rname->token.str());
 QV method = cls->findMethod(symbol);
 if (method.isNullOrUndefined()) method = cls->type->findMethod(symbol);
 auto fi = ta.resolveFunctionInfo(method);

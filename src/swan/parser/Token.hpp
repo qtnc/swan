@@ -13,6 +13,8 @@ QTokenType type;
 const char *start;
 size_t length;
 QV value;
+
+inline std::string str () const { return std::string(start, length); }
 };
 
 #endif

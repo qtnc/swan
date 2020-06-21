@@ -20,7 +20,7 @@ return it==end? 0 : utf8::peek_next(it, end);
 }
 
 static inline ostream& operator<< (ostream& out, const QToken& token) {
-return out << string(token.start, token.length);
+return out << token.str();
 }
 
 bool isName (uint32_t c) {
@@ -358,7 +358,7 @@ while(matchOneOf(T_LINE, T_SEMICOLON));
 void QParser::printMessage (const QToken& tok, Swan::CompilationMessage::Kind msgtype, const string& msg) {
 auto p = getPositionOf(tok.start);
 int line = p.first, column = p.second;
-Swan::CompilationMessage z = { msgtype, msg, std::string(tok.start, tok.length), displayName, line, column };
+Swan::CompilationMessage z = { msgtype, msg, tok.str(), displayName, line, column };
 vm.messageReceiver(z);
 }
 

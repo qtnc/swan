@@ -119,7 +119,7 @@ if (*name.start!='[' && name.start[name.length -1]=='=' && func->params.size()!=
 parseError(("Setter methods must take exactly one argument"));
 }
 if (auto m = cls.findMethod(name, static_cast<bool>(func->flags & VarFlag::Static))) {
-parseError("%s already defined in line %d", string(name.start, name.length), getPositionOf(m->name.start).first);
+parseError("%s already defined in line %d", name.str(), getPositionOf(m->name.start).first);
 }
 parseKeywordFlags(func->flags, VarFlag::Pure | VarFlag::Final | VarFlag::Static | VarFlag::Async);
 match(T_COLON);
@@ -148,7 +148,7 @@ if (cur.type==T_NAME) prevToken();
 do {
 consume(T_NAME, ("Expected field name after 'var'"));
 QToken fieldToken = cur;
-string fieldName = string(fieldToken.start, fieldToken.length);
+string fieldName = fieldToken.str();
 if (auto m = cls.findMethod(fieldToken, static_cast<bool>(flags & VarFlag::Static))) parseError("%s already defined in line %d", fieldName, getPositionOf(m->name.start).first);
 int fieldIndex = cls.findField((flags & VarFlag::Static)? cls.staticFields : cls.fields, fieldToken);
 shared_ptr<TypeInfo> typeHint = nullptr;
@@ -208,10 +208,10 @@ case T_GLOBAL: flagToCheck = VarFlag::Global; break;
 default: first=false; continue;
 }
 if (!(flagToCheck & allowedFlags)) {
-parseError("%s not allowed at this place", string(cur.start, cur.length));
+parseError("%s not allowed at this place", cur.str());
 }
 else if (flags & flagToCheck) {
-if (!first) parseError("Duplicated %s", string(cur.start, cur.length));
+if (!first) parseError("Duplicated %s", cur.str());
 }
 flags |= (flagToCheck & allowedFlags);
 first=false;

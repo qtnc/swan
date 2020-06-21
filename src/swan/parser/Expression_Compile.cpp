@@ -200,7 +200,7 @@ compiler.writeOpStoreLocal(token.value.d);
 }
 
 void GenericMethodSymbolExpression::compile (QCompiler& compiler) {
-int symbol = compiler.parser.vm.findMethodSymbol(std::string(token.start, token.length));
+int symbol = compiler.parser.vm.findMethodSymbol(token.str());
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, compiler.findConstant(QV(symbol | QV_TAG_GENERIC_SYMBOL_FUNCTION)));
 }
 
@@ -272,7 +272,7 @@ ClassDeclaration* cls = compiler.getCurClass(&atLevel);
 if (cls) {
 if (atLevel<=2) compiler.writeOp(OP_LOAD_THIS);
 else compiler.writeOpArg<uint_upvalue_index_t>(OP_LOAD_UPVALUE, compiler.findUpvalue(THIS_TOKEN));
-compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(string(token.start, token.length)));
+compiler.writeOpArg<uint_method_symbol_t>(OP_CALL_METHOD_1, compiler.vm.findMethodSymbol(token.str()));
 return;
 }
 compiler.compileError(token, ("Undefined variable"));
@@ -651,7 +651,7 @@ auto super = dynamic_pointer_cast<SuperExpression>(left);
 auto getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
+int symbol = compiler.vm.findMethodSymbol(getter->token.str());
 left->compile(compiler);
 if (isInlinableAccessor(type, func)) compiler.writeOpArg<uint_field_index_t>( (func->flags & FunctionFlag::Static)? OP_LOAD_STATIC_FIELD : OP_LOAD_FIELD, func->fieldIndex);
 else compiler.writeOpArg<uint_method_symbol_t>(super? OP_CALL_SUPER_1 : OP_CALL_METHOD_1, symbol);
@@ -662,7 +662,7 @@ if (call) {
 getter = dynamic_pointer_cast<NameExpression>(call->receiver);
 if (getter) {
 if (getter->token.type==T_END) getter->token = compiler.parser.curMethodNameToken;
-int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
+int symbol = compiler.vm.findMethodSymbol(getter->token.str());
 bool vararg = call->isVararg();
 if (vararg) compiler.writeOp(OP_PUSH_VARARG_MARK);
 left->compile(compiler);
@@ -681,7 +681,7 @@ auto super = dynamic_pointer_cast<SuperExpression>(left);
 auto setter = dynamic_pointer_cast<NameExpression>(right);
 auto func = fd.getFunc();
 if (setter) {
-string sName = string(setter->token.start, setter->token.length) + ("=");
+string sName = setter->token.str() + ("=");
 int symbol = compiler.vm.findMethodSymbol(sName);
 QToken sToken = { T_NAME, sName.data(), sName.size(), QV::UNDEFINED };
 left->compile(compiler);
@@ -700,7 +700,7 @@ void MethodLookupOperation::compile (QCompiler& compiler) {
 left->compile(compiler);
 shared_ptr<NameExpression> getter = dynamic_pointer_cast<NameExpression>(right);
 if (getter) {
-int symbol = compiler.vm.findMethodSymbol(string(getter->token.start, getter->token.length));
+int symbol = compiler.vm.findMethodSymbol(getter->token.str());
 compiler.writeOpArg<uint_method_symbol_t>(OP_LOAD_METHOD, symbol);
 return;
 }
@@ -711,7 +711,7 @@ void MethodLookupOperation::compileAssignment (QCompiler& compiler, shared_ptr<E
 left->compile(compiler);
 shared_ptr<NameExpression> setter = dynamic_pointer_cast<NameExpression>(right);
 if (setter) {
-int symbol = compiler.vm.findMethodSymbol(string(setter->token.start, setter->token.length));
+int symbol = compiler.vm.findMethodSymbol(setter->token.str());
 assignedValue->compile(compiler);
 compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, symbol);
 compiler.writeOp(OP_POP);
@@ -762,18 +762,18 @@ static_cast<uint_field_index_t>(parents.size()), 0, 0,
 
 ClassDeclaration* oldClassDecl = compiler.curClass;
 compiler.curClass = this;
-int nameConstant = compiler.findConstant(QV(compiler.vm, string(name.start, name.length)));
+int nameConstant = compiler.findConstant(QV(compiler.vm, name.str()));
 compiler.writeDebugLine(name);
 compiler.writeOpArg<uint_constant_index_t>(OP_LOAD_CONSTANT, nameConstant);
 for (auto& parent: parents) NameExpression(parent) .compile(compiler);
 int fieldInfoPos = compiler.writeOpArg<FieldInfo>(OP_NEW_CLASS, fieldInfo);
 for (auto method: methods) {
-int methodSymbol = compiler.vm.findMethodSymbol(string(method->name.start, method->name.length));
+int methodSymbol = compiler.vm.findMethodSymbol(method->name.str());
 compiler.parser.curMethodNameToken = method->name;
 compiler.curMethod = method.get();
 auto func = method->compileFunction(compiler);
 compiler.curMethod = nullptr;
-func->name = string(name.start, name.length) + "::" + string(method->name.start, method->name.length);
+func->name = name.str() + "::" + method->name.str();
 compiler.writeDebugLine(method->name);
 if (method->flags &VarFlag::Static) compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_STATIC_METHOD, methodSymbol);
 else compiler.writeOpArg<uint_method_symbol_t>(OP_STORE_METHOD, methodSymbol);
@@ -863,7 +863,7 @@ else if (func->flags & FunctionFlag::Accessor) {
 flags |= VarFlag::Accessor;
 fieldIndex = func->fieldIndex;
 }
-if (name.type==T_NAME) func->name = string(name.start, name.length);
+if (name.type==T_NAME) func->name = name.str();
 else func->name = "<closure>";
 string sType = type->toBinString(compiler.vm);
 func->typeInfo.assign(sType.begin() +3, sType.end() -1);

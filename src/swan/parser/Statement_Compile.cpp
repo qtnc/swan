@@ -308,7 +308,7 @@ bool hoisted = static_cast<bool>(var->flags & VarFlag::Hoisted);
 if (var->value && !hoisted) {
 if (auto fdecl = dynamic_pointer_cast<FunctionDeclaration>(var->value)) {
 auto func = fdecl->compileFunction(compiler);
-func->name = string(name->token.start, name->token.length);
+func->name = name->token.str();
 }
 else if (!hoisted) var->value->compile(compiler);
 else compiler.writeOp(OP_LOAD_UNDEFINED);

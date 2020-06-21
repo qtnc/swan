@@ -18,7 +18,7 @@ if (auto th = dynamic_pointer_cast<TypeHintExpression>(key)) key = th->expr;
 if (auto name = dynamic_pointer_cast<NameExpression>(key)) {
 QToken token = name->token;
 token.type = T_STRING;
-token.value = QV(vm, string(token.start, token.length));
+token.value = QV(vm, token.str());
 key = make_shared<ConstantExpression>(token);
 }
 return key;

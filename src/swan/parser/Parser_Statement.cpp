@@ -294,7 +294,7 @@ if (match(T_VAR)) return parseVarDecl(flags);
 else if (match(T_FUNCTION)) return parseFunctionDecl(flags);
 else if (match(T_NAME)) { prevToken(); return parseVarDecl(flags); }
 else if (match(T_CLASS)) return parseClassDecl(flags);
-else parseError("Expected variable, function or class declaration after %s", string(cur.start, cur.length));
+else parseError("Expected variable, function or class declaration after %s", cur.str());
 return nullptr;
 }
 

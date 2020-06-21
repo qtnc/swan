@@ -12,7 +12,7 @@ using namespace std;
 extern const QToken THIS_TOKEN;
 
 int ClassDeclaration::findField (unordered_map<string,Field>& flds, const QToken& name, shared_ptr<TypeInfo>** type) {
-auto it = flds.find(string(name.start, name.length));
+auto it = flds.find(name.str());
 int index = -1;
 if (it!=flds.end()) {
 index = it->second.index;
@@ -20,8 +20,8 @@ if (type) *type = &(it->second.type);
 }
 else {
 index = flds.size();
-flds[string(name.start, name.length)] = { index, name, nullptr, nullptr };
-if (type) *type = &(flds[string(name.start, name.length)].type);
+flds[name.str()] = { index, name, nullptr, nullptr };
+if (type) *type = &(flds[name.str()].type);
 }
 return index;
 }

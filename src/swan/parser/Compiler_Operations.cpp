@@ -78,7 +78,7 @@ int QCompiler::createLocalVariable (const QToken& name, bool isConst) {
 auto it = findLV(localVariables, name);
 if (it!=localVariables.end()) {
 if (it->scope>=curScope) return ERR_ALREADY_EXIST;
-else compileWarn(name, "Shadowig %s declared at line %d", string(it->name.start, it->name.length), parser.getPositionOf(it->name.start).first);
+else compileWarn(name, "Shadowig %s declared at line %d", it->name.str(), parser.getPositionOf(it->name.start).first);
 }
 if (localVariables.size() >= std::numeric_limits<uint_local_index_t>::max()) return ERR_TOO_MANY;
 int n = localVariables.size();
@@ -114,12 +114,12 @@ return slot;
 
 int QCompiler::createGlobalVariable (const QToken& name, bool isConst) {
 int slot = findGlobalVariable(name, true);
-if (slot==ERR_NOT_FOUND) slot = vm.bindGlobal(string(name.start, name.length), QV::UNDEFINED, isConst);
+if (slot==ERR_NOT_FOUND) slot = vm.bindGlobal(name.str(), QV::UNDEFINED, isConst);
 return slot;
 }
 
 int QCompiler::findGlobalVariable (const QToken& name, bool forWrite) {
-return vm.findGlobalSymbol(string(name.start, name.length), forWrite);
+return vm.findGlobalSymbol(name.str(), forWrite);
 }
 
 int QCompiler::findGlobalVariable (const string& name, bool forWrite) {

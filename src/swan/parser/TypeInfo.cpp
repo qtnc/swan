@@ -118,7 +118,7 @@ NamedTypeInfo::NamedTypeInfo (const QToken& t, bitmask<TypeInfoFlag> fl):
 token(t), flags(fl) {}
 
 string NamedTypeInfo::toBinString (QVM& vm) {
-string s = format("Q%s;", string(token.start, token.length));
+string s = format("Q%s;", token.str());
 if (flags & TypeInfoFlag::Exact) s+='!';
 if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
@@ -156,7 +156,7 @@ QClass* cls = value.asObject<QClass>();
 return make_shared<ClassTypeInfo>(cls, flags);
 }}
 }//if lv->value
-println("CAn't resolve '%s', lv=%s, value=%s", string(token.start, token.length), !!lv, lv&&lv->value?typeid(*lv->value).name() : "<null>");
+println("CAn't resolve '%s', lv=%s, value=%s", token.str(), !!lv, lv&&lv->value?typeid(*lv->value).name() : "<null>");
 return TypeInfo::ANY;
 }
 
@@ -222,14 +222,14 @@ return re;
 }
 
 string ClassDeclTypeInfo::toString () { 
-string s(cls->name.start, cls->name.length); 
+string s = cls->name.str();
 if (flags & TypeInfoFlag::Exact) s+='!';
 if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
 }
 
 string ClassDeclTypeInfo::toBinString (QVM& vm) {
-string s = format("Q%s;", string(cls->name.start, cls->name.length));
+string s = format("Q%s;", cls->name.str());
 if (flags & TypeInfoFlag::Exact) s+='!';
 if (flags & TypeInfoFlag::Optional) s+='?';
 return s;
