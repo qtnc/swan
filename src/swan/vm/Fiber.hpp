@@ -40,9 +40,13 @@ virtual inline bool isNum (int i) final override { return at(i).isNum(); }
 virtual inline bool isBool  (int i) final override { return at(i).isBool(); }
 virtual inline bool isString (int i) final override { return at(i).isString(); }
 virtual bool isRange (int i) final override;
+virtual bool isList (int i) final override;
+virtual bool isTuple (int i) final override;
+virtual bool isListOrTuple  (int i) final override { return isList(i) || isTuple(i); }
 virtual inline bool isNull (int i) final override { return at(i).isNull(); }
 virtual inline bool isUndefined  (int i) final override { return at(i).isUndefined(); }
 virtual inline bool isNullOrUndefined (int i) final override { return at(i).isNullOrUndefined(); }
+virtual inline bool isLightPointer (int i) final override { return at(i).isLightUserData(); }
 virtual bool isUserPointer (int i, size_t classId) final override;
 
 template<class T> inline T& getObject (int i) { return *at(i).asObject<T>(); }
@@ -53,18 +57,21 @@ virtual inline const char* getCString (int i) final override { return at(i).asCS
 virtual inline const Swan::Range& getRange (int i) final override { return at(i).asRange(); }
 virtual inline Swan::Fiber& getFiber (int i) final override { return getObject<QFiber>(i); }
 virtual inline void* getUserPointer (int i) final override { return getObject<QForeignInstance>(i).userData; }
+virtual inline void* getLightPointer (int i) final override { return at(i).asPointer<void>(); }
 virtual inline Swan::Handle getHandle (int i) final override { return at(i).asHandle(); }
 
 virtual inline double getOptionalNum (int i, double defaultValue) { return getArgCount()>i && isNum(i)? getNum(i) : defaultValue; }
 virtual inline bool getOptionalBool (int i, bool defaultValue) { return getArgCount()>i && isBool(i)? getBool(i) : defaultValue; }
 virtual inline std::string getOptionalString  (int i, const std::string& defaultValue) { return getArgCount()>i && isString(i)? getString(i) : defaultValue; }
 virtual inline void* getOptionalUserPointer (int i, size_t classId, void* defaultValue = nullptr) { return getArgCount()>i && isUserPointer(i, classId)? getUserPointer(i) : defaultValue; }
+virtual inline void* getOptionalLightPointer (int i, void* defaultValue = nullptr) { return getArgCount()>i && isLightPointer(i)? getLightPointer(i) : defaultValue; }
 virtual inline Swan::Handle getOptionalHandle  (int i, const Swan::Handle& defaultValue) { return getArgCount()>i && !isNullOrUndefined(i)? at(i).asHandle() : defaultValue; }
 
 virtual double getOptionalNum (int stackIndex, const std::string& key, double defaultValue) final override;
 virtual bool getOptionalBool (int stackIndex, const std::string& key, bool defaultValue) final override;
 virtual std::string getOptionalString (int stackIndex, const std::string& key, const std::string& defaultValue) final override;
 virtual void* getOptionalUserPointer (int stackIndex, const std::string& key, size_t classId, void* defaultValue = nullptr) final override;
+virtual void* getOptionalLightPointer (int stackIndex, const std::string& key, void* defaultValue = nullptr) final override;
 virtual Swan::Handle getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) final override;
 
 virtual std::vector<double> getNumList (int stackIndex);
@@ -80,6 +87,7 @@ virtual inline void setUndefined (int i) final override { at(i) = QV::UNDEFINED;
 virtual inline void setNativeFunction (int i, Swan::NativeFunction f) final override { at(i) = QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION); }
 virtual void setStdFunction (int i, const std::function<void(Swan::Fiber&)>& func) final override;
 virtual inline void setFiber (int i, Swan::Fiber& f) final override { at(i) = QV(static_cast<QFiber*>(&f)); }
+virtual inline void setLightPointer  (int i, void* p) final override { at(i) = QV(p, QV_TAG_LIGHTUSERDATA); }
 virtual void* setNewUserPointer (int i, size_t id) final override;
 virtual void setHandle (int i, const Swan::Handle& h) final override { at(i) = QV(h.value); }
 inline void setObject (int i, QObject* obj) { at(i)=QV(obj); }
@@ -95,17 +103,21 @@ virtual inline void pushUndefined () final override { stack.push_back(QV::UNDEFI
 virtual inline void pushNativeFunction (Swan::NativeFunction f) final override { stack.push_back(QV(reinterpret_cast<void*>(f), QV_TAG_NATIVE_FUNCTION)); }
 virtual inline void pushStdFunction (const std::function<void(Swan::Fiber&)>& f) final override ;
 virtual inline void pushFiber (Swan::Fiber& f) final override { push(QV(static_cast<QFiber*>(&f))); }
+virtual inline void pushLightPointer (void* p) final override { stack.push_back(QV(p, QV_TAG_LIGHTUSERDATA)); }
 virtual void pushNewForeignClass (const std::string& name, size_t id, int nUserBytes, int nParents=0) final override;
 virtual void* pushNewUserPointer (size_t id) final override;
 virtual inline void pushHandle (const Swan::Handle& h) final override { push(QV(h.value)); }
+
 virtual inline void pushCopy (int i = -1) final override { stack.push_back(at(i)); }
 virtual inline void swap (int i1 = -2, int i2 = -1) final override { std::swap(at(i1), at(i2)); }
 virtual inline void setCopy (int i, int j) final override { at(i) = at(j); }
 virtual inline void insertCopy (int i, int j) final override { stack.insert(&at(i), at(j)); }
+
 virtual inline void pop () final override { stack.pop_back(); }
 inline QV& top () { return stack.back(); }
 inline QV& base () { return stack.at(callFrames.back().stackBase); }
 inline void push (const QV& x) { stack.push_back(x); }
+
 inline void pushCppCallFrame () { callFrames.push_back({ nullptr, nullptr, stack.size() }); }
 inline void popCppCallFrame () { callFrames.pop_back(); }
 
@@ -127,6 +139,7 @@ virtual void loadGlobal (const std::string& name) final override;
 virtual void storeMethod (const std::string& name) final override;
 virtual void storeStaticMethod (const std::string& name) final override;
 virtual void storeDestructor ( void(*destr)(void*) ) final override;
+
 virtual void call (int nArgs) final override;
 virtual void callMethod (const std::string& name, int nArgs) final override;
 

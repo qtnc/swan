@@ -35,6 +35,9 @@ void QFiber::release () {
 vm.fibers.erase(find(vm.fibers.begin(), vm.fibers.end(), this));
 }
 
+bool QFiber::isList (int i) { return at(i).isInstanceOf(vm.listClass); }
+bool QFiber::isTuple (int i) { return at(i).isInstanceOf(vm.tupleClass); }
+
 bool QFiber::isRange (int i) { return at(i).isInstanceOf(vm.rangeClass); }
 
 void QFiber::pushRange (const Swan::Range& r) {

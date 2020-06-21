@@ -217,6 +217,21 @@ virtual bool isString (int stackIndex) = 0;
 */
 virtual bool isRange (int stackIndex) = 0;
 
+/** Check if the element at stackIndex is a list value 
+@param stackIndex the stack index to check
+*/
+virtual bool isList (int stackIndex) = 0;
+
+/** Check if the element at stackIndex is a tuple value 
+@param stackIndex the stack index to check
+*/
+virtual bool isTuple (int stackIndex) = 0;
+
+/** Check if the element at stackIndex is a list or tuple value 
+@param stackIndex the stack index to check
+*/
+virtual bool isListOrTuple (int stackIndex) = 0;
+
 /** Check if the element at stackIndex is a Null value 
 @param stackIndex the stack index to check
 */
@@ -237,6 +252,11 @@ virtual bool isNullOrUndefined (int stackIndex) = 0;
 @param classId the type ID of the expected user-defined type
 */
 virtual bool isUserPointer (int stackIndex, size_t classId) = 0;
+
+/** Check if the element at stackIndex is a light pointer 
+@param stackIndex the stack index to check
+*/
+virtual bool isLightPointer (int stackIndex) = 0;
 
 /** Return the value of the Num object at the given stack index. 
 An undefined value is returned in case the requested element isn't of the required type. 
@@ -280,6 +300,11 @@ The behavior is undefined in case the requested element isn't of the required ty
 */
 virtual void* getUserPointer (int stackIndex) = 0;
 
+/** Return a light pointer stored at the given stack index
+@param stackIndex the stack index from which to get the value 
+*/
+virtual void* getLightPointer (int stackIndex) = 0;
+
 /** Return an handle to the Swan object at the given stack index. This allows you to use that handle later on, for example to call Swan callbacks from C++.
 @param stackIndex the stack index from which to get the value
 */
@@ -309,6 +334,12 @@ inline std::string getOptionalString (int stackIndex, const std::string& default
 @param defaultValue the default value to return in case the value can't be retrieved 
 */
 inline void* getOptionalUserPointer (int stackIndex, size_t classId, void* defaultValue = nullptr) { return getArgCount()>stackIndex && isUserPointer(stackIndex, classId)? getUserPointer(stackIndex) : defaultValue; }
+
+/** Return a light pointer at the given stack index, or defaultValue if there isn't that many stack elements or if the given stack element isn't of an appropriate type.
+@param stackIndex the stack index from which to get the value
+@param defaultValue the default value to return in case the value can't be retrieved 
+*/
+inline void* getOptionalLightPointer (int stackIndex, void* defaultValue = nullptr) { return getArgCount()>stackIndex && isLightPointer(stackIndex)? getLightPointer(stackIndex) : defaultValue; }
 
 /** Return an handle to the object at the given stack index, or defaultValue if there isn't that many stack elements or if the given stack element isn't of an appropriate type.
 @param stackIndex the stack index from which to get the value
@@ -345,6 +376,13 @@ virtual std::string getOptionalString (int stackIndex, const std::string& key, c
  */
 virtual void* getOptionalUserPointer   (int stackIndex, const std::string& key, size_t classId, void* defaultValue = nullptr) = 0;
 
+/** Look for a light pointer at the given stack index, or inside a Map at index -1 with the given key. Return that light pointer if found, otherwise defaultValue.
+@param stackIndex the stack index from which to get the value
+@param key the key in which to look for the value inside the Map
+@param defaultValue the default value to return in case the value can't be retrieved
+ */
+virtual void* getOptionalLightPointer   (int stackIndex, const std::string& key, void* defaultValue = nullptr) = 0;
+
 /** Look for any object at the given stack index, or inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue.
 @param stackIndex the stack index from which to get the value
 @param key the key in which to look for the value inside the Map
@@ -376,6 +414,12 @@ inline std::string getOptionalString (const std::string& key, const std::string&
 @param defaultValue the default value to return in case the value can't be retrieved
  */
 inline void* getOptionalUserPointer  (const std::string& key, size_t classId, void* defaultValue = nullptr) { return getOptionalUserPointer(-1, key, classId, defaultValue); }
+
+/** Look for a light pointer inside a Map at index -1 with the given key. Return that light pointer if found, otherwise defaultValue.
+@param key the key in which to look for the value inside the Map
+@param defaultValue the default value to return in case the value can't be retrieved
+ */
+inline void* getOptionalLightPointer  (const std::string& key, void* defaultValue = nullptr) { return getOptionalLightPointer(-1, key, defaultValue); }
 
 /** Look for any object inside a Map at index -1 with the given key. Return an handle to that object if found, otherwise defaultValue.
 @param key the key in which to look for the value inside the Map
@@ -451,6 +495,12 @@ Return a pointer to an uninitialized block of memory where the data associated t
 */
 virtual void* setNewUserPointer (int stackIndex, size_t classId) = 0;
 
+/** Replace the element at the specified stack index by a light pointer.
+@param stackIndex the stack index which will be overwritten
+@param value the value to put into that stack index
+*/
+virtual void setLightPointer (int stackIndex, void* value) = 0;
+
 /** Replace the element at the given stack index by the value stored in the handle 
 @param stackIndex the stack index which will be overwritten
 @param value the value to put into that stack index
@@ -516,6 +566,11 @@ Return a pointer to an uninitialized block of memory where the data associated t
 @param classId the type ID of the requested type
 */
 virtual void* pushNewUserPointer (size_t classId) = 0;
+
+/** Push a light pointer at the back of the stack 
+@param value the value to push onto the stack
+*/
+virtual void pushLightPointer  (void* value) = 0;
 
 /** Push the value of an handle at the back of the stack 
 @param handle the value to be pushed onto the stack

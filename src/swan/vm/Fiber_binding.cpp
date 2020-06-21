@@ -138,6 +138,12 @@ if (value.isInstanceOf( vm.foreignClassIds[classId] )) return value.asObject<QFo
 else return getOptionalUserPointer(stackIndex, classId, defaultValue);
 }
 
+void* QFiber::getOptionalLightPointer  (int stackIndex, const std::string& key, void* defaultValue) {
+QV value = getItemFromLastArgMap(*this, key);
+if (value.isLightUserData()) return value.asPointer<void>();
+else return getOptionalLightPointer(stackIndex, defaultValue);
+}
+
 Swan::Handle QFiber::getOptionalHandle  (int stackIndex, const std::string& key, const Swan::Handle& defaultValue) {
 QV value = getItemFromLastArgMap(*this, key);
 if (!value.isNullOrUndefined()) return value.asHandle();
